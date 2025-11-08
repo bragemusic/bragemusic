@@ -8,6 +8,7 @@ import (
 )
 
 type ServerConfig struct {
+	Port              string
 	MusicDirPath      string
 	ArtistArtsDirPath string
 	AlbumArtsDirPath  string
@@ -18,6 +19,8 @@ type ServerConfig struct {
 
 func GetServerConfig() (sc ServerConfig, err error) {
 	errs := []error{}
+
+	sc.Port = envWithDefault("SERVER_PORT", "3000")
 
 	sc.MusicDirPath, err = getEnv("MUSIC_DIR")
 	errs = append(errs, err)
@@ -48,4 +51,12 @@ func getEnv(key string) (string, error) {
 		return "", fmt.Errorf("env %s not set", key)
 	}
 	return val, nil
+}
+
+func envWithDefault(key, defaultVal string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		return defaultVal
+	}
+	return val
 }
