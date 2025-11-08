@@ -178,6 +178,21 @@ func (d Database) UpdateTrackFromMbID(ctx context.Context, t types.Track) error 
 	return err
 }
 
+func (d Database) GetTrackFromID(ctx context.Context, ID string) (track types.Track, err error) {
+	query := `
+        SELECT *
+        FROM tracks
+        WHERE id = ?
+        LIMIT 1;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &track, query, ID)
+	if err != nil {
+		return types.Track{}, err
+	}
+
+	return
+}
+
 func (d Database) GetTrackFromMbID(ctx context.Context, mbID string) (track types.Track, err error) {
 	query := `
         SELECT *

@@ -1,20 +1,50 @@
 package server
 
-import "net/http"
+import (
+	"database/sql"
+	"errors"
+	"net/http"
 
-func (s Server) listArtists() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	"github.com/go-chi/chi/v5"
+)
+
+func (s Server) getArtist() http.HandlerFunc {
+	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		ctx := r.Context()
 
-		artists, err := s.db.ListArtists(ctx)
-		if err != nil {
-			s.handleErr(ctx, err)
-			return
+		artistID := chi.URLParamFromCtx(ctx, "artistID")
+		if artistID == "" {
+			return http.StatusBadRequest, nil, ErrIDNotFound{
+				idKey: "artistID",
+				err:   errors.New("could not parse artistID"),
+			}
 		}
 
-		if err = s.writeJSON(ctx, w, artists); err != nil {
-			s.handleErr(ctx, err)
-			return
+		artist, err := s.mediamgr.GetArtist(ctx, artistID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return http.StatusBadRequest, nil, ErrIDNotFound{
+					idKey: "artistID",
+					err:   err,
+				}
+			} else {
+				return http.StatusInternalServerError, nil, err
+			}
 		}
-	}
+
+		return http.StatusOK, artist, nil
+	})
+}
+
+func (s Server) listArtists() http.HandlerFunc {
+	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
+		ctx := r.Context()
+
+		artists, err := s.mediamgr.ListArtists(ctx)
+		if err != nil {
+			return http.StatusInternalServerError, nil, err
+		}
+
+		return http.StatusOK, artists, nil
+	})
 }

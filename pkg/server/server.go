@@ -1,19 +1,19 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 
-	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/go-chi/chi/v5"
 )
 
-type Server struct {
-	log *slog.Logger
+type handlerFuncErrJson func(http.ResponseWriter, *http.Request) (int, any, error)
 
-	db database.DatabaseFace
+type Server struct {
+	log      *slog.Logger
+	mediamgr *mediamanager.MediaManager
 }
 
 func (s Server) Handler() http.Handler {
@@ -22,41 +22,62 @@ func (s Server) Handler() http.Handler {
 	r.Get("/healthz", s.healthz())
 
 	r.Get("/artists", s.listArtists())
+	r.Get("/artists/{artistID}", s.getArtist())
 	r.Get("/artists/{artistID}/albums", s.listAlbums())
+
+	r.Get("/albums/{albumID}", s.getAlbum())
+	r.Get("/albums/{albumID}/tracks", s.listAlbumTracks())
+
+	r.Get("/tracks/{trackID}", s.getTrack())
 
 	return r
 }
 
 func (s Server) healthz() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-
-		err := s.writeJSON(ctx, w, Healthz{
+	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
+		return http.StatusOK, Healthz{
 			Application: "brage-server",
 			Version:     "v0.0.1",
 			Status:      HealthzRunning,
-		})
+		}, nil
+	})
+}
+
+func (s Server) handleJSON(f handlerFuncErrJson) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		status, payload, err := f(w, r)
+
+		ctx := r.Context()
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(status)
+
 		if err != nil {
-			s.handleErr(ctx, err)
-			w.WriteHeader(http.StatusInternalServerError)
+			sErr, ok := err.(ServerError)
+			if ok {
+				jErr := json.NewEncoder(w).Encode(map[string]string{"error": sErr.UserError()})
+				if jErr != nil {
+					s.log.ErrorContext(ctx, err.Error())
+				}
+			} else {
+				jErr := json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+				if jErr != nil {
+					s.log.ErrorContext(ctx, err.Error())
+				}
+			}
+			s.log.ErrorContext(ctx, err.Error())
 			return
+		}
+
+		err = json.NewEncoder(w).Encode(payload)
+		if err != nil {
+			s.log.ErrorContext(ctx, err.Error())
 		}
 	}
 }
 
-func (s Server) writeJSON(ctx context.Context, w http.ResponseWriter, payload any) error {
-	w.Header().Add("Content-Type", "application/json")
-	err := json.NewEncoder(w).Encode(payload)
-	return err
-}
-
-func (s Server) handleErr(ctx context.Context, err error) {
-	s.log.ErrorContext(ctx, err.Error())
-}
-
-func New(slogHandler slog.Handler, db database.DatabaseFace) Server {
+func New(slogHandler slog.Handler, m *mediamanager.MediaManager) Server {
 	return Server{
-		log: slog.New(slogHandler).With("service", "server"),
-		db:  db,
+		log:      slog.New(slogHandler).With("service", "server"),
+		mediamgr: m,
 	}
 }

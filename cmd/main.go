@@ -10,6 +10,7 @@ import (
 	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/trackmgr"
 	"github.com/bragemusic/core/pkg/wiki"
@@ -57,7 +58,9 @@ func main() {
 	tm := trackmgr.New(scfg, db, aid, w, slogHandler)
 	_ = tm
 
-	s := server.New(slogHandler, db)
+	m := mediamanager.New(slogHandler, db)
+
+	s := server.New(slogHandler, &m)
 
 	logger.Info(fmt.Sprintf("serving on port %s", scfg.Port))
 	if err = http.ListenAndServe(":"+scfg.Port, s.Handler()); err != nil {

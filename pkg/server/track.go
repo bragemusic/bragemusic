@@ -8,7 +8,36 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (s Server) getAlbum() http.HandlerFunc {
+func (s Server) getTrack() http.HandlerFunc {
+	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
+		ctx := r.Context()
+
+		trackID := chi.URLParamFromCtx(ctx, "trackID")
+		if trackID == "" {
+			return http.StatusBadRequest, nil, ErrIDNotFound{
+				idKey: "trackID",
+				err:   errors.New("could not parse trackID"),
+			}
+		}
+
+		track, err := s.mediamgr.GetTrack(ctx, trackID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return http.StatusBadRequest, nil, ErrIDNotFound{
+					idKey: "trackID",
+					err:   err,
+				}
+			} else {
+				return http.StatusInternalServerError, nil, err
+			}
+		}
+
+		return http.StatusOK, track, nil
+	},
+	)
+}
+
+func (s Server) listAlbumTracks() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		ctx := r.Context()
 
@@ -20,7 +49,7 @@ func (s Server) getAlbum() http.HandlerFunc {
 			}
 		}
 
-		album, err := s.mediamgr.GetAlbum(ctx, albumID)
+		tracks, err := s.mediamgr.ListTracksByAlbum(ctx, albumID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return http.StatusBadRequest, nil, ErrIDNotFound{
@@ -32,34 +61,6 @@ func (s Server) getAlbum() http.HandlerFunc {
 			}
 		}
 
-		return http.StatusOK, album, nil
-	})
-}
-
-func (s Server) listAlbums() http.HandlerFunc {
-	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
-		ctx := r.Context()
-
-		artistID := chi.URLParamFromCtx(ctx, "artistID")
-		if artistID == "" {
-			return http.StatusBadRequest, nil, ErrIDNotFound{
-				idKey: "artistID",
-				err:   errors.New("could not parse artistID"),
-			}
-		}
-
-		albums, err := s.mediamgr.ListAlbumsByArtist(ctx, artistID)
-		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return http.StatusBadRequest, nil, ErrIDNotFound{
-					idKey: "artistID",
-					err:   err,
-				}
-			} else {
-				return http.StatusInternalServerError, nil, err
-			}
-		}
-
-		return http.StatusOK, albums, nil
+		return http.StatusOK, tracks, nil
 	})
 }
