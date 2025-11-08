@@ -1,0 +1,7 @@
+.build
+.direnv
+data
+db/schema.sql
+.env.local
+
+importDir
