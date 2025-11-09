@@ -34,6 +34,7 @@ type DatabaseFace interface {
 	UpdateTrack(ctx context.Context, t types.Track) error
 	UpdateTrackFromMbID(ctx context.Context, t types.Track) error
 	GetTrackFromMbID(ctx context.Context, mbID string) (track types.Track, err error)
+	GetTrackFromID(ctx context.Context, ID string) (track types.Track, err error)
 	GetTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.Track, err error)
 	GetEnhancedTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.TrackEnhanced, err error)
 	GetTrackFromName(ctx context.Context, albumID string, trackName string) (track types.Track, err error)
