@@ -9,7 +9,10 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type handlerFuncErrJson func(http.ResponseWriter, *http.Request) (int, any, error)
+type (
+	handlerFuncErrJson func(http.ResponseWriter, *http.Request) (int, any, error)
+	handlerFuncErrVoid func(http.ResponseWriter, *http.Request) (*int, error)
+)
 
 type Server struct {
 	log      *slog.Logger
@@ -29,6 +32,7 @@ func (s Server) Handler() http.Handler {
 	r.Get("/albums/{albumID}/tracks", s.listAlbumTracks())
 
 	r.Get("/tracks/{trackID}", s.getTrack())
+	r.Get("/tracks/{trackID}/file", s.getTrackFile())
 
 	return r
 }
@@ -41,6 +45,34 @@ func (s Server) healthz() http.HandlerFunc {
 			Status:      HealthzRunning,
 		}, nil
 	})
+}
+
+func (s Server) handleVoid(f handlerFuncErrVoid) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		status, err := f(w, r)
+
+		ctx := r.Context()
+		if status != nil {
+			w.WriteHeader(*status)
+		}
+
+		if err != nil {
+			sErr, ok := err.(ServerError)
+			if ok {
+				jErr := json.NewEncoder(w).Encode(map[string]string{"error": sErr.UserError()})
+				if jErr != nil {
+					s.log.ErrorContext(ctx, err.Error())
+				}
+			} else {
+				jErr := json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+				if jErr != nil {
+					s.log.ErrorContext(ctx, err.Error())
+				}
+			}
+			s.log.ErrorContext(ctx, err.Error())
+			return
+		}
+	}
 }
 
 func (s Server) handleJSON(f handlerFuncErrJson) http.HandlerFunc {

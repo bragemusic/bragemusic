@@ -2,6 +2,9 @@ package mediamanager
 
 import (
 	"context"
+	"fmt"
+	"io"
+	"os"
 
 	"github.com/bragemusic/core/pkg/types"
 )
@@ -13,6 +16,30 @@ func (m MediaManager) GetTrack(ctx context.Context, trackID string) (types.Track
 	}
 
 	return track, nil
+}
+
+func (m MediaManager) GetTrackFile(ctx context.Context, trackID string, w io.Writer) error {
+	track, err := m.db.GetTrackFromID(ctx, trackID)
+	if err != nil {
+		return err
+	}
+
+	if track.FilePath == "" {
+		return fmt.Errorf("file does not exist for track '%s'", trackID)
+	}
+
+	f, err := os.Open(track.FilePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = io.Copy(w, f)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (m MediaManager) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.Track, error) {
