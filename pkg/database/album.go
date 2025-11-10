@@ -152,3 +152,21 @@ func (d Database) ListAlbumsByArtist(ctx context.Context, artistID string) (albu
 
 	return
 }
+
+func (d Database) ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error) {
+	query := `
+        SELECT id
+        FROM albums
+        WHERE
+          created_at > ?
+          OR
+          updated_at > ?
+        ;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &albumIDs, query, since, since)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}

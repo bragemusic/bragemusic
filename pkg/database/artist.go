@@ -133,3 +133,21 @@ func (d Database) ListArtists(ctx context.Context) (artists []types.Artist, err 
 
 	return
 }
+
+func (d Database) ListUpdatedArtists(ctx context.Context, since time.Time) (artistIDs []string, err error) {
+	query := `
+        SELECT id
+        FROM artists
+        WHERE
+          created_at > ?
+          OR
+          updated_at > ?
+        ;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &artistIDs, query, since, since)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
