@@ -34,6 +34,8 @@ func (s Server) Handler() http.Handler {
 	r.Get("/tracks/{trackID}", s.getTrack())
 	r.Get("/tracks/{trackID}/file", s.getTrackFile())
 
+	r.Post("/sync", s.sync())
+
 	return r
 }
 

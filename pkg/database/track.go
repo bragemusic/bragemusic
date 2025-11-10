@@ -257,3 +257,21 @@ func (d Database) GetTrackFromName(ctx context.Context, albumID string, trackNam
 
 	return
 }
+
+func (d Database) ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error) {
+	query := `
+        SELECT id
+        FROM tracks
+        WHERE
+          created_at > ?
+          OR
+          updated_at > ?
+        ;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &trackIDs, query, since, since)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}

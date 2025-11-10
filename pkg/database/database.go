@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql/driver"
 	"errors"
+	"time"
 
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/jmoiron/sqlx"
@@ -21,6 +22,7 @@ type DatabaseFace interface {
 	GetEnhancedAlbumFromID(ctx context.Context, id string) (album types.AlbumEnhanced, err error)
 	GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]types.Album, error)
 	ListAlbumsByArtist(ctx context.Context, artistID string) (albums []types.Album, err error)
+	ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error)
 
 	AddArtist(ctx context.Context, a types.Artist) (string, error)
 	UpdateArtist(ctx context.Context, a types.Artist) error
@@ -28,6 +30,7 @@ type DatabaseFace interface {
 	GetArtistFromMbID(ctx context.Context, mbID string) (artist types.Artist, err error)
 	GetArtistFromName(ctx context.Context, name string) (artist types.Artist, err error)
 	ListArtists(ctx context.Context) (artists []types.Artist, err error)
+	ListUpdatedArtists(ctx context.Context, since time.Time) (artistIDs []string, err error)
 
 	AddTrack(ctx context.Context, t types.Track) (string, error)
 	AddTracks(ctx context.Context, tracks []types.Track) ([]string, error)
@@ -38,6 +41,7 @@ type DatabaseFace interface {
 	GetTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.Track, err error)
 	GetEnhancedTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.TrackEnhanced, err error)
 	GetTrackFromName(ctx context.Context, albumID string, trackName string) (track types.Track, err error)
+	ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error)
 
 	// // User Handling
 	// AddUser(ctx context.Context, user *DbUser) (bool, error)

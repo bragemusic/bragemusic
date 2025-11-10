@@ -1,6 +1,7 @@
 package serverclient
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"log/slog"
@@ -19,6 +20,30 @@ func (s ServerClient) do(ctx context.Context, req *http.Request) (*http.Response
 
 func (s ServerClient) doGetJson(ctx context.Context, u string, target any) error {
 	req, err := http.NewRequest(http.MethodGet, u, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.do(ctx, req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if err := json.NewDecoder(resp.Body).Decode(&target); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s ServerClient) doPostJson(ctx context.Context, u string, payload any, target any) error {
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPost, u, bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		return err
 	}
