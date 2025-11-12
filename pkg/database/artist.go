@@ -51,6 +51,22 @@ func (d Database) AddArtist(ctx context.Context, a types.Artist) (string, error)
 	return a.ID, nil
 }
 
+func (d Database) ArtistExists(ctx context.Context, ID string) (bool, error) {
+	const query = `
+        SELECT COUNT(1)
+        FROM artists
+        WHERE id = ?;
+    `
+
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query, ID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
 func (d Database) UpdateArtist(ctx context.Context, a types.Artist) error {
 	query := `
         UPDATE artists

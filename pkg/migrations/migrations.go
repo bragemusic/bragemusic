@@ -2,7 +2,6 @@ package migrations
 
 import (
 	"context"
-	"embed"
 	"fmt"
 	"log/slog"
 	"net/url"
@@ -10,10 +9,8 @@ import (
 
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/sqlite"
+	dbMigrations "github.com/bragemusic/core/db"
 )
-
-//go:embed migrations/*.sql
-var fs embed.FS
 
 func Migrate(ctx context.Context, databasePath string, slogHandler slog.Handler) error {
 	logger := slog.New(slogHandler).With("service", "migrations")
@@ -30,7 +27,7 @@ func Migrate(ctx context.Context, databasePath string, slogHandler slog.Handler)
 	}
 
 	db := dbmate.New(u)
-	db.FS = fs
+	db.FS = dbMigrations.FS
 	db.MigrationsDir = []string{"migrations"}
 	db.AutoDumpSchema = false
 	db.Log = sw

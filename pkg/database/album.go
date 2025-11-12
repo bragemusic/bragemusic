@@ -53,6 +53,22 @@ func (d Database) AddAlbum(ctx context.Context, a types.Album) (string, error) {
 	return a.ID, nil
 }
 
+func (d Database) AlbumExists(ctx context.Context, ID string) (bool, error) {
+	const query = `
+        SELECT COUNT(1)
+        FROM albums
+        WHERE id = ?;
+    `
+
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query, ID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
 func (d Database) GetAlbumFromArtistAndName(ctx context.Context, artistName, albumName string) (album types.Album, err error) {
 	query := `
        SELECT a.*

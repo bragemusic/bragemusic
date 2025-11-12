@@ -16,6 +16,7 @@ type DatabaseFace interface {
 	driver.Tx
 
 	AddAlbum(ctx context.Context, a types.Album) (string, error)
+	AlbumExists(ctx context.Context, ID string) (bool, error)
 	GetAlbumFromArtistAndName(ctx context.Context, artistName, albumName string) (album types.Album, err error)
 	GetAlbumFromMbID(ctx context.Context, mbID string) (album types.Album, err error)
 	GetAlbumFromID(ctx context.Context, id string) (album types.Album, err error)
@@ -25,6 +26,7 @@ type DatabaseFace interface {
 	ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error)
 
 	AddArtist(ctx context.Context, a types.Artist) (string, error)
+	ArtistExists(ctx context.Context, ID string) (bool, error)
 	UpdateArtist(ctx context.Context, a types.Artist) error
 	GetArtistFromID(ctx context.Context, id string) (artist types.Artist, err error)
 	GetArtistFromMbID(ctx context.Context, mbID string) (artist types.Artist, err error)

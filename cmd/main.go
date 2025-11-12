@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,7 +12,10 @@ import (
 	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/mediamanager"
+	"github.com/bragemusic/core/pkg/migrations"
 	"github.com/bragemusic/core/pkg/server"
+	"github.com/bragemusic/core/pkg/serverclient"
+	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/trackmgr"
 	"github.com/bragemusic/core/pkg/wiki"
 
@@ -63,9 +67,23 @@ func main() {
 	s := server.New(slogHandler, &m)
 
 	logger.Info(fmt.Sprintf("serving on port %s", scfg.Port))
-	if err = http.ListenAndServe(":"+scfg.Port, s.Handler()); err != nil {
-		logger.Error(err.Error())
-		return
+	go func() {
+		if err = http.ListenAndServe(":"+scfg.Port, s.Handler()); err != nil {
+			logger.Error(err.Error())
+			return
+		}
+	}()
+
+	sc := serverclient.New("http://picard.local:3000", slogHandler)
+	err = migrations.Migrate(context.Background(), "../data/server/data.db", slogHandler)
+	if err != nil {
+		panic(err)
+	}
+
+	sy := syncer.New(&sc, &db, slogHandler)
+	err = sy.Sync(context.Background())
+	if err != nil {
+		panic(err)
 	}
 
 	// imp := importer.New("importDir", &tm, slogHandler)
