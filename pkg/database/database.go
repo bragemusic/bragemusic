@@ -17,6 +17,7 @@ type DatabaseFace interface {
 
 	AddAlbum(ctx context.Context, a types.Album) (string, error)
 	AlbumExists(ctx context.Context, ID string) (bool, error)
+	UpdateAlbum(ctx context.Context, a types.Album) error
 	GetAlbumFromArtistAndName(ctx context.Context, artistName, albumName string) (album types.Album, err error)
 	GetAlbumFromMbID(ctx context.Context, mbID string) (album types.Album, err error)
 	GetAlbumFromID(ctx context.Context, id string) (album types.Album, err error)

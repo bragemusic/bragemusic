@@ -87,10 +87,9 @@ func (s Syncer) syncAlbums(ctx context.Context, tx database.DatabaseFace, albumI
 		}
 
 		if exists {
-			s.log.WarnContext(ctx, "cannot update yet")
-			// if err = tx.UpdateAlbum(ctx, serverArtist); err != nil {
-			// 	return err
-			// }
+			if err = tx.UpdateAlbum(ctx, serverAlbum); err != nil {
+				return err
+			}
 		} else {
 			if _, err = tx.AddAlbum(ctx, serverAlbum); err != nil {
 				return err

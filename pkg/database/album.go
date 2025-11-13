@@ -186,3 +186,28 @@ func (d Database) ListUpdatedAlbums(ctx context.Context, since time.Time) (album
 
 	return
 }
+
+func (d Database) UpdateAlbum(ctx context.Context, a types.Album) error {
+	query := `
+        UPDATE albums
+        SET
+            musicbrainz_id = :musicbrainz_id,
+            name = :name,
+            sort_name = :sort_name,
+            artist_id = :artist_id,
+            release_date = :release_date,
+            tracks = :tracks,
+            discs = :discs,
+            description = :description,
+            owner = :owner,
+            public = :public
+        WHERE id = :id;
+    `
+
+	_, err := sqlx.NamedExecContext(ctx, d.ext, query, a)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
