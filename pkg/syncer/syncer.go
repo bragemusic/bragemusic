@@ -5,13 +5,12 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
-	"github.com/bragemusic/core/pkg/utils"
-	"github.com/dhowden/tag"
 )
 
 type Syncer struct {
@@ -159,30 +158,11 @@ func (s Syncer) syncTracks(ctx context.Context, tx database.DatabaseFace, trackI
 			created += 1
 
 			if serverTrack.FilePath != "" {
-				// FIXME: This entire thing can be replaced with the actual FilePath from the serverTrack when it is a relative path in the server db
-				album, err := tx.GetAlbumFromID(ctx, *serverTrack.AlbumID)
-				if err != nil {
+				trackPath := filepath.Join(s.musicDir, serverTrack.FilePath)
+
+				if err = os.MkdirAll(filepath.Dir(trackPath), os.ModePerm); err != nil {
 					return 0, 0, err
 				}
-
-				artist, err := tx.GetArtistFromID(ctx, album.ArtistID)
-				if err != nil {
-					return 0, 0, err
-				}
-
-				albumFolder := utils.GenerateAlbumFolderPath(artist.Name, album.Name, s.musicDir)
-
-				if err = os.MkdirAll(albumFolder, os.ModePerm); err != nil {
-					return 0, 0, err
-				}
-
-				trackPath, err := utils.GenerateTrackPath(*serverTrack.DiscNumber, *serverTrack.TrackNumber, serverTrack.Title, tag.FileType(*serverTrack.MimeType), albumFolder)
-				if err != nil {
-					return 0, 0, err
-				}
-
-				// trackPath := serverTrack.FilePath
-				//////////////////////////////////////////////////////////////////////
 
 				dst, err := os.Create(trackPath)
 				if err != nil {

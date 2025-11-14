@@ -60,7 +60,7 @@ func main() {
 	tm := trackmgr.New(scfg, db, aid, w, slogHandler)
 	_ = tm
 
-	m := mediamanager.New(slogHandler, db)
+	m := mediamanager.New(slogHandler, db, "/home/lucas/dev/p/brage-player/data/music")
 
 	s := server.New(slogHandler, &m)
 

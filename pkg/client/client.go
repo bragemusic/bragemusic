@@ -54,7 +54,7 @@ func NewSyncer(config Config, slogHandler slog.Handler) (c Client, err error) {
 	}
 
 	sc := serverclient.New(config.ServerBaseURL, slogHandler)
-	mm := mediamanager.New(slogHandler, &db)
+	mm := mediamanager.New(slogHandler, &db, config.MusicDirPath)
 	sy := syncer.New(&sc, &db, config.MusicDirPath, slogHandler)
 
 	return Client{
