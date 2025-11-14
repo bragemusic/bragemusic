@@ -37,6 +37,8 @@ type DatabaseFace interface {
 
 	AddTrack(ctx context.Context, t types.Track) (string, error)
 	AddTracks(ctx context.Context, tracks []types.Track) ([]string, error)
+	TrackExists(ctx context.Context, ID string) (bool, error)
+	TrackExistsByNameAndAlbumID(ctx context.Context, title, albumID string) (bool, error)
 	UpdateTrack(ctx context.Context, t types.Track) error
 	UpdateTrackFromMbID(ctx context.Context, t types.Track) error
 	GetTrackFromMbID(ctx context.Context, mbID string) (track types.Track, err error)
@@ -45,6 +47,9 @@ type DatabaseFace interface {
 	GetEnhancedTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.TrackEnhanced, err error)
 	GetTrackFromName(ctx context.Context, albumID string, trackName string) (track types.Track, err error)
 	ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error)
+
+	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
+	GetLastSync(ctx context.Context) (sync types.DBSyncState, err error)
 
 	// // User Handling
 	// AddUser(ctx context.Context, user *DbUser) (bool, error)

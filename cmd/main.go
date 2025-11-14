@@ -10,12 +10,10 @@ import (
 
 	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/acoustid"
+	"github.com/bragemusic/core/pkg/client"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/mediamanager"
-	"github.com/bragemusic/core/pkg/migrations"
 	"github.com/bragemusic/core/pkg/server"
-	"github.com/bragemusic/core/pkg/serverclient"
-	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/trackmgr"
 	"github.com/bragemusic/core/pkg/wiki"
 
@@ -74,18 +72,19 @@ func main() {
 		}
 	}()
 
-	sc := serverclient.New("http://picard.local:3000", slogHandler)
-	err = migrations.Migrate(context.Background(), "../data/server/data.db", slogHandler)
+	syC, err := client.NewSyncer(client.Config{
+		ServerBaseURL: "http://localhost:3000",
+		MusicDirPath:  "/home/lucas/dev/p/brage/client_data/music",
+		ConfigPath:    "/home/lucas/dev/p/brage/client_data",
+		ImagePath:     "/home/lucas/dev/p/brage/client_data/img",
+	}, slogHandler)
 	if err != nil {
 		panic(err)
 	}
+	defer syC.Close()
 
-	sy := syncer.New(&sc, &db, slogHandler)
-	err = sy.Sync(context.Background())
+	err = syC.Sync(context.Background())
 	if err != nil {
 		panic(err)
 	}
-
-	// imp := importer.New("importDir", &tm, slogHandler)
-	// imp.Run(context.Background())
 }

@@ -21,42 +21,48 @@ type Config struct {
 }
 
 type Client struct {
-	sc     *serverclient.ServerClient
-	mm     *mediamanager.MediaManager
-	sy     *syncer.Syncer
-	config Config
-	log    *slog.Logger
+	sc      *serverclient.ServerClient
+	mm      *mediamanager.MediaManager
+	sy      *syncer.Syncer
+	config  Config
+	log     *slog.Logger
+	dbClose func() error
 }
 
 func (c Client) Sync(ctx context.Context) error {
 	return c.sy.Sync(ctx)
 }
 
-func NewSyncer(config Config, slogHandler slog.Handler) (c Client, dbCloseFunc func() error, err error) {
+func (c *Client) Close() error {
+	return c.dbClose()
+}
+
+func NewSyncer(config Config, slogHandler slog.Handler) (c Client, err error) {
 	dbPath := filepath.Join(config.ConfigPath, "data.db")
 	if err = migrations.Migrate(context.Background(), dbPath, slogHandler); err != nil {
-		return Client{}, nil, err
+		return Client{}, err
 	}
 
 	dbSqlite, err := sqlx.Open("sqlite3", dbPath)
 	if err != nil {
-		return Client{}, nil, err
+		return Client{}, err
 	}
 
 	db, err := database.New(dbSqlite)
 	if err != nil {
-		return Client{}, dbSqlite.Close, err
+		return Client{}, err
 	}
 
 	sc := serverclient.New(config.ServerBaseURL, slogHandler)
 	mm := mediamanager.New(slogHandler, &db)
-	sy := syncer.New(&sc, &db, slogHandler)
+	sy := syncer.New(&sc, &db, config.MusicDirPath, slogHandler)
 
 	return Client{
-		sc:     &sc,
-		mm:     &mm,
-		sy:     &sy,
-		config: config,
-		log:    slog.New(slogHandler).With("service", "client"),
-	}, dbSqlite.Close, nil
+		sc:      &sc,
+		mm:      &mm,
+		sy:      &sy,
+		config:  config,
+		log:     slog.New(slogHandler).With("service", "client"),
+		dbClose: dbSqlite.Close,
+	}, nil
 }
