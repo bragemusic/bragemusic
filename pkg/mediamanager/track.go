@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/bragemusic/core/pkg/types"
 )
@@ -28,7 +29,7 @@ func (m MediaManager) GetTrackFile(ctx context.Context, trackID string, w io.Wri
 		return fmt.Errorf("file does not exist for track '%s'", trackID)
 	}
 
-	f, err := os.Open(track.FilePath)
+	f, err := os.Open(filepath.Join(m.musicDir, track.FilePath))
 	if err != nil {
 		return err
 	}

@@ -19,7 +19,7 @@ func (d Database) AddTracks(ctx context.Context, tracks []types.Track) (ids []st
 			}
 		}
 
-		trackExists, err := d.TrackExists(ctx, track.Title, *track.AlbumID)
+		trackExists, err := d.TrackExistsByNameAndAlbumID(ctx, track.Title, *track.AlbumID)
 		if err != nil {
 			return nil, err
 		}
@@ -95,7 +95,23 @@ func (d Database) AddTrack(ctx context.Context, t types.Track) (string, error) {
 	return t.ID, nil
 }
 
-func (d Database) TrackExists(ctx context.Context, title, albumID string) (bool, error) {
+func (d Database) TrackExists(ctx context.Context, ID string) (bool, error) {
+	const query = `
+        SELECT COUNT(1)
+        FROM tracks
+        WHERE id = ?;
+    `
+
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query, ID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func (d Database) TrackExistsByNameAndAlbumID(ctx context.Context, title, albumID string) (bool, error) {
 	const query = `
         SELECT COUNT(1)
         FROM tracks

@@ -3,7 +3,11 @@ package utils
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
+	"path"
+	"path/filepath"
+	"strings"
 
 	"github.com/dhowden/tag"
 )
@@ -26,4 +30,24 @@ func SaveID3Image(ctx context.Context, img *tag.Picture, filename string) error 
 	f.Write(img.Data)
 
 	return nil
+}
+
+func GenerateAlbumFolderPath(artist, album, musicDir string) string {
+	artist = strings.ReplaceAll(artist, " ", "_")
+	album = strings.ReplaceAll(album, " ", "_")
+
+	return path.Join(musicDir, artist, album)
+}
+
+func GenerateTrackPath(discNumber, trackNumber int, trackTitle string, format tag.FileType, albumFolder string) (string, error) {
+	if format == "" {
+		return "", fmt.Errorf("unknown fileformat for track '%s'", trackTitle)
+	}
+
+	trackTitle = strings.ReplaceAll(trackTitle, " ", "_")
+	trackTitle = strings.ReplaceAll(trackTitle, "/", "_")
+
+	filename := fmt.Sprintf("%02d-%02d-%s.%s", discNumber, trackNumber, trackTitle, strings.ToLower(string(format)))
+
+	return filepath.Join(albumFolder, filename), nil
 }

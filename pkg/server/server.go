@@ -14,15 +14,22 @@ type (
 	handlerFuncErrVoid func(http.ResponseWriter, *http.Request) (*int, error)
 )
 
+type Config struct {
+	ImagePath string
+}
+
 type Server struct {
 	log      *slog.Logger
 	mediamgr *mediamanager.MediaManager
+	config   Config
 }
 
 func (s Server) Handler() http.Handler {
 	r := chi.NewRouter()
 
 	r.Get("/healthz", s.healthz())
+
+	r.Get("/img/*", s.getImage())
 
 	r.Get("/artists", s.listArtists())
 	r.Get("/artists/{artistID}", s.getArtist())
@@ -109,9 +116,10 @@ func (s Server) handleJSON(f handlerFuncErrJson) http.HandlerFunc {
 	}
 }
 
-func New(slogHandler slog.Handler, m *mediamanager.MediaManager) Server {
+func New(slogHandler slog.Handler, m *mediamanager.MediaManager, c Config) Server {
 	return Server{
 		log:      slog.New(slogHandler).With("service", "server"),
 		mediamgr: m,
+		config:   c,
 	}
 }

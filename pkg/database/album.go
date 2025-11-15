@@ -53,6 +53,22 @@ func (d Database) AddAlbum(ctx context.Context, a types.Album) (string, error) {
 	return a.ID, nil
 }
 
+func (d Database) AlbumExists(ctx context.Context, ID string) (bool, error) {
+	const query = `
+        SELECT COUNT(1)
+        FROM albums
+        WHERE id = ?;
+    `
+
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query, ID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
 func (d Database) GetAlbumFromArtistAndName(ctx context.Context, artistName, albumName string) (album types.Album, err error) {
 	query := `
        SELECT a.*
@@ -169,4 +185,29 @@ func (d Database) ListUpdatedAlbums(ctx context.Context, since time.Time) (album
 	}
 
 	return
+}
+
+func (d Database) UpdateAlbum(ctx context.Context, a types.Album) error {
+	query := `
+        UPDATE albums
+        SET
+            musicbrainz_id = :musicbrainz_id,
+            name = :name,
+            sort_name = :sort_name,
+            artist_id = :artist_id,
+            release_date = :release_date,
+            tracks = :tracks,
+            discs = :discs,
+            description = :description,
+            owner = :owner,
+            public = :public
+        WHERE id = :id;
+    `
+
+	_, err := sqlx.NamedExecContext(ctx, d.ext, query, a)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
