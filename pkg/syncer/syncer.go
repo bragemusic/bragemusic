@@ -18,6 +18,7 @@ type Syncer struct {
 	db       database.DatabaseFace
 	log      *slog.Logger
 	musicDir string
+	imgDir   string
 }
 
 func (s Syncer) Sync(ctx context.Context) error {
@@ -98,6 +99,28 @@ func (s Syncer) syncArtists(ctx context.Context, tx database.DatabaseFace, artis
 			}
 			created += 1
 		}
+
+		filename := filepath.Join(s.imgDir, "artists", fmt.Sprintf("%s.jpg", aID))
+
+		if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
+			return 0, 0, err
+		}
+
+		dst, err := os.Create(filename)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		s.log.DebugContext(ctx, fmt.Sprintf("downloading artist image '%s' to '%s'", aID, filename))
+
+		if err = s.sc.DownloadArtistImage(ctx, aID, dst); err != nil {
+			dst.Close()
+			return 0, 0, err
+		}
+
+		if err = dst.Close(); err != nil {
+			return 0, 0, err
+		}
 	}
 
 	return created, updated, nil
@@ -127,6 +150,29 @@ func (s Syncer) syncAlbums(ctx context.Context, tx database.DatabaseFace, albumI
 			}
 			created += 1
 		}
+
+		filename := filepath.Join(s.imgDir, "albums", fmt.Sprintf("%s.jpg", aID))
+
+		if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
+			return 0, 0, err
+		}
+
+		dst, err := os.Create(filename)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		s.log.DebugContext(ctx, fmt.Sprintf("downloading album cover '%s' to '%s'", aID, filename))
+
+		if err = s.sc.DownloadAlbumCover(ctx, aID, dst); err != nil {
+			dst.Close()
+			return 0, 0, err
+		}
+
+		if err = dst.Close(); err != nil {
+			return 0, 0, err
+		}
+
 	}
 
 	return created, updated, nil
@@ -187,11 +233,12 @@ func (s Syncer) syncTracks(ctx context.Context, tx database.DatabaseFace, trackI
 	return created, updated, nil
 }
 
-func New(sc *serverclient.ServerClient, db database.DatabaseFace, musicDir string, slogHandler slog.Handler) Syncer {
+func New(sc *serverclient.ServerClient, db database.DatabaseFace, musicDir, imgDir string, slogHandler slog.Handler) Syncer {
 	return Syncer{
 		sc:       sc,
 		db:       db,
 		musicDir: musicDir,
+		imgDir:   imgDir,
 		log:      slog.New(slogHandler).With("service", "syncer"),
 	}
 }

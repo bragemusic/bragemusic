@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 )
@@ -55,6 +56,26 @@ func (s ServerClient) doPostJson(ctx context.Context, u string, payload any, tar
 	defer resp.Body.Close()
 
 	if err := json.NewDecoder(resp.Body).Decode(&target); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s ServerClient) downloadFile(ctx context.Context, u string, w io.Writer) error {
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.do(ctx, req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	_, err = io.Copy(w, resp.Body)
+	if err != nil {
 		return err
 	}
 

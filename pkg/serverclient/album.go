@@ -2,10 +2,21 @@ package serverclient
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"net/url"
 
 	"github.com/bragemusic/core/pkg/types"
 )
+
+func (s ServerClient) DownloadAlbumCover(ctx context.Context, albumID string, w io.Writer) error {
+	u, err := url.JoinPath(s.baseUrl, "img", "albums", fmt.Sprintf("%s.jpg", albumID))
+	if err != nil {
+		return err
+	}
+
+	return s.downloadFile(ctx, u, w)
+}
 
 func (s ServerClient) GetAlbum(ctx context.Context, albumID string) (album types.Album, err error) {
 	u, err := url.JoinPath(s.baseUrl, "albums", albumID)

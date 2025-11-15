@@ -3,7 +3,6 @@ package serverclient
 import (
 	"context"
 	"io"
-	"net/http"
 	"net/url"
 
 	"github.com/bragemusic/core/pkg/types"
@@ -15,23 +14,7 @@ func (s ServerClient) DownloadTrackFile(ctx context.Context, trackID string, w i
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodGet, u, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := s.do(ctx, req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	_, err = io.Copy(w, resp.Body)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return s.downloadFile(ctx, u, w)
 }
 
 func (s ServerClient) GetTrack(ctx context.Context, trackID string) (track types.Track, err error) {

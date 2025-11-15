@@ -1,15 +1,17 @@
 package main
 
 import (
-	"context"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"time"
 
 	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/acoustid"
-	"github.com/bragemusic/core/pkg/client"
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/mediamanager"
+	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/trackmgr"
 	"github.com/bragemusic/core/pkg/wiki"
 
@@ -56,32 +58,14 @@ func main() {
 	tm := trackmgr.New(scfg, db, aid, w, slogHandler)
 	_ = tm
 
-	// m := mediamanager.New(slogHandler, db, "/home/lucas/dev/p/brage-player/data/music")
+	m := mediamanager.New(slogHandler, db, "/home/lucas/dev/p/brage-player/data/music")
 
-	// sc := server.Config{ImagePath: "/home/lucas/dev/brage-player/data/img"}
-	// s := server.New(slogHandler, &m, sc)
+	sc := server.Config{ImagePath: "/home/lucas/dev/brage-player/data/img"}
+	s := server.New(slogHandler, &m, sc)
 
-	// logger.Info(fmt.Sprintf("serving on port %s", scfg.Port))
-	// go func() {
-	// 	if err = http.ListenAndServe(":"+scfg.Port, s.Handler()); err != nil {
-	// 		logger.Error(err.Error())
-	// 		return
-	// 	}
-	// }()
-
-	syC, err := client.NewSyncer(client.Config{
-		ServerBaseURL: "http://localhost:3000",
-		MusicDirPath:  "/home/lucas/dev/brage/client_data/music",
-		ConfigPath:    "/home/lucas/dev/brage/client_data",
-		ImagePath:     "/home/lucas/dev/brage/client_data/img",
-	}, slogHandler)
-	if err != nil {
-		panic(err)
-	}
-	defer syC.Close()
-
-	err = syC.Sync(context.Background())
-	if err != nil {
-		panic(err)
+	logger.Info(fmt.Sprintf("serving on port %s", scfg.Port))
+	if err = http.ListenAndServe(":"+scfg.Port, s.Handler()); err != nil {
+		logger.Error(err.Error())
+		return
 	}
 }
