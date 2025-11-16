@@ -32,11 +32,11 @@ func SaveID3Image(ctx context.Context, img *tag.Picture, filename string) error 
 	return nil
 }
 
-func GenerateAlbumFolderPath(artist, album, musicDir string) string {
+func GenerateAlbumFolderPath(artist, album string) string {
 	artist = strings.ReplaceAll(artist, " ", "_")
 	album = strings.ReplaceAll(album, " ", "_")
 
-	return path.Join(musicDir, artist, album)
+	return path.Join(artist, album)
 }
 
 func GenerateTrackPath(discNumber, trackNumber int, trackTitle string, format tag.FileType, albumFolder string) (string, error) {

@@ -41,7 +41,7 @@ func main() {
 	}
 	defer dbSqlite.Close()
 
-	aid, err := acoustid.New(scfg.AcoustIDApiKey)
+	aid, err := acoustid.New(scfg.AcoustIDApiKey, slogHandler)
 	if err != nil {
 		logger.Error(err.Error())
 		return

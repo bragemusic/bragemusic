@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"net/http"
 	"net/url"
@@ -59,10 +60,12 @@ type AcoustMatch struct {
 
 type AcoustID struct {
 	apiKey      string
+	log         *slog.Logger
 	lastReqTime time.Time
 }
 
 func (a *AcoustID) GetMusicBrainzAlbumID(filename string) ([]AcoustMatch, error) {
+	a.log.Info(fmt.Sprintf("analyzing file '%s'", filename))
 	fpCalc, err := a.fpCalc(filename)
 	if err != nil {
 		return nil, err
@@ -77,7 +80,7 @@ func (a *AcoustID) GetMusicBrainzAlbumID(filename string) ([]AcoustMatch, error)
 	u := fmt.Sprintf("%s?%s", apiUrl, params.Encode())
 
 	if time.Now().Before(a.lastReqTime.Add(minReqTimeout)) {
-		fmt.Println("sleep")
+		a.log.Debug(fmt.Sprintf("sleeping for %d ms to avoid rate limit", minReqTimeout-time.Since(a.lastReqTime)))
 		time.Sleep(minReqTimeout - time.Since(a.lastReqTime))
 	}
 
@@ -139,7 +142,7 @@ func (a AcoustID) fpCalc(filename string) (fpCalcResp, error) {
 	return fpCalc, nil
 }
 
-func New(apiKey string) (AcoustID, error) {
+func New(apiKey string, slogHandler slog.Handler) (AcoustID, error) {
 	_, err := exec.LookPath("fpcalc")
 	if err != nil {
 		return AcoustID{}, errors.New("'fpcalc' command not found on the computer")
@@ -147,5 +150,6 @@ func New(apiKey string) (AcoustID, error) {
 
 	return AcoustID{
 		apiKey: apiKey,
+		log:    slog.New(slogHandler).With("service", "acousticID"),
 	}, nil
 }

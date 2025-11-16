@@ -44,7 +44,7 @@ func main() {
 		return
 	}
 
-	aid, err := acoustid.New(scfg.AcoustIDApiKey)
+	aid, err := acoustid.New(scfg.AcoustIDApiKey, slogHandler)
 	if err != nil {
 		logger.Error(err.Error())
 		return
@@ -52,7 +52,7 @@ func main() {
 
 	w := wiki.New(scfg.WikiEmail)
 
-	imp := importer.New("/home/lucas/dev/brage/importDir", &db, musicbrainz.MusicBrainz{}, aid, w, slogHandler)
+	imp := importer.New("/home/lucas/dev/brage/importDir", "/home/lucas/dev/brage/data/music", &db, musicbrainz.MusicBrainz{}, aid, w, slogHandler)
 
 	imp.Run(context.Background())
 }

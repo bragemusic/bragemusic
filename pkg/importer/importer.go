@@ -19,6 +19,7 @@ import (
 
 type Importer struct {
 	importDir string
+	musicDir  string
 	db        database.DatabaseFace
 	mb        musicbrainz.MusicBrainz
 	aid       acoustid.AcoustID
@@ -85,10 +86,10 @@ func (i Importer) unzipMusicFiles(ctx context.Context, filename, targetDir strin
 	defer archive.Close()
 
 	for _, f := range archive.File {
-		if filepath.Ext(f.Name) != ".flac" {
+		if f.FileInfo().IsDir() {
 			continue
 		}
-		filePath := filepath.Join(targetDir, f.Name)
+		filePath := filepath.Join(targetDir, filepath.Base(f.Name))
 
 		if !strings.HasPrefix(filePath, filepath.Clean(targetDir)+string(os.PathSeparator)) {
 			return fmt.Errorf("invalid file path '%s'", filePath)
@@ -151,9 +152,10 @@ func (i *Importer) Run(ctx context.Context) {
 	i.log.InfoContext(ctx, "import check done")
 }
 
-func New(importDir string, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, wiki wiki.Wiki, slogHandler slog.Handler) Importer {
+func New(importDir, musicDir string, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, wiki wiki.Wiki, slogHandler slog.Handler) Importer {
 	return Importer{
 		importDir: importDir,
+		musicDir:  musicDir,
 		db:        db,
 		mb:        mb,
 		aid:       aid,
