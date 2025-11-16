@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/dhowden/tag"
@@ -50,4 +51,29 @@ func GenerateTrackPath(discNumber, trackNumber int, trackTitle string, format ta
 	filename := fmt.Sprintf("%02d-%02d-%s.%s", discNumber, trackNumber, trackTitle, strings.ToLower(string(format)))
 
 	return filepath.Join(albumFolder, filename), nil
+}
+
+func HighestCount(ss []string) string {
+	uss := slices.Compact(ss)
+	counts := map[string]int{}
+
+	for _, s := range uss {
+		counts[s] = 0
+		for _, a := range ss {
+			if a == s {
+				counts[s]++
+			}
+		}
+	}
+
+	bestName := ""
+	bestCnt := -1
+	for an, ac := range counts {
+		if ac > bestCnt {
+			bestName = an
+			bestCnt = ac
+		}
+	}
+
+	return bestName
 }
