@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/bragemusic/core/pkg/acoustid"
+	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/utils"
 	"github.com/samber/lo"
 )
@@ -98,7 +99,7 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalys
 			} else if aares.Tracks[tidx].Name != nil {
 				for discNmbr, media := range mbAlbum.Media {
 					for _, mbT := range media.Tracks {
-						if utils.CompareTwoStrings(*aa, stringTwo string)
+						// if utils.CompareTwoStrings(*aa, stringTwo string)
 						fmt.Println(*aares.Tracks[tidx].Name)
 					}
 				}
@@ -116,6 +117,42 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalys
 	panic("hej")
 
 	return AlbumAnalysisResults{}, nil
+}
+
+func (i Importer) matchRemainingTracks(tracks []Track, mbAlbum musicbrainz.Release) ([]Track, error) {
+	usedIDs := []string{}
+	for _, t := range tracks {
+		if t.MbID != nil {
+			usedIDs = append(usedIDs, *t.MbID)
+		}
+	}
+
+	for tidx := range tracks {
+		if tracks[tidx].MbID == nil {
+			possibleIds := []string{}
+			if tracks[tidx].DiscNumber != nil && tracks[tidx].TrackNumber != nil {
+				for discNmbr, media := range mbAlbum.Media {
+					for _, mbT := range media.Tracks {
+						if discNmbr == *tracks[tidx].DiscNumber && mbT.Position == *tracks[tidx].TrackNumber {
+							possibleIds = append(possibleIds, mbT.ID)
+							break
+						}
+					}
+				}
+			} else if aares.Tracks[tidx].Name != nil {
+				for discNmbr, media := range mbAlbum.Media {
+					for _, mbT := range media.Tracks {
+						// if utils.CompareTwoStrings(*aa, stringTwo string)
+						fmt.Println(*aares.Tracks[tidx].Name)
+					}
+				}
+			}
+
+			// FIXME: match first on track and disc number. If not possible, match on name of track but make sure that the results are not already used by another track that is alredy matched.
+			// If none of above works, only return ID3 tags as is
+			fmt.Println("ejeje", *aares.Tracks[tidx].Name)
+		}
+	}
 }
 
 func (i Importer) getBestMatchedMbID(aids [][]acoustid.AcoustMatch, id3Album string) (MbAlbum, error) {
