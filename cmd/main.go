@@ -71,9 +71,9 @@ func main() {
 
 	syC, err := client.NewSyncer(client.Config{
 		ServerBaseURL: "http://localhost:3000",
-		MusicDirPath:  "/home/lucas/dev/brage/client_data/music",
-		ConfigPath:    "/home/lucas/dev/brage/client_data",
-		ImagePath:     "/home/lucas/dev/brage/client_data/img",
+		MusicDirPath:  "/home/lucas/dev/p/brage/client_data/music",
+		ConfigPath:    "/home/lucas/dev/p/brage/client_data",
+		ImagePath:     "/home/lucas/dev/p/brage/client_data/img",
 	}, slogHandler)
 	if err != nil {
 		panic(err)

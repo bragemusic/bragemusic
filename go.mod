@@ -18,10 +18,12 @@ require (
 	github.com/mewpkg/term v0.0.0-20241026122259-37a80af23985 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
+	golang.org/x/text v0.27.0 // indirect
 )
 
 require (
 	github.com/amacneil/dbmate/v2 v2.28.0
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/mewkiz/flac v1.0.13
+	github.com/samber/lo v1.52.0
 )

@@ -22,7 +22,7 @@ func main() {
 		slog.Error(err.Error())
 		return
 	}
-	scfg.DBPath = "/home/lucas/dev/brage/data/config/data.db"
+	scfg.DBPath = "/home/lucas/dev/p/brage/data/config/data.db"
 
 	slogHandler := tint.NewHandler(os.Stderr, &tint.Options{
 		Level:      slog.LevelDebug,
@@ -52,7 +52,7 @@ func main() {
 
 	w := wiki.New(scfg.WikiEmail)
 
-	imp := importer.New("/home/lucas/dev/brage/importDir", "/home/lucas/dev/brage/data/music", &db, musicbrainz.MusicBrainz{}, aid, w, slogHandler)
+	imp := importer.New("/home/lucas/dev/p/brage/importDir", "/home/lucas/dev/p/brage/data/music", &db, musicbrainz.MusicBrainz{}, aid, w, slogHandler)
 
 	imp.Run(context.Background())
 }
