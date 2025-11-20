@@ -27,13 +27,15 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalys
 	i.log.InfoContext(ctx, "getting album name from ID3")
 	id3Artist, id3Album, id3Year, id3Tracks, mdPics, err := i.getID3Info(ctx, files)
 	if err != nil {
+		if errors.Is(err, ErrId3AlbumNotFound) {
+			return AlbumAnalysisResults{}, errors.New("FIXME: See if there is something we can do when no ID3Album exists.. Maybe we can continue with one of the MB albums anyway and it should be ok. Exile on main street can be ued for test")
+		}
 		return AlbumAnalysisResults{}, err
 	}
 
 	matchedAlbum, err := i.getBestMatchedMbID(aids, id3Album)
 	if err != nil {
 		if errors.Is(err, ErrAlbumMbIDNotFound) {
-			// FIXME return only ID3 info
 			i.log.WarnContext(ctx, "could not find MusicBrainzID, using ID3 instead", "album", id3Album)
 			return AlbumAnalysisResults{
 				Id3Artist:      id3Artist,
