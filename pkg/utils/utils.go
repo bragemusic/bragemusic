@@ -2,7 +2,6 @@ package utils
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -17,11 +16,7 @@ func Ptr[T any](t T) *T {
 	return &t
 }
 
-func SaveID3Image(ctx context.Context, img *tag.Picture, filename string) error {
-	if img == nil {
-		return errors.New("no image data in ID3 tag")
-	}
-
+func SaveID3Image(ctx context.Context, img tag.Picture, filename string) error {
 	f, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -53,9 +48,9 @@ func GenerateTrackPath(discNumber, trackNumber int, trackTitle string, format ta
 	return filepath.Join(albumFolder, filename), nil
 }
 
-func HighestCount(ss []string) string {
+func HighestCount[T comparable](ss []T) T {
 	uss := slices.Compact(ss)
-	counts := map[string]int{}
+	counts := map[T]int{}
 
 	for _, s := range uss {
 		counts[s] = 0
@@ -66,8 +61,8 @@ func HighestCount(ss []string) string {
 		}
 	}
 
-	bestName := ""
-	bestCnt := -1
+	bestName := ss[0]
+	bestCnt := counts[ss[0]]
 	for an, ac := range counts {
 		if ac > bestCnt {
 			bestName = an

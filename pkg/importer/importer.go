@@ -14,12 +14,16 @@ import (
 	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/musicbrainz"
+	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/core/pkg/utils"
 	"github.com/bragemusic/core/pkg/wiki"
+	"github.com/dhowden/tag"
 )
 
 type Importer struct {
 	importDir string
 	musicDir  string
+	imageDir  string
 	db        database.DatabaseFace
 	mb        musicbrainz.MusicBrainz
 	aid       acoustid.AcoustID
@@ -172,6 +176,38 @@ func (i Importer) copyFile(ctx context.Context, from, to string) error {
 	return nil
 }
 
+func (i Importer) downloadAlbumCover(ctx context.Context, album types.Album, mdPictures []*tag.Picture) error {
+	dir := filepath.Join(i.imageDir, "albums")
+
+	if album.MusicBrainzID != nil {
+		i.log.InfoContext(ctx, "downloading album cover from MusicBrainz", "album", album.Name)
+
+		err := i.mb.DownloadCoverArt(ctx, *album.MusicBrainzID, album.ID, dir)
+		if err == nil {
+			return nil
+		}
+
+		i.log.WarnContext(ctx, "could not get album cover from MusicBrainz")
+	}
+
+	i.log.InfoContext(ctx, "grabbing from ID3 instead")
+	for _, pic := range mdPictures {
+		if pic == nil {
+			continue
+		}
+
+		imgFilename := filepath.Join(dir, fmt.Sprintf("%s.%s", album.ID, pic.Ext))
+		err := utils.SaveID3Image(ctx, *pic, imgFilename)
+		if err != nil {
+			i.log.WarnContext(ctx, "could not get image from ID3", "error", err.Error())
+			continue
+		}
+		return nil
+	}
+
+	return fmt.Errorf("could not get album cover for album '%s'", album.ID)
+}
+
 func (i *Importer) Run(ctx context.Context) {
 	i.log.InfoContext(ctx, "starting import check")
 
@@ -183,10 +219,11 @@ func (i *Importer) Run(ctx context.Context) {
 	i.log.InfoContext(ctx, "import check done")
 }
 
-func New(importDir, musicDir string, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, wiki wiki.Wiki, slogHandler slog.Handler) Importer {
+func New(importDir, musicDir, imageDir string, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, wiki wiki.Wiki, slogHandler slog.Handler) Importer {
 	return Importer{
 		importDir: importDir,
 		musicDir:  musicDir,
+		imageDir:  imageDir,
 		db:        db,
 		mb:        mb,
 		aid:       aid,

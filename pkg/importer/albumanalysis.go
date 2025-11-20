@@ -25,7 +25,7 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalys
 	}
 
 	i.log.InfoContext(ctx, "getting album name from ID3")
-	id3Artist, id3Album, id3Tracks, err := i.getID3Info(ctx, files)
+	id3Artist, id3Album, id3Year, id3Tracks, mdPics, err := i.getID3Info(ctx, files)
 	if err != nil {
 		return AlbumAnalysisResults{}, err
 	}
@@ -34,7 +34,15 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalys
 	if err != nil {
 		if errors.Is(err, ErrAlbumMbIDNotFound) {
 			// FIXME return only ID3 info
-			return AlbumAnalysisResults{}, errors.New("FIXME not implemented")
+			i.log.WarnContext(ctx, "could not find MusicBrainzID, using ID3 instead", "album", id3Album)
+			return AlbumAnalysisResults{
+				Id3Artist:      id3Artist,
+				Id3Album:       id3Album,
+				Id3ReleaseDate: id3Year,
+				Files:          files,
+				Tracks:         id3Tracks,
+				Covers:         mdPics,
+			}, ErrAlbumMbIDNotFound
 		}
 		return AlbumAnalysisResults{}, err
 	}
@@ -89,6 +97,8 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalys
 	if err != nil {
 		return AlbumAnalysisResults{}, err
 	}
+
+	aares.Covers = mdPics
 
 	return aares, nil
 }
