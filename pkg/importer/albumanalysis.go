@@ -4,7 +4,6 @@ import (
 	"cmp"
 	"context"
 	"errors"
-	"fmt"
 	"slices"
 
 	"github.com/bragemusic/core/pkg/acoustid"
@@ -86,40 +85,16 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalys
 		}
 	}
 
-	for tidx := range aares.Tracks {
-		if aares.Tracks[tidx].MbID == nil {
-			if aares.Tracks[tidx].DiscNumber != nil && aares.Tracks[tidx].TrackNumber != nil {
-				for discNmbr, media := range mbAlbum.Media {
-					for _, mbT := range media.Tracks {
-						if discNmbr == *aares.Tracks[tidx].DiscNumber && mbT.Position == *aares.Tracks[tidx].TrackNumber {
-							fmt.Println("FoUND")
-						}
-					}
-				}
-			} else if aares.Tracks[tidx].Name != nil {
-				for discNmbr, media := range mbAlbum.Media {
-					for _, mbT := range media.Tracks {
-						// if utils.CompareTwoStrings(*aa, stringTwo string)
-						fmt.Println(*aares.Tracks[tidx].Name)
-					}
-				}
-			}
-
-			// FIXME: match first on track and disc number. If not possible, match on name of track but make sure that the results are not already used by another track that is alredy matched.
-			// If none of above works, only return ID3 tags as is
-			fmt.Println("ejeje", *aares.Tracks[tidx].Name)
-		}
+	aares.Tracks, err = i.matchRemainingTracks(ctx, aares.Tracks, mbAlbum)
+	if err != nil {
+		return AlbumAnalysisResults{}, err
 	}
 
-	fmt.Println(aares)
-	_ = id3Artist
-	_ = id3Tracks
-	panic("hej")
-
-	return AlbumAnalysisResults{}, nil
+	return aares, nil
 }
 
-func (i Importer) matchRemainingTracks(tracks []Track, mbAlbum musicbrainz.Release) ([]Track, error) {
+func (i Importer) matchRemainingTracks(ctx context.Context, tracks []Track, mbAlbum musicbrainz.Release) ([]Track, error) {
+	// List used MusicBrainz IDs
 	usedIDs := []string{}
 	for _, t := range tracks {
 		if t.MbID != nil {
@@ -127,32 +102,84 @@ func (i Importer) matchRemainingTracks(tracks []Track, mbAlbum musicbrainz.Relea
 		}
 	}
 
-	for tidx := range tracks {
-		if tracks[tidx].MbID == nil {
-			possibleIds := []string{}
-			if tracks[tidx].DiscNumber != nil && tracks[tidx].TrackNumber != nil {
-				for discNmbr, media := range mbAlbum.Media {
-					for _, mbT := range media.Tracks {
-						if discNmbr == *tracks[tidx].DiscNumber && mbT.Position == *tracks[tidx].TrackNumber {
-							possibleIds = append(possibleIds, mbT.ID)
-							break
-						}
-					}
-				}
-			} else if aares.Tracks[tidx].Name != nil {
-				for discNmbr, media := range mbAlbum.Media {
-					for _, mbT := range media.Tracks {
-						// if utils.CompareTwoStrings(*aa, stringTwo string)
-						fmt.Println(*aares.Tracks[tidx].Name)
-					}
-				}
+	availableTracks := []Track{}
+
+	// Create tracks for all remaining MusicBrainz IDs
+	for discNmbr, media := range mbAlbum.Media {
+		for _, mbT := range media.Tracks {
+			if slices.ContainsFunc(usedIDs, func(tID string) bool {
+				return mbT.ID == tID
+			}) {
+				continue
 			}
 
-			// FIXME: match first on track and disc number. If not possible, match on name of track but make sure that the results are not already used by another track that is alredy matched.
-			// If none of above works, only return ID3 tags as is
-			fmt.Println("ejeje", *aares.Tracks[tidx].Name)
+			availableTracks = append(availableTracks, Track{
+				TrackNumber: &mbT.Position,
+				DiscNumber:  utils.Ptr(discNmbr + 1),
+				Name:        &mbT.Title,
+				MbID:        &mbT.ID,
+			})
 		}
 	}
+
+	// Try to match the remaining tracks
+	for tidx := range tracks {
+		if tracks[tidx].MbID == nil {
+			var err error
+			tracks[tidx], availableTracks, err = i.matchTrack(ctx, tracks[tidx], availableTracks)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return tracks, nil
+}
+
+func (i Importer) matchTrack(ctx context.Context, track Track, availableTracks []Track) (Track, []Track, error) {
+	type match struct {
+		V   float32
+		Idx int
+	}
+
+	// First try matching using disc and track number
+	if track.DiscNumber != nil && track.TrackNumber != nil {
+		for tidx, t := range availableTracks {
+			if *t.DiscNumber == *track.DiscNumber && *t.TrackNumber == *track.TrackNumber {
+				i.log.DebugContext(ctx, "matched track using disc and track number", "track_id", *t.MbID)
+				t.File = track.File
+				availableTracks = slices.Delete(availableTracks, tidx, tidx)
+				return t, availableTracks, nil
+			}
+		}
+	}
+
+	stringMatch := []match{}
+
+	// If not possible with track and disc number, compare names of the tracks
+	for tidx, t := range availableTracks {
+		stringMatch = append(stringMatch, match{V: utils.CompareTwoStrings(*track.Name, *t.Name), Idx: tidx})
+	}
+
+	// Sort based on best match
+	slices.SortFunc(stringMatch, func(a, b match,
+	) int {
+		return cmp.Compare(b.V, a.V)
+	})
+
+	if len(stringMatch) == 0 {
+		return Track{}, availableTracks, errors.New("no tracks available")
+	}
+
+	tidx := stringMatch[0].Idx
+	t := availableTracks[tidx]
+
+	i.log.DebugContext(ctx, "matched track using name", "track_id", *t.MbID, "match_score", stringMatch[0].V)
+
+	t.File = track.File
+	availableTracks = slices.Delete(availableTracks, tidx, tidx)
+
+	return t, availableTracks, nil
 }
 
 func (i Importer) getBestMatchedMbID(aids [][]acoustid.AcoustMatch, id3Album string) (MbAlbum, error) {

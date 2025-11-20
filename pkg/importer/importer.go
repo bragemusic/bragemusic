@@ -89,6 +89,11 @@ func (i Importer) unzipMusicFiles(ctx context.Context, filename, targetDir strin
 		if f.FileInfo().IsDir() {
 			continue
 		}
+
+		if strings.ToLower(filepath.Ext(f.Name)) != ".flac" {
+			continue
+		}
+
 		filePath := filepath.Join(targetDir, filepath.Base(f.Name))
 
 		if !strings.HasPrefix(filePath, filepath.Clean(targetDir)+string(os.PathSeparator)) {
@@ -139,6 +144,32 @@ func (i *Importer) importTrack(ctx context.Context, filename string) error {
 	// 	// return err
 	// }
 	// return nil
+}
+
+func (i Importer) copyFile(ctx context.Context, from, to string) error {
+	i.log.DebugContext(ctx, "copying file", "src", from, "dst", to)
+
+	if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
+		return err
+	}
+
+	src, err := os.OpenFile(from, os.O_RDONLY, os.ModePerm)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	dst, err := os.Create(to)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	if _, err = io.Copy(dst, src); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (i *Importer) Run(ctx context.Context) {

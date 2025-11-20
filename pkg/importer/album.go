@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/bragemusic/core/pkg/acoustid"
+	"github.com/bragemusic/core/pkg/files"
 	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
@@ -30,15 +31,14 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 		return err
 	}
 
-	files := []string{}
+	filenames := []string{}
 	for _, f := range osFiles {
-		files = append(files, filepath.Join(folder, f.Name()))
+		filenames = append(filenames, filepath.Join(folder, f.Name()))
 	}
 
 	var album types.Album
 
-	// returnera ett objekt h'rist'llet med filnamn pa varje track tillsammans med mbid o lite id3 (namn, nummer osv), och albumid. Sa blir det lattare att mathc asen
-	albumAnalysis, err := i.analyzeAlbum(ctx, files)
+	albumAnalysis, err := i.analyzeAlbum(ctx, filenames)
 	if err != nil {
 		if errors.Is(err, ErrAlbumMbIDNotFound) {
 			return errors.New("not implemented to add non MB album. TODO: Do something else")
@@ -71,20 +71,39 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 
 	albumFolderPath := utils.GenerateAlbumFolderPath(artist.Name, album.Name)
 
-	// fmt.Println(trackMbIDs)
 	for _, track := range albumAnalysis.Tracks {
-		// trackMbId := track.MbID
 		if track.MbID != nil {
 			for tidx := range tracks {
-				// fmt.Println(*tracks[tidx].MusicBrainzID, *trackMbId)
 				if *tracks[tidx].MusicBrainzID == *track.MbID {
 					tfp, err := utils.GenerateTrackPath(*track.DiscNumber, *track.TrackNumber, *track.Name, tag.FLAC, albumFolderPath)
 					if err != nil {
 						return err
 					}
-					tracks[tidx].FilePath = tfp
-					// har ska filen kopieras till ratt stalle. Man borde kanske ocksa tabort anvanda filer och trackMbIds ur listorna
-					// _ = filename
+
+					if track.File == "" {
+						return fmt.Errorf("track '%s' does not have a file", *track.MbID)
+					}
+
+					if err = i.copyFile(ctx, track.File, filepath.Join(i.musicDir, tfp)); err != nil {
+						return err
+					}
+
+					f, err := os.OpenFile(track.File, os.O_RDONLY, os.ModePerm)
+					if err != nil {
+						return err
+					}
+
+					// FIXME: Do not hardcode Flac
+					af, err := files.ParseAudioFile(f, tag.FLAC)
+					if err != nil {
+						f.Close()
+						return err
+					}
+
+					// FIXME: Do not hardcode Flac
+					tracks[tidx] = i.updateTrackData(tracks[tidx], af, tfp, tag.FLAC)
+					f.Close()
+
 					break
 				}
 			}
@@ -93,11 +112,31 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 		}
 	}
 
+	tx, err := i.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	artist.ID, err = i.addOrGetArtist(ctx, tx, artist)
+	if err != nil {
+		return err
+	}
+
+	album.ArtistID = artist.ID
+
+	album.ID, err = i.addOrGetAlbum(ctx, tx, album, artist.Name)
+	if err != nil {
+		return err
+	}
+
+	loop through tracks and add or update. NOT ADD OR GET
+
 	fmt.Println(album)
 	fmt.Println(artist)
 	fmt.Println(tracks)
 
-	return nil
+	return tx.Commit()
 }
 
 type MbAlbum struct {
