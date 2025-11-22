@@ -13,6 +13,7 @@ import (
 
 	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/metasyncer"
 	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
@@ -25,6 +26,7 @@ type Importer struct {
 	musicDir  string
 	imageDir  string
 	db        database.DatabaseFace
+	ms        *metasyncer.MetaSyncer
 	mb        musicbrainz.MusicBrainz
 	aid       acoustid.AcoustID
 	wiki      wiki.Wiki
@@ -179,6 +181,10 @@ func (i Importer) copyFile(ctx context.Context, from, to string) error {
 func (i Importer) downloadAlbumCover(ctx context.Context, album types.Album, mdPictures []*tag.Picture) error {
 	dir := filepath.Join(i.imageDir, "albums")
 
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+
 	if album.MusicBrainzID != nil {
 		i.log.InfoContext(ctx, "downloading album cover from MusicBrainz", "album", album.Name)
 
@@ -216,10 +222,12 @@ func (i *Importer) Run(ctx context.Context) {
 		i.log.ErrorContext(ctx, "import check finished with errors", "error", err.Error())
 	}
 
+	i.ms.Sync(ctx)
+
 	i.log.InfoContext(ctx, "import check done")
 }
 
-func New(importDir, musicDir, imageDir string, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, wiki wiki.Wiki, slogHandler slog.Handler) Importer {
+func New(importDir, musicDir, imageDir string, ms *metasyncer.MetaSyncer, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, wiki wiki.Wiki, slogHandler slog.Handler) Importer {
 	return Importer{
 		importDir: importDir,
 		musicDir:  musicDir,
@@ -229,5 +237,6 @@ func New(importDir, musicDir, imageDir string, db database.DatabaseFace, mb musi
 		aid:       aid,
 		wiki:      wiki,
 		log:       slog.New(slogHandler).With("service", "importer"),
+		ms:        ms,
 	}
 }

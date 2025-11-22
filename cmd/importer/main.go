@@ -10,6 +10,7 @@ import (
 	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/importer"
+	"github.com/bragemusic/core/pkg/metasyncer"
 	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/wiki"
 	"github.com/jmoiron/sqlx"
@@ -22,7 +23,7 @@ func main() {
 		slog.Error(err.Error())
 		return
 	}
-	scfg.DBPath = "/home/lucas/dev/p/brage/data/config/data.db"
+	scfg.DBPath = "/home/lucas/dev/brage/data/config/data.db"
 
 	slogHandler := tint.NewHandler(os.Stderr, &tint.Options{
 		Level:      slog.LevelDebug,
@@ -52,7 +53,9 @@ func main() {
 
 	w := wiki.New(scfg.WikiEmail)
 
-	imp := importer.New("/home/lucas/dev/p/brage/importDir", "/home/lucas/dev/p/brage/data/music", &db, musicbrainz.MusicBrainz{}, aid, w, slogHandler)
+	ms := metasyncer.New("/home/lucas/dev/brage/data/img", &db, musicbrainz.MusicBrainz{}, w, slogHandler)
+	imp := importer.New("/home/lucas/dev/brage/importDir", "/home/lucas/dev/brage/data/music", "/home/lucas/dev/brage/data/img", &ms, &db, musicbrainz.MusicBrainz{}, aid, w, slogHandler)
 
+	_ = imp
 	imp.Run(context.Background())
 }

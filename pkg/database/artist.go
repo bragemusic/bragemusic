@@ -173,9 +173,9 @@ func (d Database) ListArtistsWithoutMeta(ctx context.Context) (artists []types.A
         SELECT *
         FROM artists
         WHERE
-          musicbrainz_id != nil,
+          musicbrainz_id IS NOT null
         AND
-          description = nil
+          description IS null
         ;
     `
 	err = sqlx.SelectContext(ctx, d.ext, &artists, query)
