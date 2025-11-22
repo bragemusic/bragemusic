@@ -227,6 +227,7 @@ func (i Importer) getBestMatchedMbID(aids [][]acoustid.AcoustMatch, id3Album str
 		return cmp.Or(
 			cmp.Compare(b.MatchedTracks, a.MatchedTracks),
 			cmp.Compare(b.ID3AlbumNameMatch, a.ID3AlbumNameMatch),
+			create own compare function to find earliest official album
 		)
 	})
 
