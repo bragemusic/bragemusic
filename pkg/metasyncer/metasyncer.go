@@ -20,6 +20,14 @@ type MetaSyncer struct {
 	log      *slog.Logger
 }
 
+func (m MetaSyncer) artistHasImage(artistID string) bool {
+	imgFilename := filepath.Join(m.imageDir, "artists", artistID+".jpg")
+	if _, err := os.Stat(imgFilename); err != nil {
+		return false
+	}
+	return true
+}
+
 func (m MetaSyncer) getArtistMetaData(ctx context.Context, artistMbId string) (wiki.WikiData, error) {
 	mbArtist, err := m.mb.GetArtist(artistMbId)
 	if err != nil {
@@ -76,7 +84,7 @@ func (m MetaSyncer) Sync(ctx context.Context) {
 
 		m.log.InfoContext(ctx, "updated artist description", "artist", a.Name)
 
-		if wikiData.ImageUrl != nil {
+		if wikiData.ImageUrl != nil && !m.artistHasImage(a.ID) {
 			imgFilename := filepath.Join(m.imageDir, "artists", a.ID+".jpg")
 			if err = m.wiki.DownloadFile(ctx, *wikiData.ImageUrl, imgFilename); err != nil {
 				m.log.ErrorContext(ctx, "could not download artist image", "error", err.Error(), "artist", a.Name)
