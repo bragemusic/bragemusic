@@ -2,13 +2,14 @@ package utils
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
+	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/dhowden/tag"
 )
 
@@ -16,11 +17,7 @@ func Ptr[T any](t T) *T {
 	return &t
 }
 
-func SaveID3Image(ctx context.Context, img *tag.Picture, filename string) error {
-	if img == nil {
-		return errors.New("no image data in ID3 tag")
-	}
-
+func SaveID3Image(ctx context.Context, img tag.Picture, filename string) error {
 	f, err := os.Create(filename)
 	if err != nil {
 		return err
@@ -32,11 +29,11 @@ func SaveID3Image(ctx context.Context, img *tag.Picture, filename string) error 
 	return nil
 }
 
-func GenerateAlbumFolderPath(artist, album, musicDir string) string {
+func GenerateAlbumFolderPath(artist, album string) string {
 	artist = strings.ReplaceAll(artist, " ", "_")
 	album = strings.ReplaceAll(album, " ", "_")
 
-	return path.Join(musicDir, artist, album)
+	return path.Join(artist, album)
 }
 
 func GenerateTrackPath(discNumber, trackNumber int, trackTitle string, format tag.FileType, albumFolder string) (string, error) {
@@ -50,4 +47,80 @@ func GenerateTrackPath(discNumber, trackNumber int, trackTitle string, format ta
 	filename := fmt.Sprintf("%02d-%02d-%s.%s", discNumber, trackNumber, trackTitle, strings.ToLower(string(format)))
 
 	return filepath.Join(albumFolder, filename), nil
+}
+
+func HighestCount[T comparable](ss []T) T {
+	uss := slices.Compact(ss)
+	counts := map[T]int{}
+
+	for _, s := range uss {
+		counts[s] = 0
+		for _, a := range ss {
+			if a == s {
+				counts[s]++
+			}
+		}
+	}
+
+	bestName := ss[0]
+	bestCnt := counts[ss[0]]
+	for an, ac := range counts {
+		if ac > bestCnt {
+			bestName = an
+			bestCnt = ac
+		}
+	}
+
+	return bestName
+}
+
+func CmpReleaseDates(d1, d2 acoustid.Date) int {
+	d1 = fixDate(d1)
+	d2 = fixDate(d2)
+
+	// Compare year
+	if d1.Year < d2.Year {
+		return -1
+	}
+
+	if d1.Year > d2.Year {
+		return 1
+	}
+
+	// Compare month
+	if d1.Month < d2.Month {
+		return -1
+	}
+
+	if d1.Month > d2.Month {
+		return 1
+	}
+
+	// Compare day
+	if d1.Day < d2.Day {
+		return -1
+	}
+
+	if d1.Day > d2.Day {
+		return 1
+	}
+
+	// Equal
+	return 0
+}
+
+func fixDate(d acoustid.Date) acoustid.Date {
+	if d.Year == 0 {
+		d.Year = 9999
+	}
+
+	if d.Month == 0 {
+		d.Month = 12
+	}
+
+	if d.Day == 0 {
+		d.Day = 31
+	}
+
+	return d
 }

@@ -167,3 +167,21 @@ func (d Database) ListUpdatedArtists(ctx context.Context, since time.Time) (arti
 
 	return
 }
+
+func (d Database) ListArtistsWithoutMeta(ctx context.Context) (artists []types.Artist, err error) {
+	query := `
+        SELECT *
+        FROM artists
+        WHERE
+          musicbrainz_id IS NOT null
+        AND
+          description IS null
+        ;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &artists, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}

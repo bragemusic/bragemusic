@@ -34,6 +34,7 @@ type DatabaseFace interface {
 	GetArtistFromName(ctx context.Context, name string) (artist types.Artist, err error)
 	ListArtists(ctx context.Context) (artists []types.Artist, err error)
 	ListUpdatedArtists(ctx context.Context, since time.Time) (artistIDs []string, err error)
+	ListArtistsWithoutMeta(ctx context.Context) (artists []types.Artist, err error)
 
 	AddTrack(ctx context.Context, t types.Track) (string, error)
 	AddTracks(ctx context.Context, tracks []types.Track) ([]string, error)

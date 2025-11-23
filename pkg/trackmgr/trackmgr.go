@@ -134,13 +134,13 @@ func (t TrackManager) AddTrack(ctx context.Context, f *os.File) error {
 	// FIXME: Should either download or extract album cover
 	// FIXME: Should populate a new artist with metadata and download pics from wiki. Same function can be used for if statement below
 	if !newArtist && newAlbum && album.MusicBrainzID != nil && artist.MusicBrainzID == nil {
-		mbAlbum, err := t.mb.GetAlbum(*album.MusicBrainzID)
+		mbAlbum, err := t.mb.GetAlbum(ctx, *album.MusicBrainzID)
 		if err != nil {
 			return err
 		}
 
 		if len(mbAlbum.ArtistCredit) > 0 {
-			mbArtist, err := t.mb.GetArtist(mbAlbum.ArtistCredit[0].Artist.ID)
+			mbArtist, err := t.mb.GetArtist(ctx, mbAlbum.ArtistCredit[0].Artist.ID)
 			if err != nil {
 				return err
 			}
@@ -202,13 +202,13 @@ func (t TrackManager) AddTrack(ctx context.Context, f *os.File) error {
 			if err = t.mb.DownloadCoverArt(ctx, *album.MusicBrainzID, album.ID, t.albumArtsDir); err != nil {
 				t.log.InfoContext(ctx, "could not get album cover from MusicBrainz. Trying from ID3", "album", album.Name)
 				imgFilename := filepath.Join(t.albumArtsDir, fmt.Sprintf("%s.%s", album.ID, metadata.Picture().Ext))
-				if err = utils.SaveID3Image(ctx, metadata.Picture(), imgFilename); err != nil {
+				if err = utils.SaveID3Image(ctx, *metadata.Picture(), imgFilename); err != nil {
 					t.log.WarnContext(ctx, "could not get image from ID3", "error", err.Error())
 				}
 			}
 		} else if metadata.Picture() != nil {
 			imgFilename := filepath.Join(t.albumArtsDir, fmt.Sprintf("%s.%s", album.ID, metadata.Picture().Ext))
-			if err = utils.SaveID3Image(ctx, metadata.Picture(), imgFilename); err != nil {
+			if err = utils.SaveID3Image(ctx, *metadata.Picture(), imgFilename); err != nil {
 				t.log.WarnContext(ctx, "could not get image from ID3", "error", err.Error())
 			}
 		}

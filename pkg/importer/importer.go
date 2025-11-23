@@ -1,102 +1,262 @@
 package importer
 
 import (
+	"archive/zip"
 	"context"
+	"errors"
 	"fmt"
-	"log"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/bragemusic/core/pkg/trackmgr"
+	"github.com/bragemusic/core/pkg/acoustid"
+	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/musicbrainz"
+	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/core/pkg/utils"
+	"github.com/dhowden/tag"
 )
 
+type Config struct {
+	ImportDirPath          string
+	FinishedImportsDirPath string
+	MusicDirPath           string
+	ImageDirPath           string
+	DeleteImportsOnSuccess bool
+}
+
 type Importer struct {
-	importDir    string
-	log          *slog.Logger
-	trackManager *trackmgr.TrackManager
+	importDir       string
+	postImportDir   string
+	musicDir        string
+	imageDir        string
+	deleteOnSuccess bool
+	db              database.DatabaseFace
+	mb              musicbrainz.MusicBrainz
+	aid             acoustid.AcoustID
+	log             *slog.Logger
 }
 
 func (i *Importer) runImportCheck(ctx context.Context) error {
-	err := filepath.Walk(i.importDir,
+	if err := os.MkdirAll(i.postImportDir, 0o755); err != nil {
+		return err
+	}
+
+	return filepath.Walk(i.importDir,
 		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				i.log.ErrorContext(ctx, "skipping file due to error", "error", err.Error())
+			}
+
+			var f func(context.Context, string) error
+
+			switch strings.ToLower(filepath.Ext(path)) {
+			case ".flac":
+				f = i.importTrack
+			case ".zip":
+				f = i.importAlbum
+			default:
+				return nil
+			}
+
+			i.log.InfoContext(ctx, "file found", "filename", path)
+			err = f(ctx, path)
+			if err != nil {
+				i.log.ErrorContext(ctx, "could not import track", "error", err.Error())
+				return err
+			}
+
+			if !i.deleteOnSuccess {
+				err = i.copyFile(ctx, path, filepath.Join(i.postImportDir, filepath.Base(path)))
+				if err != nil {
+					return err
+				}
+			}
+
+			err = os.Remove(path)
 			if err != nil {
 				return err
 			}
-			if strings.ToLower(filepath.Ext(path)) == ".flac" {
-				i.log.Info("file found", "filename", path)
-				err = i.importTrack(ctx, path)
-				if err != nil {
-					i.log.Error("could not import track", "error", err.Error())
-					return err
-				}
-				return nil
-			}
+
 			return nil
 		})
+}
+
+func (i *Importer) importAlbum(ctx context.Context, filename string) error {
+	i.log.InfoContext(ctx, "parsing album", "filename", filename)
+
+	tempFolder, err := os.MkdirTemp(os.TempDir(), "brage-album")
 	if err != nil {
-		log.Println(err)
+		return err
 	}
+	defer os.RemoveAll(tempFolder)
+
+	if err = i.unzipMusicFiles(ctx, filename, tempFolder); err != nil {
+		return err
+	}
+
+	if err = i.importAlbumFiles(ctx, tempFolder); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i Importer) unzipMusicFiles(ctx context.Context, filename, targetDir string) error {
+	i.log.InfoContext(ctx, "unzipping file", "filename", filename)
+
+	archive, err := zip.OpenReader(filename)
+	if err != nil {
+		panic(err)
+	}
+	defer archive.Close()
+
+	for _, f := range archive.File {
+		if f.FileInfo().IsDir() {
+			continue
+		}
+
+		if strings.ToLower(filepath.Ext(f.Name)) != ".flac" {
+			continue
+		}
+
+		filePath := filepath.Join(targetDir, filepath.Base(f.Name))
+
+		if !strings.HasPrefix(filePath, filepath.Clean(targetDir)+string(os.PathSeparator)) {
+			return fmt.Errorf("invalid file path '%s'", filePath)
+		}
+
+		if f.FileInfo().IsDir() {
+			fmt.Println("creating directory...")
+			os.MkdirAll(filePath, os.ModePerm)
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
+			return err
+		}
+
+		dstFile, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+		if err != nil {
+			return err
+		}
+
+		fileInArchive, err := f.Open()
+		if err != nil {
+			return err
+		}
+
+		if _, err := io.Copy(dstFile, fileInArchive); err != nil {
+			return err
+		}
+
+		dstFile.Close()
+		fileInArchive.Close()
+	}
+
 	return nil
 }
 
 func (i *Importer) importTrack(ctx context.Context, filename string) error {
-	f, err := os.OpenFile(filename, os.O_RDONLY, os.ModePerm)
+	return errors.New("track import not implemented")
+	// f, err := os.OpenFile(filename, os.O_RDONLY, os.ModePerm)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer f.Close()
+
+	// if err := i.trackManager.AddTrack(ctx, f); err != nil {
+	// 	i.log.ErrorContext(ctx, "could not import track", "error", err.Error())
+	// 	// return err
+	// }
+	// return nil
+}
+
+func (i Importer) copyFile(ctx context.Context, from, to string) error {
+	i.log.DebugContext(ctx, "copying file", "src", from, "dst", to)
+
+	if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
+		return err
+	}
+
+	src, err := os.OpenFile(from, os.O_RDONLY, os.ModePerm)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer src.Close()
 
-	if err := i.trackManager.AddTrack(ctx, f); err != nil {
-		i.log.ErrorContext(ctx, "could not import track", "error", err.Error())
-		// return err
+	dst, err := os.Create(to)
+	if err != nil {
+		return err
 	}
+	defer dst.Close()
+
+	if _, err = io.Copy(dst, src); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (i *Importer) Run(ctx context.Context) {
-	i.runImportCheck(ctx)
+func (i Importer) downloadAlbumCover(ctx context.Context, album types.Album, mdPictures []*tag.Picture) error {
+	dir := filepath.Join(i.imageDir, "albums")
 
-	artists, err := i.trackManager.ListArtists(ctx)
-	if err != nil {
-		panic(err)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
 	}
 
-	// for _, a := range artists {
-	// 	if a.MusicBrainzID != nil {
-	// 		err = i.trackManager.GetArtistMetaData(ctx, *a.MusicBrainzID)
-	// 		if err != nil {
-	// 			panic(err)
-	// 		}
-	// 	}
-	// }
+	if album.MusicBrainzID != nil {
+		i.log.InfoContext(ctx, "downloading album cover from MusicBrainz", "album", album.Name)
 
-	// return
+		err := i.mb.DownloadCoverArt(ctx, *album.MusicBrainzID, album.ID, dir)
+		if err == nil {
+			return nil
+		}
 
-	for _, a := range artists {
-		albums, err := i.trackManager.GetAlbumsByArtist(ctx, a.ID)
+		i.log.WarnContext(ctx, "could not get album cover from MusicBrainz")
+	}
+
+	i.log.InfoContext(ctx, "grabbing from ID3 instead")
+	for _, pic := range mdPictures {
+		if pic == nil {
+			continue
+		}
+
+		imgFilename := filepath.Join(dir, fmt.Sprintf("%s.%s", album.ID, pic.Ext))
+		err := utils.SaveID3Image(ctx, *pic, imgFilename)
 		if err != nil {
-			panic(err)
+			i.log.WarnContext(ctx, "could not get image from ID3", "error", err.Error())
+			continue
 		}
-		fmt.Println(a.Name)
-		for _, al := range albums {
-			fmt.Println(" ", al.Name)
-			tracks, err := i.trackManager.GetTracksByAlbum(ctx, al.ID)
-			if err != nil {
-				panic(err)
-			}
-			for _, t := range tracks {
-				fmt.Println("    ", *t.DiscNumber, "|", *t.TrackNumber, "-", t.Title)
-			}
-		}
+		return nil
 	}
+
+	return fmt.Errorf("could not get album cover for album '%s'", album.ID)
 }
 
-func New(importDir string, trackManager *trackmgr.TrackManager, slogHandler slog.Handler) Importer {
+func (i *Importer) Run(ctx context.Context) {
+	i.log.InfoContext(ctx, "starting import check")
+
+	err := i.runImportCheck(ctx)
+	if err != nil {
+		i.log.ErrorContext(ctx, "import check finished with errors", "error", err.Error())
+	}
+
+	i.log.InfoContext(ctx, "import check done")
+}
+
+func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, slogHandler slog.Handler) Importer {
 	return Importer{
-		importDir:    importDir,
-		log:          slog.New(slogHandler),
-		trackManager: trackManager,
+		importDir:       cfg.ImportDirPath,
+		musicDir:        cfg.MusicDirPath,
+		imageDir:        cfg.ImageDirPath,
+		db:              db,
+		mb:              mb,
+		aid:             aid,
+		log:             slog.New(slogHandler).With("service", "importer"),
+		postImportDir:   cfg.FinishedImportsDirPath,
+		deleteOnSuccess: cfg.DeleteImportsOnSuccess,
 	}
 }
