@@ -47,7 +47,7 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 	return filepath.Walk(i.importDir,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
-				return err
+				i.log.ErrorContext(ctx, "skipping file due to error", "error", err.Error())
 			}
 
 			var f func(context.Context, string) error
