@@ -58,9 +58,11 @@ func main() {
 	mb := musicbrainz.New(slogHandler)
 
 	impCfg := importer.Config{
-		ImportDirPath: filepath.Join(datadir, "..", "importDir"),
-		MusicDirPath:  filepath.Join(datadir, "music"),
-		ImageDirPath:  filepath.Join(datadir, "img"),
+		ImportDirPath:          filepath.Join(datadir, "..", "importDir"),
+		MusicDirPath:           filepath.Join(datadir, "music"),
+		ImageDirPath:           filepath.Join(datadir, "img"),
+		DeleteImportsOnSuccess: false,
+		FinishedImportsDirPath: filepath.Join(datadir, "..", "doneImportsDir"),
 	}
 
 	imp := importer.New(impCfg, &db, mb, aid, slogHandler)

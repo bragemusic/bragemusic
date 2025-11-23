@@ -9,7 +9,7 @@ import (
 	"github.com/bragemusic/core/pkg/types"
 )
 
-func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, artist types.Artist) (id string, err error) {
+func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, artist types.Artist) (id string, retArtist *types.Artist, err error) {
 	var existingArtist types.Artist
 
 	if artist.MusicBrainzID != nil {
@@ -23,22 +23,24 @@ func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, 
 			existingArtist, err = tx.GetArtistFromName(ctx, artist.Name)
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
-					return "", err
+					return "", nil, err
 				}
 			} else {
 				i.log.InfoContext(ctx, "found existsing artist using name", "id", existingArtist.ID)
-				return existingArtist.ID, nil
+				return existingArtist.ID, &existingArtist, nil
 			}
 		} else {
-			return "", err
+			return "", nil, err
 		}
 	} else {
 		i.log.InfoContext(ctx, "found existsing artist using musicbrainz id", "id", existingArtist.ID)
-		return existingArtist.ID, nil
+		return existingArtist.ID, &existingArtist, nil
 	}
 
 	i.log.InfoContext(ctx, "creating new artist")
-	return tx.AddArtist(ctx, artist)
+	id, err = tx.AddArtist(ctx, artist)
+
+	return id, nil, err
 }
 
 func (i Importer) addOrGetAlbum(ctx context.Context, tx database.DatabaseFace, album types.Album, artistName string) (id string, err error) {

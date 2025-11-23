@@ -20,22 +20,30 @@ import (
 )
 
 type Config struct {
-	ImportDirPath string
-	MusicDirPath  string
-	ImageDirPath  string
+	ImportDirPath          string
+	FinishedImportsDirPath string
+	MusicDirPath           string
+	ImageDirPath           string
+	DeleteImportsOnSuccess bool
 }
 
 type Importer struct {
-	importDir string
-	musicDir  string
-	imageDir  string
-	db        database.DatabaseFace
-	mb        musicbrainz.MusicBrainz
-	aid       acoustid.AcoustID
-	log       *slog.Logger
+	importDir       string
+	postImportDir   string
+	musicDir        string
+	imageDir        string
+	deleteOnSuccess bool
+	db              database.DatabaseFace
+	mb              musicbrainz.MusicBrainz
+	aid             acoustid.AcoustID
+	log             *slog.Logger
 }
 
 func (i *Importer) runImportCheck(ctx context.Context) error {
+	if err := os.MkdirAll(i.postImportDir, 0o755); err != nil {
+		return err
+	}
+
 	return filepath.Walk(i.importDir,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -57,6 +65,18 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 			err = f(ctx, path)
 			if err != nil {
 				i.log.ErrorContext(ctx, "could not import track", "error", err.Error())
+				return err
+			}
+
+			if !i.deleteOnSuccess {
+				err = i.copyFile(ctx, path, filepath.Join(i.postImportDir, filepath.Base(path)))
+				if err != nil {
+					return err
+				}
+			}
+
+			err = os.Remove(path)
+			if err != nil {
 				return err
 			}
 
@@ -229,12 +249,14 @@ func (i *Importer) Run(ctx context.Context) {
 
 func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, slogHandler slog.Handler) Importer {
 	return Importer{
-		importDir: cfg.ImportDirPath,
-		musicDir:  cfg.MusicDirPath,
-		imageDir:  cfg.ImageDirPath,
-		db:        db,
-		mb:        mb,
-		aid:       aid,
-		log:       slog.New(slogHandler).With("service", "importer"),
+		importDir:       cfg.ImportDirPath,
+		musicDir:        cfg.MusicDirPath,
+		imageDir:        cfg.ImageDirPath,
+		db:              db,
+		mb:              mb,
+		aid:             aid,
+		log:             slog.New(slogHandler).With("service", "importer"),
+		postImportDir:   cfg.FinishedImportsDirPath,
+		deleteOnSuccess: cfg.DeleteImportsOnSuccess,
 	}
 }

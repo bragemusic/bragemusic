@@ -124,9 +124,20 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 	}
 	defer tx.Rollback()
 
-	artist.ID, err = i.addOrGetArtist(ctx, tx, artist)
+	var existingArtist *types.Artist
+
+	artist.ID, existingArtist, err = i.addOrGetArtist(ctx, tx, artist)
 	if err != nil {
 		return err
+	}
+
+	if existingArtist != nil {
+		if existingArtist.MusicBrainzID == nil && artist.MusicBrainzID != nil {
+			err = tx.UpdateArtist(ctx, artist)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
 	album.ArtistID = artist.ID
