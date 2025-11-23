@@ -181,7 +181,7 @@ type Track struct {
 }
 
 func (i Importer) generateAlbumFromMbID(ctx context.Context, mbID string) (types.Album, error) {
-	mbAlbum, err := i.mb.GetAlbum(mbID)
+	mbAlbum, err := i.mb.GetAlbum(ctx, mbID)
 	if err != nil {
 		return types.Album{}, err
 	}
@@ -234,7 +234,7 @@ func (i Importer) generateAlbumFromID3(ctx context.Context, analysResults AlbumA
 }
 
 func (i Importer) generateArtistFromAlbumMbID(ctx context.Context, mbID string) (types.Artist, error) {
-	mbAlbum, err := i.mb.GetAlbum(mbID)
+	mbAlbum, err := i.mb.GetAlbum(ctx, mbID)
 	if err != nil {
 		return types.Artist{}, err
 	}
@@ -245,7 +245,7 @@ func (i Importer) generateArtistFromAlbumMbID(ctx context.Context, mbID string) 
 
 	artistMbID := mbAlbum.ArtistCredit[0].Artist.ID
 
-	mbArtist, err := i.mb.GetArtist(artistMbID)
+	mbArtist, err := i.mb.GetArtist(ctx, artistMbID)
 	if err != nil {
 		return types.Artist{}, err
 	}
@@ -287,7 +287,7 @@ func (i Importer) generateArtistFromID3(ctx context.Context, analysis AlbumAnaly
 }
 
 func (i Importer) generateTracksFromAlbumMbID(ctx context.Context, albumMbID string) (tracks []types.Track, err error) {
-	mbAlbum, err := i.mb.GetAlbum(albumMbID)
+	mbAlbum, err := i.mb.GetAlbum(ctx, albumMbID)
 	if err != nil {
 		return nil, err
 	}

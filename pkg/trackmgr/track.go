@@ -47,7 +47,7 @@ func (t TrackManager) generateTrackFromID3(metadata tag.Metadata, albumID string
 func (t TrackManager) generateTracks(ctx context.Context, tx database.DatabaseFace, album types.Album, metadata tag.Metadata) (tracks []types.Track, new bool, err error) {
 	// we have a MusicBrainz ID, so we do all if it with it
 	if album.MusicBrainzID != nil {
-		mbAlbum, err := t.mb.GetAlbum(*album.MusicBrainzID)
+		mbAlbum, err := t.mb.GetAlbum(ctx, *album.MusicBrainzID)
 		if err != nil {
 			return nil, false, err
 		}

@@ -29,7 +29,7 @@ func (m MetaSyncer) artistHasImage(artistID string) bool {
 }
 
 func (m MetaSyncer) getArtistMetaData(ctx context.Context, artistMbId string) (wiki.WikiData, error) {
-	mbArtist, err := m.mb.GetArtist(artistMbId)
+	mbArtist, err := m.mb.GetArtist(ctx, artistMbId)
 	if err != nil {
 		return wiki.WikiData{}, err
 	}

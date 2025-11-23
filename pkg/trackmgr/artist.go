@@ -65,7 +65,7 @@ func (t TrackManager) addOrGetArtistFromMbId(ctx context.Context, tx database.Da
 		return artist, nil
 	}
 
-	mbArtist, err := t.mb.GetArtist(artistMbId)
+	mbArtist, err := t.mb.GetArtist(ctx, artistMbId)
 	if err != nil {
 		return types.Artist{}, err
 	}
@@ -87,7 +87,7 @@ func (t TrackManager) addOrGetArtistFromMbId(ctx context.Context, tx database.Da
 }
 
 func (t TrackManager) GetArtistMetaData(ctx context.Context, artistMbId string) (wiki.WikiData, error) {
-	mbArtist, err := t.mb.GetArtist(artistMbId)
+	mbArtist, err := t.mb.GetArtist(ctx, artistMbId)
 	if err != nil {
 		return wiki.WikiData{}, err
 	}
@@ -113,7 +113,7 @@ func (t TrackManager) GetArtistMetaData(ctx context.Context, artistMbId string) 
 }
 
 func (t TrackManager) GetAlbumMetaData(ctx context.Context, albumMbId string) (wiki.WikiData, error) {
-	mbAlbum, err := t.mb.GetAlbum(albumMbId)
+	mbAlbum, err := t.mb.GetAlbum(ctx, albumMbId)
 	if err != nil {
 		return wiki.WikiData{}, err
 	}
@@ -153,7 +153,7 @@ func (t TrackManager) getOrCreateArtist(ctx context.Context, tx database.Databas
 
 	// If MusicBrainz ID exists on the album, use that to get the artist
 	if album.MusicBrainzID != nil {
-		mbAlbum, err := t.mb.GetAlbum(*album.MusicBrainzID)
+		mbAlbum, err := t.mb.GetAlbum(ctx, *album.MusicBrainzID)
 		if err != nil {
 			return types.Artist{}, false, err
 		}
@@ -184,13 +184,13 @@ func (t TrackManager) getOrCreateArtist(ctx context.Context, tx database.Databas
 
 	// If MusicBrainzID exists, use that to create the artist
 	if album.MusicBrainzID != nil {
-		mbAlbum, err := t.mb.GetAlbum(*album.MusicBrainzID)
+		mbAlbum, err := t.mb.GetAlbum(ctx, *album.MusicBrainzID)
 		if err != nil {
 			return types.Artist{}, false, err
 		}
 
 		if len(mbAlbum.ArtistCredit) > 0 {
-			mbArtist, err := t.mb.GetArtist(mbAlbum.ArtistCredit[0].Artist.ID)
+			mbArtist, err := t.mb.GetArtist(ctx, mbAlbum.ArtistCredit[0].Artist.ID)
 			if err != nil {
 				return types.Artist{}, false, err
 			}

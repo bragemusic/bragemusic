@@ -49,7 +49,7 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalys
 		return AlbumAnalysisResults{}, err
 	}
 
-	mbAlbum, err := i.mb.GetAlbum(matchedAlbum.AlbumID)
+	mbAlbum, err := i.mb.GetAlbum(ctx, matchedAlbum.AlbumID)
 	if err != nil {
 		return AlbumAnalysisResults{}, err
 	}
@@ -227,7 +227,7 @@ func (i Importer) getBestMatchedMbID(aids [][]acoustid.AcoustMatch, id3Album str
 		return cmp.Or(
 			cmp.Compare(b.MatchedTracks, a.MatchedTracks),
 			cmp.Compare(b.ID3AlbumNameMatch, a.ID3AlbumNameMatch),
-			create own compare function to find earliest official album
+			// create own compare function to find earliest official album
 		)
 	})
 

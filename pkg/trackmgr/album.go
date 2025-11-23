@@ -119,7 +119,7 @@ func (t TrackManager) getOrCreateAlbum(ctx context.Context, tx database.Database
 			aIdMatch = filteredMatches[0]
 		}
 
-		mbAlbum, err := t.mb.GetAlbum(aIdMatch.AlbumID)
+		mbAlbum, err := t.mb.GetAlbum(ctx, aIdMatch.AlbumID)
 		if err != nil {
 			return types.Album{}, false, err
 		}
@@ -152,7 +152,7 @@ func (t TrackManager) getOrCreateAlbum(ctx context.Context, tx database.Database
 	}
 
 	// Try to get a musicbrainz match using ID3
-	mbAlbum, err := t.mb.GetAlbumFromNames(id3ArtistName, metadata.Album())
+	mbAlbum, err := t.mb.GetAlbumFromNames(ctx, id3ArtistName, metadata.Album())
 	if err != nil {
 		return types.Album{}, false, err
 	}

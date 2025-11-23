@@ -13,23 +13,25 @@ import (
 
 	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/database"
-	"github.com/bragemusic/core/pkg/metasyncer"
 	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
-	"github.com/bragemusic/core/pkg/wiki"
 	"github.com/dhowden/tag"
 )
+
+type Config struct {
+	ImportDirPath string
+	MusicDirPath  string
+	ImageDirPath  string
+}
 
 type Importer struct {
 	importDir string
 	musicDir  string
 	imageDir  string
 	db        database.DatabaseFace
-	ms        *metasyncer.MetaSyncer
 	mb        musicbrainz.MusicBrainz
 	aid       acoustid.AcoustID
-	wiki      wiki.Wiki
 	log       *slog.Logger
 }
 
@@ -222,21 +224,17 @@ func (i *Importer) Run(ctx context.Context) {
 		i.log.ErrorContext(ctx, "import check finished with errors", "error", err.Error())
 	}
 
-	i.ms.Sync(ctx)
-
 	i.log.InfoContext(ctx, "import check done")
 }
 
-func New(importDir, musicDir, imageDir string, ms *metasyncer.MetaSyncer, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, wiki wiki.Wiki, slogHandler slog.Handler) Importer {
+func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, slogHandler slog.Handler) Importer {
 	return Importer{
-		importDir: importDir,
-		musicDir:  musicDir,
-		imageDir:  imageDir,
+		importDir: cfg.ImportDirPath,
+		musicDir:  cfg.MusicDirPath,
+		imageDir:  cfg.ImageDirPath,
 		db:        db,
 		mb:        mb,
 		aid:       aid,
-		wiki:      wiki,
 		log:       slog.New(slogHandler).With("service", "importer"),
-		ms:        ms,
 	}
 }

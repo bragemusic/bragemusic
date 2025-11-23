@@ -134,13 +134,13 @@ func (t TrackManager) AddTrack(ctx context.Context, f *os.File) error {
 	// FIXME: Should either download or extract album cover
 	// FIXME: Should populate a new artist with metadata and download pics from wiki. Same function can be used for if statement below
 	if !newArtist && newAlbum && album.MusicBrainzID != nil && artist.MusicBrainzID == nil {
-		mbAlbum, err := t.mb.GetAlbum(*album.MusicBrainzID)
+		mbAlbum, err := t.mb.GetAlbum(ctx, *album.MusicBrainzID)
 		if err != nil {
 			return err
 		}
 
 		if len(mbAlbum.ArtistCredit) > 0 {
-			mbArtist, err := t.mb.GetArtist(mbAlbum.ArtistCredit[0].Artist.ID)
+			mbArtist, err := t.mb.GetArtist(ctx, mbAlbum.ArtistCredit[0].Artist.ID)
 			if err != nil {
 				return err
 			}

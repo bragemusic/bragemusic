@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/bragemusic/core/internal/config"
@@ -18,12 +19,13 @@ import (
 )
 
 func main() {
+	datadir := "/home/lucas/dev/brage/data"
 	scfg, err := config.GetServerConfig()
 	if err != nil {
 		slog.Error(err.Error())
 		return
 	}
-	scfg.DBPath = "/home/lucas/dev/brage/data/config/data.db"
+	scfg.DBPath = filepath.Join(datadir, "config/data.db")
 
 	slogHandler := tint.NewHandler(os.Stderr, &tint.Options{
 		Level:      slog.LevelDebug,
@@ -53,9 +55,19 @@ func main() {
 
 	w := wiki.New(scfg.WikiEmail)
 
-	ms := metasyncer.New("/home/lucas/dev/brage/data/img", &db, musicbrainz.MusicBrainz{}, w, slogHandler)
-	imp := importer.New("/home/lucas/dev/brage/importDir", "/home/lucas/dev/brage/data/music", "/home/lucas/dev/brage/data/img", &ms, &db, musicbrainz.MusicBrainz{}, aid, w, slogHandler)
+	mb := musicbrainz.New(slogHandler)
 
-	_ = imp
-	imp.Run(context.Background())
+	impCfg := importer.Config{
+		ImportDirPath: filepath.Join(datadir, "..", "importDir"),
+		MusicDirPath:  filepath.Join(datadir, "music"),
+		ImageDirPath:  filepath.Join(datadir, "img"),
+	}
+
+	imp := importer.New(impCfg, &db, mb, aid, slogHandler)
+
+	ms := metasyncer.New(impCfg.ImageDirPath, &db, musicbrainz.MusicBrainz{}, w, slogHandler)
+
+	ctx := context.Background()
+	imp.Run(ctx)
+	ms.Sync(ctx)
 }

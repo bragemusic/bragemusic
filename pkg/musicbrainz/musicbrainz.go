@@ -3,8 +3,10 @@ package musicbrainz
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,9 +28,10 @@ var (
 
 type MusicBrainz struct {
 	lastReqTime time.Time
+	log         *slog.Logger
 }
 
-func (m *MusicBrainz) GetArtist(artistID string) (ArtistResponse, error) {
+func (m *MusicBrainz) GetArtist(ctx context.Context, artistID string) (ArtistResponse, error) {
 	params := url.Values{}
 	params.Set("inc", "aliases tags genres url-rels")
 	params.Set("fmt", "json")
@@ -40,7 +43,7 @@ func (m *MusicBrainz) GetArtist(artistID string) (ArtistResponse, error) {
 		return ArtistResponse{}, err
 	}
 
-	resp, err := m.do(context.Background(), req)
+	resp, err := m.do(ctx, req)
 	if err != nil {
 		return ArtistResponse{}, err
 	}
@@ -54,7 +57,7 @@ func (m *MusicBrainz) GetArtist(artistID string) (ArtistResponse, error) {
 	return artistData, nil
 }
 
-func (m *MusicBrainz) GetAlbumFromNames(artist, album string) (*Release, error) {
+func (m *MusicBrainz) GetAlbumFromNames(ctx context.Context, artist, album string) (*Release, error) {
 	params := url.Values{}
 	params.Set("query", fmt.Sprintf(`release:"%s" AND artist:"%s" AND status:Official`, album, artist))
 	params.Set("fmt", "json")
@@ -66,7 +69,7 @@ func (m *MusicBrainz) GetAlbumFromNames(artist, album string) (*Release, error) 
 		return nil, err
 	}
 
-	resp, err := m.do(context.Background(), req)
+	resp, err := m.do(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +111,7 @@ func (m *MusicBrainz) GetAlbumFromNames(artist, album string) (*Release, error) 
 		return nil, nil
 	}
 
-	media, err := m.getReleaseDetails(release)
+	media, err := m.getReleaseDetails(ctx, release)
 	if err != nil {
 		return nil, err
 	}
@@ -118,7 +121,7 @@ func (m *MusicBrainz) GetAlbumFromNames(artist, album string) (*Release, error) 
 	return &release, nil
 }
 
-func (m *MusicBrainz) GetAlbum(releaseID string) (Release, error) {
+func (m *MusicBrainz) GetAlbum(ctx context.Context, releaseID string) (Release, error) {
 	params := url.Values{}
 	params.Set("inc", `recordings media artist-credits url-rels`)
 	params.Set("fmt", "json")
@@ -130,7 +133,7 @@ func (m *MusicBrainz) GetAlbum(releaseID string) (Release, error) {
 		return Release{}, err
 	}
 
-	resp, err := m.do(context.Background(), req)
+	resp, err := m.do(ctx, req)
 	if err != nil {
 		return Release{}, err
 	}
@@ -144,7 +147,7 @@ func (m *MusicBrainz) GetAlbum(releaseID string) (Release, error) {
 	return releaseData, nil
 }
 
-func (m *MusicBrainz) getReleaseDetails(release Release) ([]Media, error) {
+func (m *MusicBrainz) getReleaseDetails(ctx context.Context, release Release) ([]Media, error) {
 	params := url.Values{}
 	params.Set("inc", `recordings media`)
 	params.Set("fmt", "json")
@@ -156,7 +159,7 @@ func (m *MusicBrainz) getReleaseDetails(release Release) ([]Media, error) {
 		return nil, err
 	}
 
-	resp, err := m.do(context.Background(), req)
+	resp, err := m.do(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -184,7 +187,7 @@ func (m MusicBrainz) DownloadCoverArt(ctx context.Context, albumMbID, albumID st
 		return err
 	}
 
-	resp, err := m.do(context.Background(), req)
+	resp, err := m.do(ctx, req)
 	if err != nil {
 		return err
 	}
@@ -222,7 +225,7 @@ func (m MusicBrainz) filterMedia(releases []Release, mediaType string) []Release
 
 func (m *MusicBrainz) do(ctx context.Context, req *http.Request) (resp *http.Response, err error) {
 	if time.Now().Before(m.lastReqTime.Add(minReqTimeout)) {
-		fmt.Println("sleep")
+		m.log.Debug(fmt.Sprintf("sleeping for %d ms to avoid rate limit", minReqTimeout-time.Since(m.lastReqTime)))
 		time.Sleep(minReqTimeout - time.Since(m.lastReqTime))
 	}
 
@@ -230,19 +233,24 @@ func (m *MusicBrainz) do(ctx context.Context, req *http.Request) (resp *http.Res
 
 	for i := range 3 {
 		if i > 0 {
-			fmt.Printf("attempt %d\n", i)
+			m.log.DebugContext(ctx, "trying again", "attempt", i+1)
 		}
 		client := &http.Client{}
 		resp, err = client.Do(req)
 		m.lastReqTime = time.Now()
 		if err != nil {
-			fmt.Println("err " + err.Error() + ". backing off")
+			m.log.DebugContext(ctx, "backing off", "error", err.Error())
 			time.Sleep(time.Duration(i+1) * backoff)
-			// return nil, err
 		} else {
-			break
+			return resp, nil
 		}
 	}
 
-	return resp, nil
+	return nil, errors.New("could not request musicbrainz")
+}
+
+func New(slogHandler slog.Handler) MusicBrainz {
+	return MusicBrainz{
+		log: slog.New(slogHandler).With("service", "musicbrainz"),
+	}
 }
