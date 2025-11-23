@@ -158,6 +158,7 @@ type MbAlbum struct {
 	MatchedTracks     int
 	ID3AlbumNameMatch float32
 	AIDMatch          acoustid.AcoustMatch
+	ReleaseDate       acoustid.Date
 }
 
 type AlbumAnalysisResults struct {

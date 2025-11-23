@@ -37,6 +37,13 @@ type Release struct {
 	Title   string   `json:"title"`
 	Artists []Artist `json:"artists"`
 	Mediums []Medium `json:"mediums"`
+	Date    Date     `json:"date"`
+}
+
+type Date struct {
+	Year  int `json:"year"`
+	Month int `json:"month"`
+	Day   int `json:"day"`
 }
 
 type Artist struct {
@@ -52,10 +59,11 @@ type Track struct {
 }
 
 type AcoustMatch struct {
-	AlbumID    string
-	TrackID    string
-	AlbumName  string
-	ArtistName string
+	AlbumID     string
+	TrackID     string
+	AlbumName   string
+	ArtistName  string
+	ReleaseDate Date
 }
 
 type AcoustID struct {
@@ -113,10 +121,11 @@ func (a *AcoustID) GetMusicBrainzAlbumID(filename string) ([]AcoustMatch, error)
 			continue
 		}
 		matches = append(matches, AcoustMatch{
-			AlbumID:    r.ID,
-			TrackID:    r.Mediums[0].Tracks[0].ID,
-			AlbumName:  r.Title,
-			ArtistName: r.Artists[0].Name,
+			AlbumID:     r.ID,
+			TrackID:     r.Mediums[0].Tracks[0].ID,
+			AlbumName:   r.Title,
+			ArtistName:  r.Artists[0].Name,
+			ReleaseDate: r.Date,
 		})
 	}
 

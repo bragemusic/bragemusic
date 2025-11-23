@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/dhowden/tag"
 )
 
@@ -71,4 +72,55 @@ func HighestCount[T comparable](ss []T) T {
 	}
 
 	return bestName
+}
+
+func CmpReleaseDates(d1, d2 acoustid.Date) int {
+	d1 = fixDate(d1)
+	d2 = fixDate(d2)
+
+	// Compare year
+	if d1.Year < d2.Year {
+		return -1
+	}
+
+	if d1.Year > d2.Year {
+		return 1
+	}
+
+	// Compare month
+	if d1.Month < d2.Month {
+		return -1
+	}
+
+	if d1.Month > d2.Month {
+		return 1
+	}
+
+	// Compare day
+	if d1.Day < d2.Day {
+		return -1
+	}
+
+	if d1.Day > d2.Day {
+		return 1
+	}
+
+	// Equal
+	return 0
+}
+
+func fixDate(d acoustid.Date) acoustid.Date {
+	if d.Year == 0 {
+		d.Year = 9999
+	}
+
+	if d.Month == 0 {
+		d.Month = 12
+	}
+
+	if d.Day == 0 {
+		d.Day = 31
+	}
+
+	return d
 }

@@ -214,6 +214,7 @@ func (i Importer) getBestMatchedMbID(aids [][]acoustid.AcoustMatch, id3Album str
 			}
 
 			mbAlbum.ID3AlbumNameMatch = utils.CompareTwoStrings(aid.AlbumName, id3Album)
+			mbAlbum.ReleaseDate = aid.ReleaseDate
 
 			if !slices.ContainsFunc(mbAlbums, func(ma MbAlbum) bool {
 				return ma.AlbumID == mbAlbum.AlbumID
@@ -227,7 +228,7 @@ func (i Importer) getBestMatchedMbID(aids [][]acoustid.AcoustMatch, id3Album str
 		return cmp.Or(
 			cmp.Compare(b.MatchedTracks, a.MatchedTracks),
 			cmp.Compare(b.ID3AlbumNameMatch, a.ID3AlbumNameMatch),
-			// create own compare function to find earliest official album
+			-utils.CmpReleaseDates(b.ReleaseDate, a.ReleaseDate),
 		)
 	})
 
