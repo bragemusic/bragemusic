@@ -15,6 +15,15 @@ func (m MediaManager) GetAlbum(ctx context.Context, albumID string) (types.Album
 	return album, nil
 }
 
+func (m MediaManager) GetAlbumEnhanced(ctx context.Context, albumID string) (types.AlbumEnhanced, error) {
+	album, err := m.db.GetEnhancedAlbumFromID(ctx, albumID)
+	if err != nil {
+		return types.AlbumEnhanced{}, err
+	}
+
+	return album, nil
+}
+
 func (m MediaManager) ListAlbumsByArtist(ctx context.Context, artistID string) ([]types.Album, error) {
 	albums, err := m.db.ListAlbumsByArtist(ctx, artistID)
 	if err != nil {
