@@ -25,10 +25,10 @@ type Config struct {
 }
 
 type Client struct {
+	*audioplayer.AudioPlayer
 	sc      *serverclient.ServerClient
 	mm      *mediamanager.MediaManager
 	sy      *syncer.Syncer
-	ap      *audioplayer.AudioPlayer
 	config  Config
 	log     *slog.Logger
 	dbClose func() error
@@ -52,7 +52,7 @@ func (c *Client) StartPlayer(ctx context.Context, albumID string, trackNumber in
 
 	c.tracks = tracks
 
-	err = c.ap.LoadAndStartTracks(ctx, c.tracks, trackNumber)
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, c.tracks, trackNumber)
 	if err != nil {
 		return err
 	}
@@ -103,9 +103,9 @@ func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.
 	return tracks, nil
 }
 
-func (c Client) PlayPause(ctx context.Context) {
-	c.ap.PlayPause(ctx)
-}
+// func (c Client) PlayPause(ctx context.Context) {
+// 	c.ap.PlayPause(ctx)
+// }
 
 func NewSyncer(config Config, slogHandler slog.Handler) (c Client, err error) {
 	dbPath := filepath.Join(config.ConfigPath, "data.db")
@@ -143,12 +143,12 @@ func NewSyncer(config Config, slogHandler slog.Handler) (c Client, err error) {
 	}
 
 	return Client{
-		sc:      &sc,
-		mm:      &mm,
-		sy:      &sy,
-		ap:      ap,
-		config:  config,
-		log:     slog.New(slogHandler).With("service", "client"),
-		dbClose: dbSqlite.Close,
+		sc:          &sc,
+		mm:          &mm,
+		sy:          &sy,
+		AudioPlayer: ap,
+		config:      config,
+		log:         slog.New(slogHandler).With("service", "client"),
+		dbClose:     dbSqlite.Close,
 	}, nil
 }
