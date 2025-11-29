@@ -76,7 +76,6 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 			return fmt.Errorf("track '%s' does not have a file", *track.MbID)
 		}
 
-		fmt.Println(track.DiscNumber, track.TrackNumber)
 		tfp, err := utils.GenerateTrackPath(*track.DiscNumber, *track.TrackNumber, *track.Name, tag.FLAC, albumFolderPath)
 		if err != nil {
 			return err

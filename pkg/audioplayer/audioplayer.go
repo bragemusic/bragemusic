@@ -45,8 +45,6 @@ func (a *AudioPlayer) RegisterErrorCallback(f func(context.Context, error)) {
 }
 
 func (a *AudioPlayer) RegisterTrackChangeCallback(f func(*types.TrackEnhanced)) {
-	fmt.Println("hej")
-	fmt.Println(a)
 	a.currentTrackChangeCallbacks = append(a.currentTrackChangeCallbacks, f)
 }
 
@@ -156,20 +154,15 @@ func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
 
 	trackFilePath := filepath.Join(a.musicDirPath, a.CurrentTrack().FilePath)
 
-	fmt.Println("kaka")
 	a.currentFile, err = os.Open(trackFilePath)
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(*a.currentFile)
-
-	fmt.Println("kaka1")
 	af, err := files.ParseAudioFile(a.currentFile, tag.FileType(*a.CurrentTrack().MimeType))
 	if err != nil {
 		return err
 	}
-	fmt.Println("kaka2")
 	a.log.InfoContext(ctx, "start track", "title", a.CurrentTrack().Title, "artist", *a.CurrentTrack().ArtistName, "album", *a.CurrentTrack().AlbumName)
 
 	a.ai.StartAudioFile(ctx, af, a.NextTrack)
