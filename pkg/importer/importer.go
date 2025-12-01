@@ -128,12 +128,6 @@ func (i Importer) unzipMusicFiles(ctx context.Context, filename, targetDir strin
 			return fmt.Errorf("invalid file path '%s'", filePath)
 		}
 
-		if f.FileInfo().IsDir() {
-			fmt.Println("creating directory...")
-			os.MkdirAll(filePath, os.ModePerm)
-			continue
-		}
-
 		if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
 			return err
 		}

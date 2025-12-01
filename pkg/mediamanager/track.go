@@ -51,3 +51,12 @@ func (m MediaManager) ListTracksByAlbum(ctx context.Context, albumID string) ([]
 
 	return tracks, nil
 }
+
+func (m MediaManager) ListEnhancedTracksByAlbum(ctx context.Context, albumID string) ([]types.TrackEnhanced, error) {
+	tracks, err := m.db.GetEnhancedTracksFromAlbumID(ctx, albumID)
+	if err != nil {
+		return nil, err
+	}
+
+	return tracks, nil
+}
