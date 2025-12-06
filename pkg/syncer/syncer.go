@@ -2,6 +2,7 @@ package syncer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -9,19 +10,83 @@ import (
 	"time"
 
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
 )
 
+const expectedServerApplication = "brage-server"
+
 type Syncer struct {
-	sc       *serverclient.ServerClient
-	db       database.DatabaseFace
-	log      *slog.Logger
-	musicDir string
-	imgDir   string
+	sc                       *serverclient.ServerClient
+	db                       database.DatabaseFace
+	log                      *slog.Logger
+	musicDir                 string
+	imgDir                   string
+	serverAvailable          bool
+	serverAvailableCallbacks []func(bool)
+}
+
+func (s *Syncer) RegisterServerAvailabilityCallback(f func(bool)) {
+	s.serverAvailableCallbacks = append(s.serverAvailableCallbacks, f)
+}
+
+func (s *Syncer) StartDaemon(ctx context.Context) {
+	go func() {
+		tickerStatus := time.NewTicker(10 * time.Second)
+		tickerSync := time.NewTicker(15 * time.Minute)
+		defer tickerStatus.Stop()
+		defer tickerSync.Stop()
+
+		for {
+			select {
+			case <-tickerStatus.C:
+				s.log.DebugContext(ctx, "updating server availability")
+				err := s.updateServerAvailability(ctx)
+				if err != nil {
+					s.log.WarnContext(ctx, "server unreachable", "error", err.Error())
+					s.serverAvailable = false
+				} else {
+					s.serverAvailable = true
+				}
+
+				for _, f := range s.serverAvailableCallbacks {
+					f(s.serverAvailable)
+				}
+
+			case <-tickerSync.C:
+				fmt.Println("SYNCING!!!!!")
+
+			case <-ctx.Done():
+				fmt.Println("Goroutine stopping...")
+				return
+			}
+		}
+	}()
+}
+
+func (s Syncer) updateServerAvailability(ctx context.Context) error {
+	h, err := s.sc.CheckHealth(ctx)
+	if err != nil {
+		return err
+	}
+
+	if h.Application != expectedServerApplication {
+		return fmt.Errorf("expected server application name differs. '%s' != expected '%s'", h.Application, expectedServerApplication)
+	}
+
+	if h.Status != server.HealthzRunning {
+		return fmt.Errorf("server status is not running. '%s'", h.Status)
+	}
+
+	return nil
 }
 
 func (s Syncer) Sync(ctx context.Context) error {
+	if !s.serverAvailable {
+		return errors.New("server is not available")
+	}
+
 	lastSync, err := s.db.GetLastSync(ctx)
 	if err != nil {
 		lastSync.SyncedAt = time.Unix(0, 0)

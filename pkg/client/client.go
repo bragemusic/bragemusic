@@ -36,6 +36,10 @@ type Client struct {
 	tracks []types.TrackEnhanced
 }
 
+func (c *Client) RegisterServerAvailabilityCallback(f func(bool)) {
+	c.sy.RegisterServerAvailabilityCallback(f)
+}
+
 func (c Client) Sync(ctx context.Context) error {
 	return c.sy.Sync(ctx)
 }
@@ -107,9 +111,9 @@ func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.
 // 	c.ap.PlayPause(ctx)
 // }
 
-func NewSyncer(config Config, slogHandler slog.Handler) (c Client, err error) {
+func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c Client, err error) {
 	dbPath := filepath.Join(config.ConfigPath, "data.db")
-	if err = migrations.Migrate(context.Background(), dbPath, slogHandler); err != nil {
+	if err = migrations.Migrate(ctx, dbPath, slogHandler); err != nil {
 		return Client{}, err
 	}
 
@@ -126,6 +130,8 @@ func NewSyncer(config Config, slogHandler slog.Handler) (c Client, err error) {
 	sc := serverclient.New(config.ServerBaseURL, slogHandler)
 	mm := mediamanager.New(slogHandler, &db, config.MusicDirPath)
 	sy := syncer.New(&sc, &db, config.MusicDirPath, config.ImagePath, slogHandler)
+	// FIXME: Maybe move?
+	sy.StartDaemon(ctx)
 
 	pa, err := audiointerface.NewPortAudio(slogHandler)
 	if err != nil {
