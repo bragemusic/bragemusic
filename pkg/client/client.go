@@ -111,8 +111,8 @@ func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.
 	return tracks, nil
 }
 
-func (c *Client) StartSyncDaemon(ctx context.Context) {
-	c.sy.StartDaemon(ctx)
+func (c *Client) StartSyncDaemon(ctx context.Context, done func()) {
+	c.sy.StartDaemon(ctx, done)
 }
 
 // func (c Client) PlayPause(ctx context.Context) {

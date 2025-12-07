@@ -37,8 +37,10 @@ func (s *Syncer) RegisterSyncInProgressCallback(f func(bool)) {
 	s.syncInProgressCallbacks = append(s.syncInProgressCallbacks, f)
 }
 
-func (s *Syncer) StartDaemon(ctx context.Context) {
+func (s *Syncer) StartDaemon(ctx context.Context, done func()) {
 	go func() {
+		defer done()
+
 		tickerStatus := time.NewTicker(10 * time.Second)
 		tickerSync := time.NewTicker(15 * time.Minute)
 		defer tickerStatus.Stop()
