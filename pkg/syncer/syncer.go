@@ -24,11 +24,17 @@ type Syncer struct {
 	musicDir                 string
 	imgDir                   string
 	serverAvailable          bool
+	syncInProgress           bool
 	serverAvailableCallbacks []func(bool)
+	syncInProgressCallbacks  []func(bool)
 }
 
 func (s *Syncer) RegisterServerAvailabilityCallback(f func(bool)) {
 	s.serverAvailableCallbacks = append(s.serverAvailableCallbacks, f)
+}
+
+func (s *Syncer) RegisterSyncInProgressCallback(f func(bool)) {
+	s.syncInProgressCallbacks = append(s.syncInProgressCallbacks, f)
 }
 
 func (s *Syncer) StartDaemon(ctx context.Context) {
@@ -55,10 +61,18 @@ func (s *Syncer) StartDaemon(ctx context.Context) {
 				}
 
 			case <-tickerSync.C:
-				fmt.Println("SYNCING!!!!!")
+				if s.serverAvailable {
+					s.log.InfoContext(ctx, "starting periodic sync")
+					err := s.Sync(ctx)
+					if err != nil {
+						s.log.ErrorContext(ctx, "periodic sync finished with errors", "error", err.Error())
+					}
+				} else {
+					s.log.DebugContext(ctx, "periodic sync skipped. Server not available")
+				}
 
 			case <-ctx.Done():
-				fmt.Println("Goroutine stopping...")
+				s.log.InfoContext(ctx, "terminating periodic sync")
 				return
 			}
 		}
@@ -82,10 +96,22 @@ func (s Syncer) updateServerAvailability(ctx context.Context) error {
 	return nil
 }
 
-func (s Syncer) Sync(ctx context.Context) error {
+func (s *Syncer) Sync(ctx context.Context) error {
 	if !s.serverAvailable {
 		return errors.New("server is not available")
 	}
+
+	s.syncInProgress = true
+	for _, f := range s.syncInProgressCallbacks {
+		f(true)
+	}
+
+	defer func() {
+		s.syncInProgress = false
+		for _, f := range s.syncInProgressCallbacks {
+			f(false)
+		}
+	}()
 
 	lastSync, err := s.db.GetLastSync(ctx)
 	if err != nil {

@@ -40,6 +40,10 @@ func (c *Client) RegisterServerAvailabilityCallback(f func(bool)) {
 	c.sy.RegisterServerAvailabilityCallback(f)
 }
 
+func (c *Client) RegisterSyncInProgressCallback(f func(bool)) {
+	c.sy.RegisterSyncInProgressCallback(f)
+}
+
 func (c Client) Sync(ctx context.Context) error {
 	return c.sy.Sync(ctx)
 }
@@ -107,6 +111,10 @@ func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.
 	return tracks, nil
 }
 
+func (c *Client) StartSyncDaemon(ctx context.Context) {
+	c.sy.StartDaemon(ctx)
+}
+
 // func (c Client) PlayPause(ctx context.Context) {
 // 	c.ap.PlayPause(ctx)
 // }
@@ -130,8 +138,6 @@ func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c 
 	sc := serverclient.New(config.ServerBaseURL, slogHandler)
 	mm := mediamanager.New(slogHandler, &db, config.MusicDirPath)
 	sy := syncer.New(&sc, &db, config.MusicDirPath, config.ImagePath, slogHandler)
-	// FIXME: Maybe move?
-	sy.StartDaemon(ctx)
 
 	pa, err := audiointerface.NewPortAudio(slogHandler)
 	if err != nil {
