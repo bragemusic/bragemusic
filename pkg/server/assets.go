@@ -15,7 +15,7 @@ func (s Server) getImage() http.HandlerFunc {
 		pathPrefix := strings.TrimSuffix(rctx.RoutePattern(), "*")
 		fp := strings.TrimPrefix(r.URL.Path, pathPrefix)
 
-		filename := filepath.Join(s.config.ImagePath, fp)
+		filename := filepath.Join(s.config.Paths.ImageDir, fp)
 
 		w.Header().Set("Content-Type", "image/jpeg")
 		http.ServeFile(w, r, filename)

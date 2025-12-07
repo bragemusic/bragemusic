@@ -14,10 +14,6 @@ type (
 	handlerFuncErrVoid func(http.ResponseWriter, *http.Request) (*int, error)
 )
 
-type Config struct {
-	ImagePath string
-}
-
 type Server struct {
 	log      *slog.Logger
 	mediamgr *mediamanager.MediaManager
