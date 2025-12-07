@@ -69,7 +69,7 @@ func main() {
 	// 	}
 	// }()
 
-	syC, err := client.NewSyncer(client.Config{
+	syC, err := client.NewSyncer(context.Background(), client.Config{
 		ServerBaseURL: "http://localhost:3000",
 		MusicDirPath:  "/home/lucas/dev/p/brage/client_data/music",
 		ConfigPath:    "/home/lucas/dev/p/brage/client_data",

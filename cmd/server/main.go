@@ -58,9 +58,9 @@ func main() {
 	tm := trackmgr.New(scfg, db, aid, w, slogHandler)
 	_ = tm
 
-	m := mediamanager.New(slogHandler, db, "/home/lucas/dev/p/brage-player/data/music")
+	m := mediamanager.New(slogHandler, db, "/home/lucas/dev/brage/data/music")
 
-	sc := server.Config{ImagePath: "/home/lucas/dev/brage-player/data/img"}
+	sc := server.Config{ImagePath: "/home/lucas/dev/brage/data/img"}
 	s := server.New(slogHandler, &m, sc)
 
 	logger.Info(fmt.Sprintf("serving on port %s", scfg.Port))

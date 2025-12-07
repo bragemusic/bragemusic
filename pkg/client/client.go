@@ -36,6 +36,14 @@ type Client struct {
 	tracks []types.TrackEnhanced
 }
 
+func (c *Client) RegisterServerAvailabilityCallback(f func(bool)) {
+	c.sy.RegisterServerAvailabilityCallback(f)
+}
+
+func (c *Client) RegisterSyncInProgressCallback(f func(bool)) {
+	c.sy.RegisterSyncInProgressCallback(f)
+}
+
 func (c Client) Sync(ctx context.Context) error {
 	return c.sy.Sync(ctx)
 }
@@ -103,13 +111,17 @@ func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.
 	return tracks, nil
 }
 
+func (c *Client) StartSyncDaemon(ctx context.Context, done func()) {
+	c.sy.StartDaemon(ctx, done)
+}
+
 // func (c Client) PlayPause(ctx context.Context) {
 // 	c.ap.PlayPause(ctx)
 // }
 
-func NewSyncer(config Config, slogHandler slog.Handler) (c Client, err error) {
+func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c Client, err error) {
 	dbPath := filepath.Join(config.ConfigPath, "data.db")
-	if err = migrations.Migrate(context.Background(), dbPath, slogHandler); err != nil {
+	if err = migrations.Migrate(ctx, dbPath, slogHandler); err != nil {
 		return Client{}, err
 	}
 

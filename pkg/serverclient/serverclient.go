@@ -7,6 +7,9 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
+
+	"github.com/bragemusic/core/pkg/server"
 )
 
 type ServerClient struct {
@@ -80,6 +83,19 @@ func (s ServerClient) downloadFile(ctx context.Context, u string, w io.Writer) e
 	}
 
 	return nil
+}
+
+func (s ServerClient) CheckHealth(ctx context.Context) (h server.Healthz, err error) {
+	u, err := url.JoinPath(s.baseUrl, "healthz")
+	if err != nil {
+		return server.Healthz{}, err
+	}
+
+	if err := s.doGetJson(ctx, u, &h); err != nil {
+		return server.Healthz{}, err
+	}
+
+	return h, nil
 }
 
 func New(baseUrl string, slogHandler slog.Handler) ServerClient {
