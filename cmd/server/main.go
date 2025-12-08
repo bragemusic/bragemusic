@@ -5,15 +5,12 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
-	"github.com/bragemusic/core/internal/config"
-	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/server"
-	"github.com/bragemusic/core/pkg/trackmgr"
-	"github.com/bragemusic/core/pkg/wiki"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/lmittmann/tint"
@@ -21,12 +18,6 @@ import (
 )
 
 func main() {
-	scfg, err := config.GetServerConfig()
-	if err != nil {
-		slog.Error(err.Error())
-		return
-	}
-
 	slogHandler := tint.NewHandler(os.Stderr, &tint.Options{
 		Level:      slog.LevelDebug,
 		TimeFormat: time.TimeOnly,
@@ -34,18 +25,19 @@ func main() {
 
 	logger := slog.New(slogHandler)
 
-	dbSqlite, err := sqlx.Open("sqlite3", scfg.DBPath)
+	scfg, err := server.GetConfig()
+	if err != nil {
+		logger.Error("could not parse config", "error", err.Error())
+		return
+	}
+
+	dbPath := filepath.Join(scfg.Paths.ConfigDir, "data.db")
+	dbSqlite, err := sqlx.Open("sqlite3", dbPath)
 	if err != nil {
 		logger.Error(err.Error())
 		return
 	}
 	defer dbSqlite.Close()
-
-	aid, err := acoustid.New(scfg.AcoustIDApiKey, slogHandler)
-	if err != nil {
-		logger.Error(err.Error())
-		return
-	}
 
 	db, err := database.New(dbSqlite)
 	if err != nil {
@@ -53,18 +45,12 @@ func main() {
 		return
 	}
 
-	w := wiki.New(scfg.WikiEmail)
+	m := mediamanager.New(slogHandler, db, scfg.Paths.MusicDir)
 
-	tm := trackmgr.New(scfg, db, aid, w, slogHandler)
-	_ = tm
+	s := server.New(slogHandler, &m, scfg)
 
-	m := mediamanager.New(slogHandler, db, "/home/lucas/dev/brage/data/music")
-
-	sc := server.Config{ImagePath: "/home/lucas/dev/brage/data/img"}
-	s := server.New(slogHandler, &m, sc)
-
-	logger.Info(fmt.Sprintf("serving on port %s", scfg.Port))
-	if err = http.ListenAndServe(":"+scfg.Port, s.Handler()); err != nil {
+	logger.Info(fmt.Sprintf("serving on port %d", scfg.Port))
+	if err = http.ListenAndServe(fmt.Sprintf(":%d", scfg.Port), s.Handler()); err != nil {
 		logger.Error(err.Error())
 		return
 	}
