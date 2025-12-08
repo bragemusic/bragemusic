@@ -16,6 +16,8 @@ import (
 	"github.com/dhowden/tag"
 )
 
+const playCountCountFrac = 0.75
+
 var ErrFileNotFound = errors.New("file not found")
 
 type Config struct {
@@ -35,8 +37,10 @@ type AudioPlayer struct {
 	currentTrackChangeCallbacks []func(*types.TrackEnhanced)
 	pausePlayCallbacks          []func(isPlaying bool)
 	progressCallbacks           []func(ms int64)
+	playCountCallbacks          []func(trackID string)
 	errCallback                 func(context.Context, error)
 	musicDirPath                string
+	playCountReported           bool
 	log                         *slog.Logger
 }
 
@@ -54,6 +58,10 @@ func (a *AudioPlayer) RegisterPlayPauseCallback(f func(isPlaying bool)) {
 
 func (a *AudioPlayer) RegisterProgressCallback(f func(ms int64)) {
 	a.progressCallbacks = append(a.progressCallbacks, f)
+}
+
+func (a *AudioPlayer) RegisterPlayCountCallback(f func(trackID string)) {
+	a.playCountCallbacks = append(a.playCountCallbacks, f)
 }
 
 func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, tracks []types.TrackEnhanced, startTrackIndex int) (err error) {
@@ -135,6 +143,19 @@ func (a *AudioPlayer) startProgressPrinter() {
 					for _, f := range a.progressCallbacks {
 						f(ms)
 					}
+
+					if !a.playCountReported {
+						totMs := a.CurrentTrack().DurationMS
+						if totMs != nil {
+							percPlayed := float32(ms) / float32(*totMs)
+							if percPlayed > playCountCountFrac {
+								for _, f := range a.playCountCallbacks {
+									f(a.CurrentTrack().ID)
+								}
+								a.playCountReported = true
+							}
+						}
+					}
 				}
 			}
 		}
@@ -143,6 +164,8 @@ func (a *AudioPlayer) startProgressPrinter() {
 
 func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
 	a.ai.Stop()
+
+	a.playCountReported = false
 
 	if err = a.closeCurrentFile(ctx); err != nil {
 		return err

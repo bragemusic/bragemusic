@@ -115,24 +115,37 @@ func (c *Client) StartSyncDaemon(ctx context.Context, done func()) {
 	c.sy.StartDaemon(ctx, done)
 }
 
+func (c *Client) updatePlayCount(trackID string) {
+	// FIXME: Do we need context here?
+	ctx := context.TODO()
+	// FIXME: Add proper UserID handling
+	userID := "00000000-0000-0000-0000-000000000000"
+	err := c.mm.AddPlayCount(ctx, trackID, userID)
+	if err != nil {
+		c.log.ErrorContext(ctx, "could not add play count", "error", err.Error())
+		return
+	}
+	c.log.DebugContext(ctx, "added play count", "track_id", trackID)
+}
+
 // func (c Client) PlayPause(ctx context.Context) {
 // 	c.ap.PlayPause(ctx)
 // }
 
-func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c Client, err error) {
+func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c *Client, err error) {
 	dbPath := filepath.Join(config.ConfigPath, "data.db")
 	if err = migrations.Migrate(ctx, dbPath, slogHandler); err != nil {
-		return Client{}, err
+		return nil, err
 	}
 
 	dbSqlite, err := sqlx.Open("sqlite3", dbPath)
 	if err != nil {
-		return Client{}, err
+		return nil, err
 	}
 
 	db, err := database.New(dbSqlite)
 	if err != nil {
-		return Client{}, err
+		return nil, err
 	}
 
 	sc := serverclient.New(config.ServerBaseURL, slogHandler)
@@ -141,7 +154,7 @@ func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c 
 
 	pa, err := audiointerface.NewPortAudio(slogHandler)
 	if err != nil {
-		return Client{}, err
+		return nil, err
 	}
 
 	apCfg := audioplayer.Config{
@@ -151,10 +164,10 @@ func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c 
 
 	ap, err := audioplayer.New(apCfg, pa, slogHandler)
 	if err != nil {
-		return Client{}, err
+		return nil, err
 	}
 
-	return Client{
+	c = &Client{
 		sc:          &sc,
 		mm:          &mm,
 		sy:          &sy,
@@ -162,5 +175,9 @@ func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c 
 		config:      config,
 		log:         slog.New(slogHandler).With("service", "client"),
 		dbClose:     dbSqlite.Close,
-	}, nil
+	}
+
+	ap.RegisterPlayCountCallback(c.updatePlayCount)
+
+	return c, nil
 }

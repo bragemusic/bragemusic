@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 	"github.com/jmoiron/sqlx"
 	"github.com/mattn/go-sqlite3"
 )
@@ -51,6 +52,10 @@ type DatabaseFace interface {
 
 	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
 	GetLastSync(ctx context.Context) (sync types.DBSyncState, err error)
+
+	AddPlayHistory(ctx context.Context, trackID, userID uuid.UUID) (string, error)
+	AddPlayHistoryStruct(ctx context.Context, ph types.PlayHistory) (string, error)
+	ListUpdatedPlayHistory(ctx context.Context, since time.Time) (updatedItems []types.PlayHistory, err error)
 
 	// // User Handling
 	// AddUser(ctx context.Context, user *DbUser) (bool, error)

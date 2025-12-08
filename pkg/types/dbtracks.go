@@ -48,6 +48,7 @@ type TrackEnhanced struct {
 	FilePath      string    `db:"file_path" json:"file_path"`
 	FileSize      *int64    `db:"file_size" json:"file_size,omitempty"` // bytes
 	MimeType      *string   `db:"mime_type" json:"mime_type,omitempty"`
+	PlayCount     int       `db:"play_count" json:"play_count"`
 	CreatedAt     time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
 }

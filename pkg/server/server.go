@@ -38,6 +38,7 @@ func (s Server) Handler() http.Handler {
 	r.Get("/tracks/{trackID}/file", s.getTrackFile())
 
 	r.Post("/sync", s.sync())
+	r.Post("/sync/play-history", s.syncPlayHistory())
 
 	return r
 }

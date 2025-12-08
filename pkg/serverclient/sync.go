@@ -23,3 +23,21 @@ func (s ServerClient) GetSyncState(ctx context.Context, changesSince time.Time) 
 
 	return syncState, nil
 }
+
+func (s ServerClient) SyncPlayHistory(ctx context.Context, changesSince time.Time, newItems []types.PlayHistory) (syncState types.PlayHistorySyncState, err error) {
+	u, err := url.JoinPath(s.baseUrl, "/sync/play-history")
+	if err != nil {
+		return types.PlayHistorySyncState{}, err
+	}
+
+	payload := server.SyncPlayHistoryReq{
+		ChangesSince:       changesSince,
+		UpdatedClientItems: newItems,
+	}
+
+	if err := s.doPostJson(ctx, u, payload, &syncState); err != nil {
+		return types.PlayHistorySyncState{}, err
+	}
+
+	return syncState, nil
+}

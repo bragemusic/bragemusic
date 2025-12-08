@@ -244,12 +244,18 @@ func (d Database) GetEnhancedTracksFromAlbumID(ctx context.Context, albumID stri
             t.*,
             al.name  AS album_name,
             ar.id    AS artist_id,
-            ar.name  AS artist_name
+            ar.name  AS artist_name,
+            COALESCE(tp.play_count, 0) AS play_count
         FROM tracks t
         JOIN albums al ON t.album_id = al.id
         JOIN artists ar ON al.artist_id = ar.id
+        LEFT JOIN (
+            SELECT track_id, COUNT(*) AS play_count
+            FROM play_history
+            GROUP BY track_id
+        ) tp ON tp.track_id = t.id
         WHERE t.album_id = ?;
-    `
+`
 	err = sqlx.SelectContext(ctx, d.ext, &tracks, query, albumID)
 	if err != nil {
 		return nil, err
