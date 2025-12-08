@@ -342,7 +342,7 @@ func (s Syncer) syncPlayHistory(ctx context.Context, tx database.DatabaseFace, l
 	}
 
 	for _, serverItem := range serverSyncState.RemoteItems {
-		if _, err := s.db.AddPlayHistoryStruct(ctx, serverItem); err != nil {
+		if _, err := tx.AddPlayHistoryStruct(ctx, serverItem); err != nil {
 			return err
 		}
 	}
