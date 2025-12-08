@@ -45,7 +45,7 @@ func main() {
 		return
 	}
 
-	m := mediamanager.New(slogHandler, db, "/home/lucas/dev/brage/data/music")
+	m := mediamanager.New(slogHandler, db, scfg.Paths.MusicDir)
 
 	s := server.New(slogHandler, &m, scfg)
 

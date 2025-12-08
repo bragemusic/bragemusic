@@ -30,6 +30,10 @@ func verify(cfg Config) error {
 		errs = append(errs, errors.New("Paths.ImageDir not set"))
 	}
 
+	if cfg.Paths.MusicDir == "" {
+		errs = append(errs, errors.New("Paths.MusicDir not set"))
+	}
+
 	if cfg.Paths.ConfigDir == "" {
 		errs = append(errs, errors.New("Paths.ConfigDir not set"))
 	}
