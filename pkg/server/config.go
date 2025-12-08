@@ -8,14 +8,14 @@ import (
 )
 
 type Paths struct {
-	ConfigDir string `toml:"config_dir"`
-	ImageDir  string `toml:"image_dir"`
-	MusicDir  string `toml:"music_dir"`
+	ConfigDir string `toml:"config_dir" desc:"Dir where server files are stored."`
+	ImageDir  string `toml:"image_dir" desc:"Dir where image assets are stored."`
+	MusicDir  string `toml:"music_dir" desc:"Dir where music files are stored."`
 }
 
 type Config struct {
 	Paths Paths `toml:"paths"`
-	Port  int   `toml:"port"`
+	Port  int   `toml:"port" desc:"Port of the server. Defaults to 3000."`
 }
 
 var defaultConfig = Config{

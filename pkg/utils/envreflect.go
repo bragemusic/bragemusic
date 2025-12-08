@@ -70,3 +70,9 @@ func reflectField(field reflect.StructField, value reflect.Value, p []string) er
 
 	return nil
 }
+
+func GenerateDocsMap(cfg any, generateToml bool) (map[string]string, error) {
+	// TODO: Parse desc tags and generate docs of toml name, env name and desc.
+	// To be used in an md file or similar
+	return nil, nil
+}
