@@ -7,7 +7,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (d Database) AddPlayHistory(ctx context.Context, trackID, userID string) (string, error) {
+func (d Database) AddPlayHistory(ctx context.Context, trackID, userID uuid.UUID) (string, error) {
 	uid, err := uuid.NewV4()
 	if err != nil {
 		return "", err
@@ -27,8 +27,8 @@ func (d Database) AddPlayHistory(ctx context.Context, trackID, userID string) (s
 		ctx,
 		query,
 		id,
-		userID,
-		trackID,
+		userID.String(),
+		trackID.String(),
 		playedAt,
 	)
 	if err != nil {
