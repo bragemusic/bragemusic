@@ -19,3 +19,8 @@ type DBSyncState struct {
 	TracksCreated  int       `db:"tracks_created" json:"tracks_created"`
 	TracksUpdated  int       `db:"tracks_updated" json:"tracks_updated"`
 }
+
+type PlayHistorySyncState struct {
+	Time        time.Time     `json:"time"`
+	RemoteItems []PlayHistory `json:"remote_items"`
+}

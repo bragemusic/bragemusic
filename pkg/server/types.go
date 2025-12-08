@@ -1,6 +1,10 @@
 package server
 
-import "time"
+import (
+	"time"
+
+	"github.com/bragemusic/core/pkg/types"
+)
 
 type HealthzStatus string
 
@@ -16,4 +20,9 @@ type Healthz struct {
 
 type SyncReq struct {
 	ChangesSince time.Time `json:"changes_since"`
+}
+
+type SyncPlayHistoryReq struct {
+	ChangesSince       time.Time           `json:"changes_since"`
+	UpdatedClientItems []types.PlayHistory `json:"updated_client_items"`
 }

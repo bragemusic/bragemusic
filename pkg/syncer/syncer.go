@@ -152,6 +152,10 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 
+	if err := s.syncPlayHistory(ctx, tx, lastSync.SyncedAt); err != nil {
+		return err
+	}
+
 	if _, err := tx.AddSync(ctx, dbSyncState); err != nil {
 		return err
 	}
@@ -324,6 +328,26 @@ func (s Syncer) syncTracks(ctx context.Context, tx database.DatabaseFace, trackI
 	}
 
 	return created, updated, nil
+}
+
+func (s Syncer) syncPlayHistory(ctx context.Context, tx database.DatabaseFace, lastSync time.Time) error {
+	clientHistory, err := tx.ListUpdatedPlayHistory(ctx, lastSync)
+	if err != nil {
+		return err
+	}
+
+	serverSyncState, err := s.sc.SyncPlayHistory(ctx, lastSync, clientHistory)
+	if err != nil {
+		return err
+	}
+
+	for _, serverItem := range serverSyncState.RemoteItems {
+		if _, err := s.db.AddPlayHistoryStruct(ctx, serverItem); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func New(sc *serverclient.ServerClient, db database.DatabaseFace, musicDir, imgDir string, slogHandler slog.Handler) Syncer {
