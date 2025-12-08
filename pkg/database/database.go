@@ -52,6 +52,8 @@ type DatabaseFace interface {
 	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
 	GetLastSync(ctx context.Context) (sync types.DBSyncState, err error)
 
+	AddPlayHistory(ctx context.Context, trackID, userID string) (string, error)
+
 	// // User Handling
 	// AddUser(ctx context.Context, user *DbUser) (bool, error)
 	// UserExists(ctx context.Context, username string) (bool, error)
