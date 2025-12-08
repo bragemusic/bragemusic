@@ -16,6 +16,8 @@ import (
 	"github.com/dhowden/tag"
 )
 
+const playCountCountFrac = 0.75
+
 var ErrFileNotFound = errors.New("file not found")
 
 type Config struct {
@@ -146,7 +148,7 @@ func (a *AudioPlayer) startProgressPrinter() {
 						totMs := a.CurrentTrack().DurationMS
 						if totMs != nil {
 							percPlayed := float32(ms) / float32(*totMs)
-							if percPlayed > 0.05 {
+							if percPlayed > playCountCountFrac {
 								for _, f := range a.playCountCallbacks {
 									f(a.CurrentTrack().ID)
 								}
