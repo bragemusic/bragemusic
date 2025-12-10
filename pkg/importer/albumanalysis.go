@@ -134,6 +134,10 @@ func (i Importer) matchRemainingTracks(ctx context.Context, tracks []Track, mbAl
 		}
 	}
 
+	if len(availableTracks) == 0 {
+		return tracks, nil
+	}
+
 	// Try to match the remaining tracks
 	for tidx := range tracks {
 		if tracks[tidx].MbID == nil {
