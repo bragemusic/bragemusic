@@ -34,7 +34,7 @@ type Client struct {
 	log     *slog.Logger
 	dbClose func() error
 
-	tracks []types.TrackEnhanced
+	// tracks []types.TrackEnhanced
 }
 
 func (c *Client) RegisterServerAvailabilityCallback(f func(bool)) {
@@ -53,15 +53,21 @@ func (c *Client) Close() error {
 	return c.dbClose()
 }
 
-func (c *Client) StartPlayer(ctx context.Context, albumID string, trackNumber int) error {
+func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID string, trackNumber int) error {
 	tracks, err := c.mm.ListEnhancedTracksByAlbum(ctx, albumID)
 	if err != nil {
 		return err
 	}
 
-	c.tracks = tracks
+	pCtx := audioplayer.PlayContext{
+		Type:            audioplayer.PlayContextAlbum,
+		RefID:           albumID,
+		Tracks:          tracks,
+		Queue:           []types.TrackEnhanced{},
+		CurrentTrackIdx: trackNumber,
+	}
 
-	err = c.AudioPlayer.LoadAndStartTracks(ctx, c.tracks, trackNumber)
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
 	if err != nil {
 		return err
 	}

@@ -28,11 +28,12 @@ type Config struct {
 type CallbackType string
 
 type AudioPlayer struct {
-	ai                          audiointerface.AudioInterface
-	mp                          mpris.Mpris
-	tracks                      []types.TrackEnhanced
-	currentFile                 *os.File
-	currentTrackIdx             int
+	ai      audiointerface.AudioInterface
+	mp      mpris.Mpris
+	playCtx PlayContext
+	// tracks                      []types.TrackEnhanced
+	currentFile *os.File
+	// currentTrackIdx             int
 	progressTicker              *time.Ticker
 	currentTrackChangeCallbacks []func(*types.TrackEnhanced)
 	pausePlayCallbacks          []func(isPlaying bool)
@@ -64,8 +65,8 @@ func (a *AudioPlayer) RegisterPlayCountCallback(f func(trackID string)) {
 	a.playCountCallbacks = append(a.playCountCallbacks, f)
 }
 
-func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, tracks []types.TrackEnhanced, startTrackIndex int) (err error) {
-	if startTrackIndex < 0 || startTrackIndex >= len(tracks) {
+func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, playCtx PlayContext) (err error) {
+	if playCtx.CurrentTrackIdx < 0 || playCtx.CurrentTrackIdx >= len(playCtx.Tracks) {
 		return errors.New("startTrackIndex must be between 0 and len of tracks")
 	}
 
@@ -73,20 +74,19 @@ func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, tracks []types.Tra
 		return err
 	}
 
-	a.tracks = tracks
-	a.currentTrackIdx = startTrackIndex
+	a.playCtx = playCtx
 
 	return a.startTrack(ctx)
 }
 
 func (a *AudioPlayer) NextTrack(ctx context.Context) (err error) {
 	a.log.DebugContext(ctx, "next track")
-	cidx := a.currentTrackIdx + 1
-	if cidx >= len(a.tracks) {
+	cidx := a.playCtx.CurrentTrackIdx + 1
+	if cidx >= len(a.playCtx.Tracks) {
 		cidx = 0
 	}
 
-	a.currentTrackIdx = cidx
+	a.playCtx.CurrentTrackIdx = cidx
 
 	for _, f := range a.currentTrackChangeCallbacks {
 		f(a.CurrentTrack())
@@ -96,11 +96,11 @@ func (a *AudioPlayer) NextTrack(ctx context.Context) (err error) {
 }
 
 func (a *AudioPlayer) CurrentTrack() *types.TrackEnhanced {
-	if len(a.tracks) == 0 {
+	if len(a.playCtx.Tracks) == 0 {
 		return nil
 	}
 
-	return &a.tracks[a.currentTrackIdx]
+	return &a.playCtx.Tracks[a.playCtx.CurrentTrackIdx]
 }
 
 func (a *AudioPlayer) Pause(ctx context.Context) {
