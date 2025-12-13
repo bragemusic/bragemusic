@@ -12,6 +12,20 @@ import (
 	"github.com/mattn/go-sqlite3"
 )
 
+type (
+	SortBy    string
+	SortOrder string
+)
+
+const (
+	SortByName      SortBy = "name"
+	SortByDate      SortBy = "date"
+	SortByPlayCount SortBy = "play_count"
+
+	SortAsc  SortOrder = "ASC"
+	SortDesc SortOrder = "DESC"
+)
+
 type DatabaseFace interface {
 	Begin(ctx context.Context) (DatabaseFace, error)
 	driver.Tx
@@ -24,7 +38,7 @@ type DatabaseFace interface {
 	GetAlbumFromID(ctx context.Context, id string) (album types.Album, err error)
 	GetEnhancedAlbumFromID(ctx context.Context, id string) (album types.AlbumEnhanced, err error)
 	GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]types.Album, error)
-	ListAlbumsByArtist(ctx context.Context, artistID string) (albums []types.Album, err error)
+	ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.Album, err error)
 	ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error)
 
 	AddArtist(ctx context.Context, a types.Artist) (string, error)
@@ -33,7 +47,7 @@ type DatabaseFace interface {
 	GetArtistFromID(ctx context.Context, id string) (artist types.Artist, err error)
 	GetArtistFromMbID(ctx context.Context, mbID string) (artist types.Artist, err error)
 	GetArtistFromName(ctx context.Context, name string) (artist types.Artist, err error)
-	ListArtists(ctx context.Context) (artists []types.Artist, err error)
+	ListArtists(ctx context.Context, sortBy SortBy, sortOrder SortOrder) (artists []types.Artist, err error)
 	ListUpdatedArtists(ctx context.Context, since time.Time) (artistIDs []string, err error)
 	ListArtistsWithoutMeta(ctx context.Context) (artists []types.Artist, err error)
 
@@ -46,6 +60,7 @@ type DatabaseFace interface {
 	GetTrackFromMbID(ctx context.Context, mbID string) (track types.Track, err error)
 	GetTrackFromID(ctx context.Context, ID string) (track types.Track, err error)
 	GetTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.Track, err error)
+	GetEnhancedTracksFromArtistID(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackEnhanced, err error)
 	GetEnhancedTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.TrackEnhanced, err error)
 	GetTrackFromName(ctx context.Context, albumID string, trackName string) (track types.Track, err error)
 	ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error)

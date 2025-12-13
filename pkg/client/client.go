@@ -13,6 +13,7 @@ import (
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/core/pkg/utils"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -70,8 +71,8 @@ func (c *Client) StartPlayer(ctx context.Context, albumID string, trackNumber in
 	return nil
 }
 
-func (c Client) ListArtists(ctx context.Context) ([]types.Artist, error) {
-	artists, err := c.mm.ListArtists(ctx)
+func (c Client) ListArtists(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Artist, error) {
+	artists, err := c.mm.ListArtists(ctx, sortBy, sortOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +88,8 @@ func (c Client) GetArtist(ctx context.Context, artistID string) (types.Artist, e
 	return artist, nil
 }
 
-func (c Client) ListAlbumsByArtist(ctx context.Context, artistID string) ([]types.Album, error) {
-	albums, err := c.mm.ListAlbumsByArtist(ctx, artistID)
+func (c Client) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Album, error) {
+	albums, err := c.mm.ListAlbumsByArtist(ctx, artistID, sortBy, sortOrder)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +106,14 @@ func (c Client) GetAlbum(ctx context.Context, albumID string) (types.AlbumEnhanc
 
 func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.TrackEnhanced, error) {
 	tracks, err := c.mm.ListEnhancedTracksByAlbum(ctx, albumID)
+	if err != nil {
+		return nil, err
+	}
+	return tracks, nil
+}
+
+func (c Client) GetArtistTopTracks(ctx context.Context, artistID string) ([]types.TrackEnhanced, error) {
+	tracks, err := c.mm.ListEnhancedTracksByArtist(ctx, artistID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
 	if err != nil {
 		return nil, err
 	}

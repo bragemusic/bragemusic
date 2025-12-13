@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/bragemusic/core/pkg/database"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -48,7 +49,7 @@ func (s Server) listAlbums() http.HandlerFunc {
 			}
 		}
 
-		albums, err := s.mediamgr.ListAlbumsByArtist(ctx, artistID)
+		albums, err := s.mediamgr.ListAlbumsByArtist(ctx, artistID, database.SortByDate, database.SortAsc)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return http.StatusBadRequest, nil, ErrIDNotFound{

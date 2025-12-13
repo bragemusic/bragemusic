@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/bragemusic/core/pkg/database"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -40,7 +41,7 @@ func (s Server) listArtists() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		ctx := r.Context()
 
-		artists, err := s.mediamgr.ListArtists(ctx)
+		artists, err := s.mediamgr.ListArtists(ctx, database.SortByName, database.SortAsc)
 		if err != nil {
 			return http.StatusInternalServerError, nil, err
 		}

@@ -210,10 +210,11 @@ func (t TrackManager) getOrCreateArtist(ctx context.Context, tx database.Databas
 }
 
 func (t TrackManager) ListArtists(ctx context.Context) ([]types.Artist, error) {
-	artists, err := t.db.ListArtists(ctx)
-	if err != nil {
-		return nil, err
-	}
+	// artists, err := t.db.ListArtists(ctx)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	return artists, nil
+	// return artists, nil
+	return nil, nil
 }

@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/bragemusic/core/pkg/types"
@@ -154,13 +155,23 @@ func (d Database) GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]
 	return albums, nil
 }
 
-func (d Database) ListAlbumsByArtist(ctx context.Context, artistID string) (albums []types.Album, err error) {
-	query := `
+func (d Database) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.Album, err error) {
+	sortByStr := ""
+
+	switch sortBy {
+	case SortByName:
+		sortByStr = "sort_name"
+	case SortByDate:
+		sortByStr = "release_date"
+	}
+
+	query := fmt.Sprintf(`
         SELECT *
         FROM albums
         WHERE artist_id = ?
+        ORDER BY %s %s
         ;
-    `
+    `, sortByStr, sortOrder)
 	err = sqlx.SelectContext(ctx, d.ext, &albums, query, artistID)
 	if err != nil {
 		return nil, err

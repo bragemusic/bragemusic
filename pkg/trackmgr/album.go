@@ -182,10 +182,11 @@ func (t TrackManager) getOrCreateAlbum(ctx context.Context, tx database.Database
 }
 
 func (t TrackManager) GetAlbumsByArtist(ctx context.Context, artistID string) ([]types.Album, error) {
-	albums, err := t.db.ListAlbumsByArtist(ctx, artistID)
-	if err != nil {
-		return nil, err
-	}
+	// albums, err := t.db.ListAlbumsByArtist(ctx, artistID)
+	// if err != nil {
+	// 	return nil, err
+	// }
 
-	return albums, nil
+	// return albums, nil
+	return nil, nil
 }
