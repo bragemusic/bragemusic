@@ -3,6 +3,7 @@ package mediamanager
 import (
 	"context"
 
+	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
 )
 
@@ -24,8 +25,8 @@ func (m MediaManager) GetAlbumEnhanced(ctx context.Context, albumID string) (typ
 	return album, nil
 }
 
-func (m MediaManager) ListAlbumsByArtist(ctx context.Context, artistID string) ([]types.Album, error) {
-	albums, err := m.db.ListAlbumsByArtist(ctx, artistID)
+func (m MediaManager) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Album, error) {
+	albums, err := m.db.ListAlbumsByArtist(ctx, artistID, sortBy, sortOrder)
 	if err != nil {
 		return nil, err
 	}

@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/bragemusic/core/pkg/types"
@@ -257,6 +258,54 @@ func (d Database) GetEnhancedTracksFromAlbumID(ctx context.Context, albumID stri
         WHERE t.album_id = ?;
 `
 	err = sqlx.SelectContext(ctx, d.ext, &tracks, query, albumID)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
+
+func (d Database) GetEnhancedTracksFromArtistID(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackEnhanced, err error) {
+	sortByStr := ""
+
+	if !includeMissingFiles {
+		sortByStr = "AND WHERE t.file_path != '' "
+	}
+
+	switch sortBy {
+	case SortByDate:
+		sortByStr = "created_at"
+	case SortByName:
+		sortByStr = "title"
+	case SortByPlayCount:
+		sortByStr = "play_count"
+	}
+
+	sortLimit := fmt.Sprintf("ORDER BY %s %s", sortByStr, sortOrder)
+	if limit != nil {
+		sortLimit += fmt.Sprintf(" LIMIT %d", *limit)
+	}
+
+	query := fmt.Sprintf(`
+        SELECT
+            t.*,
+            al.name  AS album_name,
+            ar.id    AS artist_id,
+            ar.name  AS artist_name,
+            COALESCE(tp.play_count, 0) AS play_count
+        FROM tracks t
+        JOIN albums al ON t.album_id = al.id
+        JOIN artists ar ON al.artist_id = ar.id
+        LEFT JOIN (
+            SELECT track_id, COUNT(*) AS play_count
+            FROM play_history
+            GROUP BY track_id
+        ) tp ON tp.track_id = t.id
+        WHERE artist_id = ?
+        %s
+;
+`, sortLimit)
+	err = sqlx.SelectContext(ctx, d.ext, &tracks, query, artistID)
 	if err != nil {
 		return nil, err
 	}

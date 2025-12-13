@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
 )
 
@@ -54,6 +55,15 @@ func (m MediaManager) ListTracksByAlbum(ctx context.Context, albumID string) ([]
 
 func (m MediaManager) ListEnhancedTracksByAlbum(ctx context.Context, albumID string) ([]types.TrackEnhanced, error) {
 	tracks, err := m.db.GetEnhancedTracksFromAlbumID(ctx, albumID)
+	if err != nil {
+		return nil, err
+	}
+
+	return tracks, nil
+}
+
+func (m MediaManager) ListEnhancedTracksByArtist(ctx context.Context, artistID string, sortBy database.SortBy, sortOrder database.SortOrder, limit *int, includeMissingFiles bool) ([]types.TrackEnhanced, error) {
+	tracks, err := m.db.GetEnhancedTracksFromArtistID(ctx, artistID, sortBy, sortOrder, limit, includeMissingFiles)
 	if err != nil {
 		return nil, err
 	}
