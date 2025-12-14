@@ -28,29 +28,27 @@ type Config struct {
 type CallbackType string
 
 type AudioPlayer struct {
-	ai      audiointerface.AudioInterface
-	mp      mpris.Mpris
-	playCtx PlayContext
-	// tracks                      []types.TrackEnhanced
-	currentFile *os.File
-	// currentTrackIdx             int
-	progressTicker              *time.Ticker
-	currentTrackChangeCallbacks []func(*types.TrackEnhanced)
-	pausePlayCallbacks          []func(isPlaying bool)
-	progressCallbacks           []func(ms int64)
-	playCountCallbacks          []func(trackID string)
-	errCallback                 func(context.Context, error)
-	musicDirPath                string
-	playCountReported           bool
-	log                         *slog.Logger
+	ai                            audiointerface.AudioInterface
+	mp                            mpris.Mpris
+	playCtx                       PlayContext
+	currentFile                   *os.File
+	progressTicker                *time.Ticker
+	currentPlayCtxChangeCallbacks []func(PlayContext)
+	pausePlayCallbacks            []func(isPlaying bool)
+	progressCallbacks             []func(ms int64)
+	playCountCallbacks            []func(trackID string)
+	errCallback                   func(context.Context, error)
+	musicDirPath                  string
+	playCountReported             bool
+	log                           *slog.Logger
 }
 
 func (a *AudioPlayer) RegisterErrorCallback(f func(context.Context, error)) {
 	a.errCallback = f
 }
 
-func (a *AudioPlayer) RegisterTrackChangeCallback(f func(*types.TrackEnhanced)) {
-	a.currentTrackChangeCallbacks = append(a.currentTrackChangeCallbacks, f)
+func (a *AudioPlayer) RegisterPlatContextChangeCallback(f func(PlayContext)) {
+	a.currentPlayCtxChangeCallbacks = append(a.currentPlayCtxChangeCallbacks, f)
 }
 
 func (a *AudioPlayer) RegisterPlayPauseCallback(f func(isPlaying bool)) {
@@ -75,6 +73,7 @@ func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, playCtx PlayContex
 	}
 
 	a.playCtx = playCtx
+	a.playCtx.CurrentTrack = &playCtx.Tracks[playCtx.CurrentTrackIdx]
 
 	return a.startTrack(ctx)
 }
@@ -87,20 +86,26 @@ func (a *AudioPlayer) NextTrack(ctx context.Context) (err error) {
 	}
 
 	a.playCtx.CurrentTrackIdx = cidx
+	a.playCtx.CurrentTrack = &a.playCtx.Tracks[a.playCtx.CurrentTrackIdx]
 
-	for _, f := range a.currentTrackChangeCallbacks {
-		f(a.CurrentTrack())
+	for _, f := range a.currentPlayCtxChangeCallbacks {
+		f(a.playCtx)
 	}
 
 	return a.startTrack(ctx)
 }
 
-func (a *AudioPlayer) CurrentTrack() *types.TrackEnhanced {
-	if len(a.playCtx.Tracks) == 0 {
-		return nil
-	}
+func (a *AudioPlayer) PlayContext() PlayContext {
+	return a.playCtx
+}
 
-	return &a.playCtx.Tracks[a.playCtx.CurrentTrackIdx]
+func (a *AudioPlayer) currentTrack() *types.TrackEnhanced {
+	return a.playCtx.CurrentTrack
+	// if len(a.playCtx.Tracks) == 0 {
+	// 	return nil
+	// }
+
+	// return &a.playCtx.Tracks[a.playCtx.CurrentTrackIdx]
 }
 
 func (a *AudioPlayer) Pause(ctx context.Context) {
@@ -145,12 +150,12 @@ func (a *AudioPlayer) startProgressPrinter() {
 					}
 
 					if !a.playCountReported {
-						totMs := a.CurrentTrack().DurationMS
+						totMs := a.currentTrack().DurationMS
 						if totMs != nil {
 							percPlayed := float32(ms) / float32(*totMs)
 							if percPlayed > playCountCountFrac {
 								for _, f := range a.playCountCallbacks {
-									f(a.CurrentTrack().ID)
+									f(a.currentTrack().ID)
 								}
 								a.playCountReported = true
 							}
@@ -171,29 +176,29 @@ func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
 		return err
 	}
 
-	if a.CurrentTrack().FilePath == "" {
+	if a.currentTrack().FilePath == "" {
 		return ErrFileNotFound
 	}
 
-	trackFilePath := filepath.Join(a.musicDirPath, a.CurrentTrack().FilePath)
+	trackFilePath := filepath.Join(a.musicDirPath, a.currentTrack().FilePath)
 
 	a.currentFile, err = os.Open(trackFilePath)
 	if err != nil {
 		return err
 	}
 
-	af, err := files.ParseAudioFile(a.currentFile, tag.FileType(*a.CurrentTrack().MimeType))
+	af, err := files.ParseAudioFile(a.currentFile, tag.FileType(*a.currentTrack().MimeType))
 	if err != nil {
 		return err
 	}
-	a.log.InfoContext(ctx, "start track", "title", a.CurrentTrack().Title, "artist", *a.CurrentTrack().ArtistName, "album", *a.CurrentTrack().AlbumName)
+	a.log.InfoContext(ctx, "start track", "title", a.currentTrack().Title, "artist", *a.currentTrack().ArtistName, "album", *a.currentTrack().AlbumName)
 
 	a.ai.StartAudioFile(ctx, af, a.NextTrack)
 	a.mp.SetStatus(mpris.MprisPlaying)
-	a.mp.SetTrack(a.CurrentTrack())
+	a.mp.SetTrack(a.currentTrack())
 
-	for _, f := range a.currentTrackChangeCallbacks {
-		f(a.CurrentTrack())
+	for _, f := range a.currentPlayCtxChangeCallbacks {
+		f(a.playCtx)
 	}
 
 	for _, f := range a.pausePlayCallbacks {

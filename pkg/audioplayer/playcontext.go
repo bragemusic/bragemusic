@@ -17,4 +17,5 @@ type PlayContext struct {
 	Tracks          []types.TrackEnhanced `json:"tracks"`
 	Queue           []types.TrackEnhanced `json:"queue"`
 	CurrentTrackIdx int                   `json:"current_track_idx"`
+	CurrentTrack    *types.TrackEnhanced  `json:"current_track"`
 }
