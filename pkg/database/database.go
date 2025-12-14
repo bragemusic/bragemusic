@@ -73,14 +73,15 @@ type DatabaseFace interface {
 	ListUpdatedPlayHistory(ctx context.Context, since time.Time) (updatedItems []types.PlayHistory, err error)
 
 	// User Handling
-	// AddUser(ctx context.Context, user *DbUser) (bool, error)
 	UserExistsByID(ctx context.Context, ID uuid.UUID) (bool, error)
 	CreateUser(ctx context.Context, user types.User) (uuid.UUID, error)
 	UpdateUser(ctx context.Context, user types.User) error
 	CreateAuthIdentity(ctx context.Context, ai types.AuthIdentity) (uuid.UUID, error)
 	GetAuthIdentityForUser(ctx context.Context, userID uuid.UUID) (ai types.AuthIdentity, err error)
 	UpdateAuthIdentity(ctx context.Context, ai types.AuthIdentity) error
-	// GetUser(ctx context.Context, username string) (user *DbUser, err error)
+	GetLocalCredentialsForUser(ctx context.Context, userID uuid.UUID) (lc types.LocalCredentials, err error)
+	CreateLocalCredentials(ctx context.Context, lc types.LocalCredentials) error
+	UpdateLocalCredentials(ctx context.Context, lc types.LocalCredentials) error
 
 	// // Login Session
 	// NewLoginSession(ctx context.Context, username string) (dbLoginSession *DbLoginSession, err error)

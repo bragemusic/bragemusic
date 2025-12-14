@@ -14,6 +14,7 @@ import (
 var adminUUID = uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111"))
 
 type Auth struct {
+	hc  *HashCrypt
 	db  database.DatabaseFace
 	log *slog.Logger
 }
@@ -69,6 +70,33 @@ func (a Auth) SetAdmin(ctx context.Context, email, username, password string) er
 		}
 	}
 
+	pw, err := a.hc.GenerateFromPassword(password)
+	if err != nil {
+		return err
+	}
+
+	localCredentials, err := tx.GetLocalCredentialsForUser(ctx, adminUUID)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+
+		localCredentials = types.LocalCredentials{
+			UserID:       adminUUID,
+			PasswordHash: pw,
+		}
+
+		if err = tx.CreateLocalCredentials(ctx, localCredentials); err != nil {
+			return err
+		}
+
+	} else {
+		localCredentials.PasswordHash = pw
+		if err = tx.UpdateLocalCredentials(ctx, localCredentials); err != nil {
+			return err
+		}
+	}
+
 	err = tx.Commit()
 	if err != nil {
 		return err
@@ -79,6 +107,7 @@ func (a Auth) SetAdmin(ctx context.Context, email, username, password string) er
 
 func New(db database.DatabaseFace, slogHandler slog.Handler) Auth {
 	return Auth{
+		hc:  NewHashCrypt(),
 		log: slog.New(slogHandler).With("service", "auth"),
 		db:  db,
 	}

@@ -139,3 +139,58 @@ func (d Database) UpdateAuthIdentity(ctx context.Context, ai types.AuthIdentity)
 	_, err := sqlx.NamedExecContext(ctx, d.ext, query, ai)
 	return err
 }
+
+func (d Database) GetLocalCredentialsForUser(ctx context.Context, userID uuid.UUID) (lc types.LocalCredentials, err error) {
+	query := `
+        SELECT *
+        FROM local_credentials
+        WHERE user_id = ?
+        LIMIT 1;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &lc, query, userID)
+	if err != nil {
+		return types.LocalCredentials{}, err
+	}
+
+	return
+}
+
+func (d Database) CreateLocalCredentials(ctx context.Context, lc types.LocalCredentials) error {
+	now := time.Now()
+	lc.CreatedAt = now
+	lc.UpdatedAt = now
+
+	query := `
+        INSERT INTO local_credentials (
+            user_id, password_hash, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?);
+    `
+
+	_, err := d.ext.ExecContext(
+		ctx,
+		query,
+		lc.UserID,
+		lc.PasswordHash,
+		lc.CreatedAt,
+		lc.UpdatedAt,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d Database) UpdateLocalCredentials(ctx context.Context, lc types.LocalCredentials) error {
+	lc.UpdatedAt = time.Now()
+	query := `
+        UPDATE local_credentials SET
+            password_hash = :password_hash,
+            updated_at = :updated_at
+        WHERE user_id = :user_id;
+    `
+
+	_, err := sqlx.NamedExecContext(ctx, d.ext, query, lc)
+	return err
+}

@@ -37,11 +37,9 @@ type AuthIdentity struct {
 	UpdatedAt      time.Time    `db:"updated_at" json:"updated_at"`
 }
 
-// CREATE TABLE IF NOT EXISTS auth_identities (
-//     id                TEXT PRIMARY KEY,           -- UUID
-//     user_id           TEXT NOT NULL,
-//     provider          TEXT NOT NULL,        -- "local", "github", "authelia"
-//     provider_user_id  TEXT NOT NULL,
-//     email             TEXT,
-//     created_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
-//     updated_at        DATETIME DEFAULT CURRENT_TIMESTAMP,
+type LocalCredentials struct {
+	UserID       uuid.UUID `db:"user_id" json:"user_id"`
+	PasswordHash string    `db:"password_hash" json:"password_hash"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
+}
