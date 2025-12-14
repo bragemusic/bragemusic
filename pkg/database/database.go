@@ -77,6 +77,9 @@ type DatabaseFace interface {
 	UserExistsByID(ctx context.Context, ID uuid.UUID) (bool, error)
 	CreateUser(ctx context.Context, user types.User) (uuid.UUID, error)
 	UpdateUser(ctx context.Context, user types.User) error
+	CreateAuthIdentity(ctx context.Context, ai types.AuthIdentity) (uuid.UUID, error)
+	GetAuthIdentityForUser(ctx context.Context, userID uuid.UUID) (ai types.AuthIdentity, err error)
+	UpdateAuthIdentity(ctx context.Context, ai types.AuthIdentity) error
 	// GetUser(ctx context.Context, username string) (user *DbUser, err error)
 
 	// // Login Session
@@ -130,6 +133,11 @@ func New(db *sqlx.DB) (Database, error) {
 		return conn.RegisterFunc("normalize", normalizeForCompare, true)
 	}
 
+	// Allows for cascade deleting of foreign rows (user related at the moment)
+	_, err := db.Exec("PRAGMA foreign_keys = ON;")
+	if err != nil {
+		return Database{}, err
+	}
 	// db.Exec("PRAGMA journal_mode = WAL;")
 	// db.Exec("PRAGMA synchronous = NORMAL;") // optional, faster writes
 	// db.SetMaxOpenConns(1)

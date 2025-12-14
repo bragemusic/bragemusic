@@ -2,19 +2,13 @@ package auth
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"log/slog"
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
-)
-
-type UserScope string
-
-const (
-	UserScopeAdmin UserScope = "admin"
-	UserScopeRead  UserScope = "read"
-	UserScopeWrite UserScope = "write"
 )
 
 var adminUUID = uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111"))
@@ -48,6 +42,29 @@ func (a Auth) SetAdmin(ctx context.Context, email, username, password string) er
 		}
 	} else {
 		if _, err = tx.CreateUser(ctx, user); err != nil {
+			return err
+		}
+	}
+
+	authIdentity, err := tx.GetAuthIdentityForUser(ctx, adminUUID)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return err
+		}
+
+		authIdentity = types.AuthIdentity{
+			UserID:         adminUUID,
+			Provider:       types.AuthLocal,
+			ProviderUserID: adminUUID,
+			Email:          email,
+		}
+
+		if _, err = tx.CreateAuthIdentity(ctx, authIdentity); err != nil {
+			return err
+		}
+	} else {
+		authIdentity.Email = email
+		if err = tx.UpdateAuthIdentity(ctx, authIdentity); err != nil {
 			return err
 		}
 	}
