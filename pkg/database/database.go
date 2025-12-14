@@ -72,9 +72,11 @@ type DatabaseFace interface {
 	AddPlayHistoryStruct(ctx context.Context, ph types.PlayHistory) (string, error)
 	ListUpdatedPlayHistory(ctx context.Context, since time.Time) (updatedItems []types.PlayHistory, err error)
 
-	// // User Handling
+	// User Handling
 	// AddUser(ctx context.Context, user *DbUser) (bool, error)
-	// UserExists(ctx context.Context, username string) (bool, error)
+	UserExistsByID(ctx context.Context, ID uuid.UUID) (bool, error)
+	CreateUser(ctx context.Context, user types.User) (uuid.UUID, error)
+	UpdateUser(ctx context.Context, user types.User) error
 	// GetUser(ctx context.Context, username string) (user *DbUser, err error)
 
 	// // Login Session

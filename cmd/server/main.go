@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/server"
@@ -18,6 +20,8 @@ import (
 )
 
 func main() {
+	// FIXME: Add proper context with SIGs
+	ctx := context.Background()
 	slogHandler := tint.NewHandler(os.Stderr, &tint.Options{
 		Level:      slog.LevelDebug,
 		TimeFormat: time.TimeOnly,
@@ -40,6 +44,13 @@ func main() {
 	defer dbSqlite.Close()
 
 	db, err := database.New(dbSqlite)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+
+	a := auth.New(db, slogHandler)
+	err = a.SetAdmin(ctx, scfg.Admin.Email, scfg.Admin.Username, scfg.Admin.Password)
 	if err != nil {
 		logger.Error(err.Error())
 		return

@@ -13,12 +13,24 @@ type Paths struct {
 	MusicDir  string `toml:"music_dir" desc:"Dir where music files are stored."`
 }
 
+type Admin struct {
+	Email    string `toml:"email" desc:"Default user, with admin rights, email. Defaults to 'admin@example.com'"`
+	Username string `toml:"username" desc:"Default user, with admin rights, username. Defaults to 'admin'"`
+	Password string `toml:"password" desc:"Default user, with admin rights, password. Defaults to 'password'"`
+}
+
 type Config struct {
+	Admin Admin `toml:"admin"`
 	Paths Paths `toml:"paths"`
 	Port  int   `toml:"port" desc:"Port of the server. Defaults to 3000."`
 }
 
 var defaultConfig = Config{
+	Admin: Admin{
+		Email:    "admin@example.com",
+		Username: "admin",
+		Password: "password",
+	},
 	Paths: Paths{},
 	Port:  3000,
 }
