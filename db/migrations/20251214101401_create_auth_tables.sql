@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS auth_identities (
 CREATE TABLE IF NOT EXISTS tokens (
     id            TEXT PRIMARY KEY,           -- UUID
     user_id       TEXT NOT NULL,
+    type          TEXT NOT NULL,
     name          TEXT,                     -- "laptop", "ci-runner", "backup-daemon"
     hash          TEXT NOT NULL,            -- SHA-256(token)
     scopes        TEXT NOT NULL,          -- space-separated scopes
@@ -65,11 +66,11 @@ ON tokens(hash);
 -----------
 CREATE TABLE IF NOT EXISTS user_scopes (
     user_id     TEXT NOT NULL,
-    scope       TEXT NOT NULL,
+    role        TEXT NOT NULL,
     created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY (user_id, scope),
+    PRIMARY KEY (user_id, role),
 
     FOREIGN KEY (user_id)
         REFERENCES users(id)

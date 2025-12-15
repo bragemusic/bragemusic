@@ -7,14 +7,14 @@ import (
 )
 
 type (
-	UserScope    string
+	UserRole     string
 	AuthProvider string
 )
 
 const (
-	UserScopeAdmin UserScope = "admin"
-	UserScopeRead  UserScope = "read"
-	UserScopeWrite UserScope = "write"
+	UserRoleAdmin UserRole = "admin"
+	UserRoleRead  UserRole = "read"
+	UserRoleWrite UserRole = "write"
 
 	AuthLocal AuthProvider = "local"
 )
@@ -42,4 +42,11 @@ type LocalCredentials struct {
 	PasswordHash string    `db:"password_hash" json:"password_hash"`
 	CreatedAt    time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
+}
+
+type UserScope struct {
+	UserID    uuid.UUID `db:"user_id" json:"user_id"`
+	Role      UserRole  `db:"role" json:"role"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }

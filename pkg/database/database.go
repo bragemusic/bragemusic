@@ -85,6 +85,10 @@ type DatabaseFace interface {
 	GetLocalCredentialsForUser(ctx context.Context, userID uuid.UUID) (lc types.LocalCredentials, err error)
 	CreateLocalCredentials(ctx context.Context, lc types.LocalCredentials) error
 	UpdateLocalCredentials(ctx context.Context, lc types.LocalCredentials) error
+	CreateUserScope(ctx context.Context, us types.UserScope) error
+	UserScopeExists(ctx context.Context, userID uuid.UUID, role types.UserRole) (bool, error)
+	RemoveUserScope(ctx context.Context, userID uuid.UUID, role types.UserRole) error
+	ListUserRoles(ctx context.Context, userID uuid.UUID) (roles []types.UserRole, err error)
 
 	// // Login Session
 	// NewLoginSession(ctx context.Context, username string) (dbLoginSession *DbLoginSession, err error)

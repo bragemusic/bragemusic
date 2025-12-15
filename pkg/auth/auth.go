@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"log/slog"
+	"slices"
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
@@ -17,7 +18,7 @@ type Auth struct {
 	log *slog.Logger
 }
 
-func (a Auth) CreateUser(ctx context.Context, userID uuid.UUID, email, username, password string) error {
+func (a Auth) CreateUser(ctx context.Context, userID uuid.UUID, email, username, password string, roles []types.UserRole) error {
 	tx, err := a.db.Begin(ctx)
 	if err != nil {
 		return err
@@ -59,10 +60,16 @@ func (a Auth) CreateUser(ctx context.Context, userID uuid.UUID, email, username,
 		return err
 	}
 
+	for _, r := range roles {
+		if err = tx.CreateUserScope(ctx, types.UserScope{UserID: userID, Role: r}); err != nil {
+			return err
+		}
+	}
+
 	return tx.Commit()
 }
 
-func (a Auth) UpdateUser(ctx context.Context, userID uuid.UUID, email, username string, password *string) error {
+func (a Auth) UpdateUser(ctx context.Context, userID uuid.UUID, email, username string, password *string, roles []types.UserRole) error {
 	tx, err := a.db.Begin(ctx)
 	if err != nil {
 		return err
@@ -107,6 +114,32 @@ func (a Auth) UpdateUser(ctx context.Context, userID uuid.UUID, email, username 
 		}
 	}
 
+	currentRoles, err := tx.ListUserRoles(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	for _, r := range currentRoles {
+		if !slices.Contains(roles, r) {
+			if err = tx.RemoveUserScope(ctx, userID, r); err != nil {
+				return err
+			}
+		}
+	}
+
+	for _, r := range roles {
+		roleExists, err := tx.UserScopeExists(ctx, userID, r)
+		if err != nil {
+			return err
+		}
+
+		if !roleExists {
+			if err = tx.CreateUserScope(ctx, types.UserScope{UserID: userID, Role: r}); err != nil {
+				return err
+			}
+		}
+	}
+
 	return tx.Commit()
 }
 
@@ -130,12 +163,14 @@ func (a Auth) SetAdmin(ctx context.Context, email, username, password string) er
 		return err
 	}
 
+	scope := []types.UserRole{types.UserRoleAdmin, types.UserRoleRead, types.UserRoleWrite}
+
 	if userExists {
-		if err = a.UpdateUser(ctx, adminUUID, email, username, &password); err != nil {
+		if err = a.UpdateUser(ctx, adminUUID, email, username, &password, scope); err != nil {
 			return err
 		}
 	} else {
-		if err = a.CreateUser(ctx, adminUUID, email, username, password); err != nil {
+		if err = a.CreateUser(ctx, adminUUID, email, username, password, scope); err != nil {
 			return err
 		}
 	}

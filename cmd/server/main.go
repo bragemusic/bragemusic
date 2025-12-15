@@ -56,6 +56,12 @@ func main() {
 		return
 	}
 
+	// err = a.RemoveUser(ctx, uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111")))
+	// if err != nil {
+	// 	logger.Error(err.Error())
+	// 	return
+	// }
+
 	m := mediamanager.New(slogHandler, db, scfg.Paths.MusicDir)
 
 	s := server.New(slogHandler, &m, scfg)

@@ -216,3 +216,85 @@ func (d Database) UpdateLocalCredentials(ctx context.Context, lc types.LocalCred
 	_, err := sqlx.NamedExecContext(ctx, d.ext, query, lc)
 	return err
 }
+
+func (d Database) CreateUserScope(ctx context.Context, us types.UserScope) error {
+	now := time.Now()
+	us.CreatedAt = now
+	us.UpdatedAt = now
+
+	query := `
+        INSERT INTO user_scopes (
+            user_id, role, created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?);
+    `
+
+	_, err := d.ext.ExecContext(
+		ctx,
+		query,
+		us.UserID,
+		us.Role,
+		us.CreatedAt,
+		us.UpdatedAt,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d Database) UserScopeExists(ctx context.Context, userID uuid.UUID, role types.UserRole) (bool, error) {
+	const query = `
+        SELECT COUNT(1)
+        FROM user_scopes
+        WHERE
+          user_id = ?
+          AND role = ?
+        ;
+    `
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query, userID, role).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func (d Database) RemoveUserScope(ctx context.Context, userID uuid.UUID, role types.UserRole) error {
+	query := `
+        DELETE FROM user_scopes WHERE user_id = ? AND role = ?;
+    `
+
+	res, err := d.ext.ExecContext(ctx, query, userID, role)
+	if err != nil {
+		return err
+	}
+
+	ra, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if ra == 0 {
+		return ErrNoRowDeleted
+	}
+
+	return nil
+}
+
+func (d Database) ListUserRoles(ctx context.Context, userID uuid.UUID) (roles []types.UserRole, err error) {
+	query := `
+        SELECT role
+        FROM user_scopes
+        WHERE user_id = ?
+        ;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &roles, query, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
