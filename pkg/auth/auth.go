@@ -2,20 +2,29 @@ package auth
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log/slog"
 	"slices"
+	"time"
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 
-var adminUUID = uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111"))
+var (
+	adminUUID        = uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111"))
+	ErrTokenNotValid = errors.New("token not valid")
+)
 
 type Auth struct {
 	hc  *HashCrypt
 	db  database.DatabaseFace
 	log *slog.Logger
+
+	frontendTokenLongDuration  time.Duration
+	frontendTokenShortDuration time.Duration
 }
 
 func (a Auth) CreateUser(ctx context.Context, userID uuid.UUID, email, username, password string, roles []types.UserRole) error {
@@ -178,10 +187,60 @@ func (a Auth) SetAdmin(ctx context.Context, email, username, password string) er
 	return nil
 }
 
+func (a Auth) GenerateToken(ctx context.Context, userID uuid.UUID, tokenType types.TokenType, name *string) (token string, err error) {
+	t := types.Token{
+		UserID:    userID,
+		Type:      tokenType,
+		Name:      name,
+		Hash:      "",
+		ExpiresAt: nil,
+	}
+
+	switch tokenType {
+	case types.TokenFrontendLong:
+		expiresAt := time.Now().Add(a.frontendTokenLongDuration)
+		t.ExpiresAt = &expiresAt
+	case types.TokenFrontendShort:
+		expiresAt := time.Now().Add(a.frontendTokenShortDuration)
+		t.ExpiresAt = &expiresAt
+	default:
+		t.ExpiresAt = nil
+	}
+
+	token, err = generateToken()
+	if err != nil {
+		return "", err
+	}
+
+	t.Hash = hashToken(token)
+
+	if _, err = a.db.CreateToken(ctx, t); err != nil {
+		return "", err
+	}
+
+	return token, nil
+}
+
+func (a Auth) GetUserFromTokenString(ctx context.Context, tokenString string) (types.User, error) {
+	hash := hashToken(tokenString)
+
+	token, err := a.db.GetTokenFromHash(ctx, hash)
+	if err != nil {
+		return types.User{}, ErrTokenNotValid
+	}
+
+	fmt.Println(token)
+	// user, err := a.db.Ge
+
+	return types.User{}, nil
+}
+
 func New(db database.DatabaseFace, slogHandler slog.Handler) Auth {
 	return Auth{
-		hc:  NewHashCrypt(),
-		log: slog.New(slogHandler).With("service", "auth"),
-		db:  db,
+		hc:                         NewHashCrypt(),
+		log:                        slog.New(slogHandler).With("service", "auth"),
+		db:                         db,
+		frontendTokenLongDuration:  7 * 24 * time.Hour,
+		frontendTokenShortDuration: 24 * time.Hour,
 	}
 }

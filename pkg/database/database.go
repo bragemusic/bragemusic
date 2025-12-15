@@ -79,16 +79,22 @@ type DatabaseFace interface {
 	CreateUser(ctx context.Context, user types.User) (uuid.UUID, error)
 	UpdateUser(ctx context.Context, user types.User) error
 	RemoveUser(ctx context.Context, userID uuid.UUID) error
+
 	CreateAuthIdentity(ctx context.Context, ai types.AuthIdentity) (uuid.UUID, error)
 	GetAuthIdentityForUser(ctx context.Context, userID uuid.UUID) (ai types.AuthIdentity, err error)
 	UpdateAuthIdentity(ctx context.Context, ai types.AuthIdentity) error
+
 	GetLocalCredentialsForUser(ctx context.Context, userID uuid.UUID) (lc types.LocalCredentials, err error)
 	CreateLocalCredentials(ctx context.Context, lc types.LocalCredentials) error
 	UpdateLocalCredentials(ctx context.Context, lc types.LocalCredentials) error
+
 	CreateUserScope(ctx context.Context, us types.UserScope) error
 	UserScopeExists(ctx context.Context, userID uuid.UUID, role types.UserRole) (bool, error)
 	RemoveUserScope(ctx context.Context, userID uuid.UUID, role types.UserRole) error
 	ListUserRoles(ctx context.Context, userID uuid.UUID) (roles []types.UserRole, err error)
+
+	CreateToken(ctx context.Context, t types.Token) (uuid.UUID, error)
+	GetTokenFromHash(ctx context.Context, hash string) (token types.Token, err error)
 
 	// // Login Session
 	// NewLoginSession(ctx context.Context, username string) (dbLoginSession *DbLoginSession, err error)

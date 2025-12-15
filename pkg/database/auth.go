@@ -298,3 +298,67 @@ func (d Database) ListUserRoles(ctx context.Context, userID uuid.UUID) (roles []
 
 	return
 }
+
+func (d Database) CreateToken(ctx context.Context, t types.Token) (uuid.UUID, error) {
+	uid, err := uuid.NewV4()
+	if err != nil {
+		return uuid.Nil, err
+	}
+	t.ID = uid
+
+	now := time.Now()
+	t.CreatedAt = now
+	t.UpdatedAt = now
+
+	query := `
+        INSERT INTO tokens (
+            id,
+            user_id,
+            type,
+            name,
+            hash,
+            scopes,
+            expires_at,
+            last_used_at,
+            created_at,
+            updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    `
+
+	_, err = d.ext.ExecContext(
+		ctx,
+		query,
+		t.ID,
+		t.UserID,
+		t.Type,
+		t.Name,
+		t.Hash,
+		t.Scopes,
+		t.ExpiresAt,
+		t.LastUsedAt,
+		t.CreatedAt,
+		t.UpdatedAt,
+	)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return t.ID, nil
+}
+
+func (d Database) GetTokenFromHash(ctx context.Context, hash string) (token types.Token, err error) {
+	query := `
+        SELECT *
+        FROM tokens
+        WHERE hash = ?
+        LIMIT 1;
+    `
+
+	err = sqlx.GetContext(ctx, d.ext, &token, query, hash)
+	if err != nil {
+		return types.Token{}, err
+	}
+
+	return
+}
