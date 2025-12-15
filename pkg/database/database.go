@@ -26,6 +26,8 @@ const (
 	SortDesc SortOrder = "DESC"
 )
 
+var ErrNoRowDeleted = errors.New("no row was deleted")
+
 type DatabaseFace interface {
 	Begin(ctx context.Context) (DatabaseFace, error)
 	driver.Tx
@@ -76,6 +78,7 @@ type DatabaseFace interface {
 	UserExistsByID(ctx context.Context, ID uuid.UUID) (bool, error)
 	CreateUser(ctx context.Context, user types.User) (uuid.UUID, error)
 	UpdateUser(ctx context.Context, user types.User) error
+	RemoveUser(ctx context.Context, userID uuid.UUID) error
 	CreateAuthIdentity(ctx context.Context, ai types.AuthIdentity) (uuid.UUID, error)
 	GetAuthIdentityForUser(ctx context.Context, userID uuid.UUID) (ai types.AuthIdentity, err error)
 	UpdateAuthIdentity(ctx context.Context, ai types.AuthIdentity) error

@@ -110,6 +110,20 @@ func (a Auth) UpdateUser(ctx context.Context, userID uuid.UUID, email, username 
 	return tx.Commit()
 }
 
+func (a Auth) RemoveUser(ctx context.Context, userID uuid.UUID) error {
+	tx, err := a.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if err = tx.RemoveUser(ctx, userID); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 func (a Auth) SetAdmin(ctx context.Context, email, username, password string) error {
 	userExists, err := a.db.UserExistsByID(ctx, adminUUID)
 	if err != nil {

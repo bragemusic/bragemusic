@@ -74,6 +74,28 @@ func (d Database) UpdateUser(ctx context.Context, user types.User) error {
 	return err
 }
 
+func (d Database) RemoveUser(ctx context.Context, userID uuid.UUID) error {
+	query := `
+        DELETE FROM users WHERE id = :id;
+    `
+
+	res, err := d.ext.ExecContext(ctx, query, userID)
+	if err != nil {
+		return err
+	}
+
+	ra, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if ra == 0 {
+		return ErrNoRowDeleted
+	}
+
+	return nil
+}
+
 func (d Database) GetAuthIdentityForUser(ctx context.Context, userID uuid.UUID) (ai types.AuthIdentity, err error) {
 	query := `
         SELECT *
