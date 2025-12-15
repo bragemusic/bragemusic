@@ -2,8 +2,6 @@ package auth
 
 import (
 	"context"
-	"database/sql"
-	"errors"
 	"log/slog"
 
 	"github.com/bragemusic/core/pkg/database"
@@ -19,55 +17,32 @@ type Auth struct {
 	log *slog.Logger
 }
 
-func (a Auth) SetAdmin(ctx context.Context, email, username, password string) error {
+func (a Auth) CreateUser(ctx context.Context, userID uuid.UUID, email, username, password string) error {
 	tx, err := a.db.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	userExists, err := tx.UserExistsByID(ctx, adminUUID)
-	if err != nil {
-		return err
-	}
-
 	user := types.User{
-		ID:       adminUUID,
+		ID:       userID,
 		Email:    email,
 		Username: username,
 	}
 
-	if userExists {
-		if err = tx.UpdateUser(ctx, user); err != nil {
-			return err
-		}
-	} else {
-		if _, err = tx.CreateUser(ctx, user); err != nil {
-			return err
-		}
+	if _, err = tx.CreateUser(ctx, user); err != nil {
+		return err
 	}
 
-	authIdentity, err := tx.GetAuthIdentityForUser(ctx, adminUUID)
-	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
-			return err
-		}
+	authIdentity := types.AuthIdentity{
+		UserID:         userID,
+		Provider:       types.AuthLocal,
+		ProviderUserID: userID,
+		Email:          email,
+	}
 
-		authIdentity = types.AuthIdentity{
-			UserID:         adminUUID,
-			Provider:       types.AuthLocal,
-			ProviderUserID: adminUUID,
-			Email:          email,
-		}
-
-		if _, err = tx.CreateAuthIdentity(ctx, authIdentity); err != nil {
-			return err
-		}
-	} else {
-		authIdentity.Email = email
-		if err = tx.UpdateAuthIdentity(ctx, authIdentity); err != nil {
-			return err
-		}
+	if _, err = tx.CreateAuthIdentity(ctx, authIdentity); err != nil {
+		return err
 	}
 
 	pw, err := a.hc.GenerateFromPassword(password)
@@ -75,31 +50,80 @@ func (a Auth) SetAdmin(ctx context.Context, email, username, password string) er
 		return err
 	}
 
-	localCredentials, err := tx.GetLocalCredentialsForUser(ctx, adminUUID)
+	localCredentials := types.LocalCredentials{
+		UserID:       userID,
+		PasswordHash: pw,
+	}
+
+	if err = tx.CreateLocalCredentials(ctx, localCredentials); err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
+func (a Auth) UpdateUser(ctx context.Context, userID uuid.UUID, email, username string, password *string) error {
+	tx, err := a.db.Begin(ctx)
 	if err != nil {
-		if !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	defer tx.Rollback()
+
+	user := types.User{
+		ID:       userID,
+		Email:    email,
+		Username: username,
+	}
+
+	if err = tx.UpdateUser(ctx, user); err != nil {
+		return err
+	}
+
+	authIdentity, err := tx.GetAuthIdentityForUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	authIdentity.Email = email
+
+	if err = tx.UpdateAuthIdentity(ctx, authIdentity); err != nil {
+		return err
+	}
+
+	if password != nil {
+		pw, err := a.hc.GenerateFromPassword(*password)
+		if err != nil {
 			return err
 		}
 
-		localCredentials = types.LocalCredentials{
-			UserID:       adminUUID,
-			PasswordHash: pw,
-		}
-
-		if err = tx.CreateLocalCredentials(ctx, localCredentials); err != nil {
+		localCredentials, err := tx.GetLocalCredentialsForUser(ctx, userID)
+		if err != nil {
 			return err
 		}
 
-	} else {
 		localCredentials.PasswordHash = pw
 		if err = tx.UpdateLocalCredentials(ctx, localCredentials); err != nil {
 			return err
 		}
 	}
 
-	err = tx.Commit()
+	return tx.Commit()
+}
+
+func (a Auth) SetAdmin(ctx context.Context, email, username, password string) error {
+	userExists, err := a.db.UserExistsByID(ctx, adminUUID)
 	if err != nil {
 		return err
+	}
+
+	if userExists {
+		if err = a.UpdateUser(ctx, adminUUID, email, username, &password); err != nil {
+			return err
+		}
+	} else {
+		if err = a.CreateUser(ctx, adminUUID, email, username, password); err != nil {
+			return err
+		}
 	}
 
 	return nil
