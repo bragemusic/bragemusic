@@ -2,12 +2,41 @@ package database
 
 import (
 	"context"
+	"database/sql/driver"
 	"time"
 
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 	"github.com/jmoiron/sqlx"
 )
+
+type AuthFace interface {
+	Begin(ctx context.Context) (DatabaseFace, error)
+	driver.Tx
+
+	UserExistsByID(ctx context.Context, ID uuid.UUID) (bool, error)
+	CreateUser(ctx context.Context, user types.User) (uuid.UUID, error)
+	UpdateUser(ctx context.Context, user types.User) error
+	RemoveUser(ctx context.Context, userID uuid.UUID) error
+
+	CreateAuthIdentity(ctx context.Context, ai types.AuthIdentity) (uuid.UUID, error)
+	GetAuthIdentityForUser(ctx context.Context, userID uuid.UUID) (ai types.AuthIdentity, err error)
+	UpdateAuthIdentity(ctx context.Context, ai types.AuthIdentity) error
+
+	GetLocalCredentialsForUser(ctx context.Context, userID uuid.UUID) (lc types.LocalCredentials, err error)
+	CreateLocalCredentials(ctx context.Context, lc types.LocalCredentials) error
+	UpdateLocalCredentials(ctx context.Context, lc types.LocalCredentials) error
+
+	CreateUserScope(ctx context.Context, us types.UserScope) error
+	UserScopeExists(ctx context.Context, userID uuid.UUID, role types.UserRole) (bool, error)
+	RemoveUserScope(ctx context.Context, userID uuid.UUID, role types.UserRole) error
+	ListUserRoles(ctx context.Context, userID uuid.UUID) (roles []types.UserRole, err error)
+
+	CreateToken(ctx context.Context, t types.Token) (uuid.UUID, error)
+	GetTokenFromHash(ctx context.Context, hash string) (token types.Token, err error)
+
+	GetUserDetails(ctx context.Context, userID uuid.UUID) (user types.UserDetails, err error)
+}
 
 func (d Database) UserExistsByID(ctx context.Context, ID uuid.UUID) (bool, error) {
 	const query = `
@@ -361,4 +390,41 @@ func (d Database) GetTokenFromHash(ctx context.Context, hash string) (token type
 	}
 
 	return
+}
+
+func (d Database) GetUserDetails(ctx context.Context, userID uuid.UUID) (user types.UserDetails, err error) {
+	// 1. Fetch user + primary provider
+	queryUser := `
+		SELECT
+			u.id,
+			u.email,
+			u.username,
+			u.created_at,
+			ai.provider
+		FROM users u
+		LEFT JOIN auth_identities ai
+			ON ai.user_id = u.id
+		WHERE u.id = ?
+		ORDER BY ai.created_at ASC
+		LIMIT 1;
+	`
+
+	err = sqlx.GetContext(ctx, d.ext, &user, queryUser, userID)
+	if err != nil {
+		return user, err
+	}
+
+	// 2. Fetch roles (scopes)
+	queryRoles := `
+		SELECT role
+		FROM user_scopes
+		WHERE user_id = ?;
+	`
+
+	err = sqlx.SelectContext(ctx, d.ext, &user.Roles, queryRoles, userID)
+	if err != nil {
+		return user, err
+	}
+
+	return user, nil
 }

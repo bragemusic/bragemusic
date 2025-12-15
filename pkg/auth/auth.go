@@ -3,9 +3,10 @@ package auth
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
+	"net/http"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/bragemusic/core/pkg/database"
@@ -20,7 +21,7 @@ var (
 
 type Auth struct {
 	hc  *HashCrypt
-	db  database.DatabaseFace
+	db  database.AuthFace
 	log *slog.Logger
 
 	frontendTokenLongDuration  time.Duration
@@ -221,21 +222,74 @@ func (a Auth) GenerateToken(ctx context.Context, userID uuid.UUID, tokenType typ
 	return token, nil
 }
 
-func (a Auth) GetUserFromTokenString(ctx context.Context, tokenString string) (types.User, error) {
+func (a Auth) getUserFromTokenString(ctx context.Context, tokenString string) (types.UserDetails, error) {
 	hash := hashToken(tokenString)
 
 	token, err := a.db.GetTokenFromHash(ctx, hash)
 	if err != nil {
-		return types.User{}, ErrTokenNotValid
+		return types.UserDetails{}, ErrTokenNotValid
 	}
 
-	fmt.Println(token)
-	// user, err := a.db.Ge
+	user, err := a.db.GetUserDetails(ctx, token.UserID)
+	if err != nil {
+		return types.UserDetails{}, err
+	}
 
-	return types.User{}, nil
+	return user, nil
 }
 
-func New(db database.DatabaseFace, slogHandler slog.Handler) Auth {
+func (a Auth) tokenFromHeader(ctx context.Context, authHeader string) (string, error) {
+	if authHeader == "" {
+		return "", errors.New("no Authorization header found")
+	}
+
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return "", errors.New("Authorization header has wrong format")
+	}
+
+	token := strings.TrimPrefix(authHeader, "Bearer ")
+
+	if !strings.HasPrefix(token, "brg_v1_") {
+		return "", errors.New("token has wrong format")
+	}
+
+	return token, nil
+}
+
+func (a Auth) Middleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		token, err := a.tokenFromHeader(ctx, r.Header.Get("Authorization"))
+		if err != nil {
+			a.log.ErrorContext(ctx, err.Error())
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		user, err := a.getUserFromTokenString(ctx, token)
+		if err != nil {
+			a.log.ErrorContext(ctx, err.Error())
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+
+		ctx = UpgradeContextWithUser(ctx, user)
+
+		// create new context from `r` request context, and assign key `"user"`
+		// to value of `"123"`
+
+		// call the next handler in the chain, passing the response writer and
+		// the updated request object with the new context value.
+		//
+		// note: context.Context values are nested, so any previously set
+		// values will be accessible as well, and the new `"user"` key
+		// will be accessible from this point forward.
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func New(db database.AuthFace, slogHandler slog.Handler) Auth {
 	return Auth{
 		hc:                         NewHashCrypt(),
 		log:                        slog.New(slogHandler).With("service", "auth"),
