@@ -33,7 +33,7 @@ func (s *ServerClient) SetAuthToken(token string) {
 }
 
 func (s ServerClient) do(ctx context.Context, req *http.Request) (*http.Response, error) {
-	s.authToken = "brg_v1_TTqTKHxCuJ1y491EZBWGDMFHI4ybwgymEQV6J-MZjew"
+	s.authToken = "brg_v1_G-ssabTfTX7MsgmR0xSh6mhL1FHB88IuKuh6o58r9Fg"
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.authToken))
 
 	resp, err := s.client.Do(req)

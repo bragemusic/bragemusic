@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	adminUUID        = uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111"))
-	ErrTokenNotValid = errors.New("token not valid")
+	adminUUID             = uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111"))
+	ErrTokenNotValid      = errors.New("token not valid")
+	ErrInvalidCredentials = errors.New("invalid user credentials")
 )
 
 type Auth struct {
@@ -188,7 +189,40 @@ func (a Auth) SetAdmin(ctx context.Context, email, username, password string) er
 	return nil
 }
 
-func (a Auth) GenerateToken(ctx context.Context, userID uuid.UUID, tokenType types.TokenType, name *string) (token string, err error) {
+func (a Auth) CreateLoginToken(ctx context.Context, email, password string, longLivedToken bool) (token string, err error) {
+	user, err := a.db.GetUserFromEmail(ctx, email)
+	if err != nil {
+		return "", ErrInvalidCredentials
+	}
+
+	localCreds, err := a.db.GetLocalCredentialsForUser(ctx, user.ID)
+	if err != nil {
+		return "", ErrInvalidCredentials
+	}
+
+	passMatch, err := a.hc.ComparePasswordAndHash(password, localCreds.PasswordHash)
+	if err != nil {
+		return "", ErrInvalidCredentials
+	}
+
+	if !passMatch {
+		return "", ErrInvalidCredentials
+	}
+
+	tokenType := types.TokenFrontendShort
+	if longLivedToken {
+		tokenType = types.TokenFrontendLong
+	}
+
+	token, err = a.generateToken(ctx, user.ID, tokenType, nil)
+	if err != nil {
+		return "", ErrInvalidCredentials
+	}
+
+	return token, nil
+}
+
+func (a Auth) generateToken(ctx context.Context, userID uuid.UUID, tokenType types.TokenType, name *string) (token string, err error) {
 	t := types.Token{
 		UserID:    userID,
 		Type:      tokenType,
@@ -288,15 +322,6 @@ func (a Auth) Middleware(next http.Handler) http.Handler {
 
 		ctx = UpgradeContextWithUser(ctx, user)
 
-		// create new context from `r` request context, and assign key `"user"`
-		// to value of `"123"`
-
-		// call the next handler in the chain, passing the response writer and
-		// the updated request object with the new context value.
-		//
-		// note: context.Context values are nested, so any previously set
-		// values will be accessible as well, and the new `"user"` key
-		// will be accessible from this point forward.
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
