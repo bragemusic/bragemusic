@@ -256,7 +256,7 @@ func (a Auth) tokenFromHeader(ctx context.Context, authHeader string) (string, e
 	}
 
 	if !strings.HasPrefix(authHeader, "Bearer ") {
-		return "", errors.New("Authorization header has wrong format")
+		return "", errors.New("authorization header has wrong format")
 	}
 
 	token := strings.TrimPrefix(authHeader, "Bearer ")
