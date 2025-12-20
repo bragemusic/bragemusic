@@ -24,6 +24,7 @@ type Server struct {
 
 func (s Server) Handler() http.Handler {
 	r := chi.NewRouter()
+	r.Use(LoggerMiddleware(*s.log, []string{"/healthz"}))
 
 	r.Get("/healthz", s.healthz())
 
