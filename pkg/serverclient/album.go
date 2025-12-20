@@ -10,7 +10,7 @@ import (
 )
 
 func (s ServerClient) DownloadAlbumCover(ctx context.Context, albumID string, w io.Writer) error {
-	u, err := url.JoinPath(s.baseUrl, "img", "albums", fmt.Sprintf("%s.jpg", albumID))
+	u, err := url.JoinPath(s.baseUrl, "api", "img", "albums", fmt.Sprintf("%s.jpg", albumID))
 	if err != nil {
 		return err
 	}
@@ -19,7 +19,7 @@ func (s ServerClient) DownloadAlbumCover(ctx context.Context, albumID string, w 
 }
 
 func (s ServerClient) GetAlbum(ctx context.Context, albumID string) (album types.Album, err error) {
-	u, err := url.JoinPath(s.baseUrl, "albums", albumID)
+	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID)
 	if err != nil {
 		return types.Album{}, err
 	}
@@ -32,7 +32,7 @@ func (s ServerClient) GetAlbum(ctx context.Context, albumID string) (album types
 }
 
 func (s ServerClient) ListAlbumsByArtist(ctx context.Context, artistID string) (albums []types.Album, err error) {
-	u, err := url.JoinPath(s.baseUrl, "artists", artistID, "albums")
+	u, err := url.JoinPath(s.baseUrl, "api", "artists", artistID, "albums")
 	if err != nil {
 		return nil, err
 	}

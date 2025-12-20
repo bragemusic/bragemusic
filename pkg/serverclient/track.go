@@ -9,7 +9,7 @@ import (
 )
 
 func (s ServerClient) DownloadTrackFile(ctx context.Context, trackID string, w io.Writer) error {
-	u, err := url.JoinPath(s.baseUrl, "tracks", trackID, "file")
+	u, err := url.JoinPath(s.baseUrl, "api", "tracks", trackID, "file")
 	if err != nil {
 		return err
 	}
@@ -18,7 +18,7 @@ func (s ServerClient) DownloadTrackFile(ctx context.Context, trackID string, w i
 }
 
 func (s ServerClient) GetTrack(ctx context.Context, trackID string) (track types.Track, err error) {
-	u, err := url.JoinPath(s.baseUrl, "tracks", trackID)
+	u, err := url.JoinPath(s.baseUrl, "api", "tracks", trackID)
 	if err != nil {
 		return types.Track{}, err
 	}
@@ -31,7 +31,7 @@ func (s ServerClient) GetTrack(ctx context.Context, trackID string) (track types
 }
 
 func (s ServerClient) ListTracksByAlbum(ctx context.Context, albumID string) (tracks []types.Track, err error) {
-	u, err := url.JoinPath(s.baseUrl, "albums", albumID, "tracks")
+	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID, "tracks")
 	if err != nil {
 		return nil, err
 	}

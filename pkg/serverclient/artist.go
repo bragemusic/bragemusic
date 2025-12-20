@@ -10,7 +10,7 @@ import (
 )
 
 func (s ServerClient) DownloadArtistImage(ctx context.Context, artistID string, w io.Writer) error {
-	u, err := url.JoinPath(s.baseUrl, "img", "artists", fmt.Sprintf("%s.jpg", artistID))
+	u, err := url.JoinPath(s.baseUrl, "api", "img", "artists", fmt.Sprintf("%s.jpg", artistID))
 	if err != nil {
 		return err
 	}
@@ -19,7 +19,7 @@ func (s ServerClient) DownloadArtistImage(ctx context.Context, artistID string, 
 }
 
 func (s ServerClient) GetArtist(ctx context.Context, artistID string) (artist types.Artist, err error) {
-	u, err := url.JoinPath(s.baseUrl, "artists", artistID)
+	u, err := url.JoinPath(s.baseUrl, "api", "artists", artistID)
 	if err != nil {
 		return types.Artist{}, err
 	}
@@ -32,7 +32,7 @@ func (s ServerClient) GetArtist(ctx context.Context, artistID string) (artist ty
 }
 
 func (s ServerClient) ListArtists(ctx context.Context) (artists []types.Artist, err error) {
-	u, err := url.JoinPath(s.baseUrl, "artists")
+	u, err := url.JoinPath(s.baseUrl, "api", "artists")
 	if err != nil {
 		return nil, err
 	}

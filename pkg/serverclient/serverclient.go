@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -12,14 +13,40 @@ import (
 	"github.com/bragemusic/core/pkg/server"
 )
 
+type ErrStatus struct {
+	Status int
+}
+
+func (e ErrStatus) Error() string {
+	return fmt.Sprintf("server returned status %d", e.Status)
+}
+
 type ServerClient struct {
-	log     *slog.Logger
-	baseUrl string
-	client  *http.Client
+	log       *slog.Logger
+	baseUrl   string
+	authToken string
+	client    *http.Client
+}
+
+func (s *ServerClient) SetAuthToken(token string) {
+	s.authToken = token
 }
 
 func (s ServerClient) do(ctx context.Context, req *http.Request) (*http.Response, error) {
-	return s.client.Do(req)
+	s.authToken = "brg_v1_TTqTKHxCuJ1y491EZBWGDMFHI4ybwgymEQV6J-MZjew"
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.authToken))
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return resp, err
+	}
+
+	if resp.StatusCode >= 400 {
+		resp.Body.Close()
+		return resp, ErrStatus{Status: resp.StatusCode}
+	}
+
+	return resp, nil
 }
 
 func (s ServerClient) doGetJson(ctx context.Context, u string, target any) error {
