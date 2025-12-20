@@ -18,7 +18,7 @@ type (
 type Server struct {
 	log      *slog.Logger
 	mediamgr *mediamanager.MediaManager
-	auth     *auth.Auth
+	authPkg  *auth.Auth
 	config   Config
 }
 
@@ -29,6 +29,7 @@ func (s Server) Handler() http.Handler {
 	r.Get("/healthz", s.healthz())
 
 	r.Mount("/api", s.api())
+	r.Mount("/auth", s.auth())
 
 	return r
 }
@@ -108,6 +109,6 @@ func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, c
 		log:      slog.New(slogHandler).With("service", "server"),
 		mediamgr: m,
 		config:   c,
-		auth:     a,
+		authPkg:  a,
 	}
 }

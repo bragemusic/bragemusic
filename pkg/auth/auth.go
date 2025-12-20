@@ -189,24 +189,24 @@ func (a Auth) SetAdmin(ctx context.Context, email, username, password string) er
 	return nil
 }
 
-func (a Auth) CreateLoginToken(ctx context.Context, email, password string, longLivedToken bool) (token string, err error) {
+func (a Auth) CreateLoginToken(ctx context.Context, email, password string, longLivedToken bool) (token string, expiresIn int, err error) {
 	user, err := a.db.GetUserFromEmail(ctx, email)
 	if err != nil {
-		return "", ErrInvalidCredentials
+		return "", 0, ErrInvalidCredentials
 	}
 
 	localCreds, err := a.db.GetLocalCredentialsForUser(ctx, user.ID)
 	if err != nil {
-		return "", ErrInvalidCredentials
+		return "", 0, ErrInvalidCredentials
 	}
 
 	passMatch, err := a.hc.ComparePasswordAndHash(password, localCreds.PasswordHash)
 	if err != nil {
-		return "", ErrInvalidCredentials
+		return "", 0, ErrInvalidCredentials
 	}
 
 	if !passMatch {
-		return "", ErrInvalidCredentials
+		return "", 0, ErrInvalidCredentials
 	}
 
 	tokenType := types.TokenFrontendShort
@@ -214,15 +214,15 @@ func (a Auth) CreateLoginToken(ctx context.Context, email, password string, long
 		tokenType = types.TokenFrontendLong
 	}
 
-	token, err = a.generateToken(ctx, user.ID, tokenType, nil)
+	token, expiresIn, err = a.generateToken(ctx, user.ID, tokenType, nil)
 	if err != nil {
-		return "", ErrInvalidCredentials
+		return "", 0, ErrInvalidCredentials
 	}
 
-	return token, nil
+	return token, expiresIn, nil
 }
 
-func (a Auth) generateToken(ctx context.Context, userID uuid.UUID, tokenType types.TokenType, name *string) (token string, err error) {
+func (a Auth) generateToken(ctx context.Context, userID uuid.UUID, tokenType types.TokenType, name *string) (token string, expiresIn int, err error) {
 	t := types.Token{
 		UserID:    userID,
 		Type:      tokenType,
@@ -244,16 +244,16 @@ func (a Auth) generateToken(ctx context.Context, userID uuid.UUID, tokenType typ
 
 	token, err = generateToken()
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	t.Hash = hashToken(token)
 
 	if _, err = a.db.CreateToken(ctx, t); err != nil {
-		return "", err
+		return "", 0, err
 	}
 
-	return token, nil
+	return token, int(t.ExpiresAt.Sub(time.Now()).Seconds()), nil
 }
 
 func (a Auth) getUserFromTokenString(ctx context.Context, tokenString string) (types.UserDetails, error) {

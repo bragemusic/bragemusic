@@ -26,3 +26,15 @@ type SyncPlayHistoryReq struct {
 	ChangesSince       time.Time           `json:"changes_since"`
 	UpdatedClientItems []types.PlayHistory `json:"updated_client_items"`
 }
+
+type loginReq struct {
+	Email          string `json:"email"`
+	Password       string `json:"password"`
+	LongLivedToken bool   `json:"long_lived_token"`
+}
+
+type loginResp struct {
+	Token     string `json:"token"`
+	TokenType string `json:"token_type"`
+	ExpiresIn int    `json:"expires_in"`
+}

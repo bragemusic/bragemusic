@@ -9,7 +9,7 @@ import (
 func (s Server) api() http.Handler {
 	r := chi.NewRouter()
 
-	r.Use(s.auth.Middleware)
+	r.Use(s.authPkg.Middleware)
 
 	r.Get("/img/*", s.getImage())
 
