@@ -230,12 +230,24 @@ func (a Auth) getUserFromTokenString(ctx context.Context, tokenString string) (t
 		return types.UserDetails{}, ErrTokenNotValid
 	}
 
+	if err = a.validateToken(ctx, token); err != nil {
+		return types.UserDetails{}, ErrTokenNotValid
+	}
+
 	user, err := a.db.GetUserDetails(ctx, token.UserID)
 	if err != nil {
 		return types.UserDetails{}, err
 	}
 
 	return user, nil
+}
+
+func (a Auth) validateToken(ctx context.Context, token types.Token) error {
+	if token.ExpiresAt.Before(time.Now()) {
+		return ErrTokenNotValid
+	}
+
+	return nil
 }
 
 func (a Auth) tokenFromHeader(ctx context.Context, authHeader string) (string, error) {
