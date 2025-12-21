@@ -25,6 +25,7 @@ type Syncer struct {
 	imgDir                   string
 	serverAvailable          bool
 	syncInProgress           bool
+	user                     *types.UserDetails
 	serverAvailableCallbacks []func(bool)
 	syncInProgressCallbacks  []func(bool)
 }
@@ -56,6 +57,15 @@ func (s *Syncer) StartDaemon(ctx context.Context, done func()) {
 					s.serverAvailable = false
 				} else {
 					s.serverAvailable = true
+					if s.user == nil {
+						user, err := s.sc.GetUser(ctx)
+						if err != nil {
+							s.log.ErrorContext(ctx, err.Error())
+						} else {
+							s.user = &user
+							fmt.Println(user)
+						}
+					}
 				}
 
 				for _, f := range s.serverAvailableCallbacks {
@@ -82,7 +92,7 @@ func (s *Syncer) StartDaemon(ctx context.Context, done func()) {
 }
 
 func (s Syncer) updateServerAvailability(ctx context.Context) error {
-	h, err := s.sc.CheckHealth(ctx)
+	h, err := s.sc.CheckStatus(ctx)
 	if err != nil {
 		return err
 	}

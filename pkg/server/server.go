@@ -37,9 +37,7 @@ func (s Server) Handler() http.Handler {
 func (s Server) healthz() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		return http.StatusOK, Healthz{
-			Application: "brage-server",
-			Version:     "v0.0.1",
-			Status:      HealthzRunning,
+			Status: HealthzRunning,
 		}, nil
 	})
 }

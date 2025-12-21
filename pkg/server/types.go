@@ -13,6 +13,10 @@ const (
 )
 
 type Healthz struct {
+	Status HealthzStatus `json:"status"`
+}
+
+type Status struct {
 	Application string        `json:"application"`
 	Version     string        `json:"version"`
 	Status      HealthzStatus `json:"status"`

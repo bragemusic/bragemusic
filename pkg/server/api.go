@@ -11,6 +11,9 @@ func (s Server) api() http.Handler {
 
 	r.Use(s.authPkg.Middleware)
 
+	r.Get("/status", s.status())
+	r.Get("/user", s.user())
+
 	r.Get("/img/*", s.getImage())
 
 	r.Get("/artists", s.listArtists())
@@ -27,4 +30,26 @@ func (s Server) api() http.Handler {
 	r.Post("/sync/play-history", s.syncPlayHistory())
 
 	return r
+}
+
+func (s Server) status() http.HandlerFunc {
+	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
+		return http.StatusOK, Status{
+			Application: "brage-server",
+			Version:     "v0.0.1",
+			Status:      HealthzRunning,
+		}, nil
+	})
+}
+
+func (s Server) user() http.HandlerFunc {
+	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
+		ctx := r.Context()
+		user, err := s.authPkg.GetUserFromContext(ctx)
+		if err != nil {
+			return http.StatusForbidden, nil, err
+		}
+
+		return http.StatusOK, user, nil
+	})
 }

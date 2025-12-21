@@ -11,6 +11,7 @@ import (
 	"net/url"
 
 	"github.com/bragemusic/core/pkg/server"
+	"github.com/bragemusic/core/pkg/types"
 )
 
 type ErrStatus struct {
@@ -112,17 +113,30 @@ func (s ServerClient) downloadFile(ctx context.Context, u string, w io.Writer) e
 	return nil
 }
 
-func (s ServerClient) CheckHealth(ctx context.Context) (h server.Healthz, err error) {
-	u, err := url.JoinPath(s.baseUrl, "healthz")
+func (s ServerClient) CheckStatus(ctx context.Context) (h server.Status, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "status")
 	if err != nil {
-		return server.Healthz{}, err
+		return server.Status{}, err
 	}
 
 	if err := s.doGetJson(ctx, u, &h); err != nil {
-		return server.Healthz{}, err
+		return server.Status{}, err
 	}
 
 	return h, nil
+}
+
+func (s ServerClient) GetUser(ctx context.Context) (user types.UserDetails, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "user")
+	if err != nil {
+		return types.UserDetails{}, err
+	}
+
+	if err := s.doGetJson(ctx, u, &user); err != nil {
+		return types.UserDetails{}, err
+	}
+
+	return user, nil
 }
 
 func New(baseUrl string, slogHandler slog.Handler) ServerClient {

@@ -29,6 +29,11 @@ type Auth struct {
 	frontendTokenShortDuration time.Duration
 }
 
+func (a Auth) GetUserFromContext(ctx context.Context) (types.UserDetails, error) {
+	user, err := UserFromContext(ctx)
+	return user, err
+}
+
 func (a Auth) CreateUser(ctx context.Context, userID uuid.UUID, email, username, password string, roles []types.UserRole) error {
 	tx, err := a.db.Begin(ctx)
 	if err != nil {
