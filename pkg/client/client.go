@@ -45,6 +45,10 @@ func (c *Client) RegisterSyncInProgressCallback(f func(bool)) {
 	c.sy.RegisterSyncInProgressCallback(f)
 }
 
+func (c *Client) RegisterUserCallback(f func(*types.UserDetails)) {
+	c.sy.RegisterUserCallback(f)
+}
+
 func (c Client) Sync(ctx context.Context) error {
 	return c.sy.Sync(ctx)
 }

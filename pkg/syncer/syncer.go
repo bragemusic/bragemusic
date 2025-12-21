@@ -28,6 +28,7 @@ type Syncer struct {
 	user                     *types.UserDetails
 	serverAvailableCallbacks []func(bool)
 	syncInProgressCallbacks  []func(bool)
+	userCallbacks            []func(*types.UserDetails)
 }
 
 func (s *Syncer) RegisterServerAvailabilityCallback(f func(bool)) {
@@ -36,6 +37,10 @@ func (s *Syncer) RegisterServerAvailabilityCallback(f func(bool)) {
 
 func (s *Syncer) RegisterSyncInProgressCallback(f func(bool)) {
 	s.syncInProgressCallbacks = append(s.syncInProgressCallbacks, f)
+}
+
+func (s *Syncer) RegisterUserCallback(f func(*types.UserDetails)) {
+	s.userCallbacks = append(s.userCallbacks, f)
 }
 
 func (s *Syncer) StartDaemon(ctx context.Context, done func()) {
@@ -63,7 +68,9 @@ func (s *Syncer) StartDaemon(ctx context.Context, done func()) {
 							s.log.ErrorContext(ctx, err.Error())
 						} else {
 							s.user = &user
-							fmt.Println(user)
+							for _, f := range s.userCallbacks {
+								f(s.user)
+							}
 						}
 					}
 				}
