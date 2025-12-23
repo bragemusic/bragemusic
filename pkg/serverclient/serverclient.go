@@ -34,8 +34,9 @@ func (s *ServerClient) SetAuthToken(token string) {
 }
 
 func (s ServerClient) do(ctx context.Context, req *http.Request) (*http.Response, error) {
-	s.authToken = "brg_v1_za5pi0duRzyvQXAa6x8YJumVEg0UdAAr5qZGfgwnSJ8"
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.authToken))
+	if s.authToken != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.authToken))
+	}
 
 	resp, err := s.client.Do(req)
 	if err != nil {

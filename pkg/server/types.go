@@ -31,13 +31,13 @@ type SyncPlayHistoryReq struct {
 	UpdatedClientItems []types.PlayHistory `json:"updated_client_items"`
 }
 
-type loginReq struct {
+type LoginReq struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`
 	LongLivedToken bool   `json:"long_lived_token"`
 }
 
-type loginResp struct {
+type LoginResp struct {
 	Token     string `json:"token"`
 	TokenType string `json:"token_type"`
 	ExpiresIn int    `json:"expires_in"`
