@@ -23,6 +23,7 @@ require (
 )
 
 require (
+	github.com/adrg/xdg v0.5.3
 	github.com/amacneil/dbmate/v2 v2.28.0
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/godbus/dbus/v5 v5.2.0
