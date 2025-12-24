@@ -56,30 +56,9 @@ func main() {
 		return
 	}
 
-	// err = a.RemoveUser(ctx, uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111")))
-	// if err != nil {
-	// 	logger.Error(err.Error())
-	// 	return
-	// }
-	//
-	// t, err := a.GenerateToken(ctx, uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111")), types.TokenFrontendLong, nil)
-	// if err != nil {
-	// 	logger.Error(err.Error())
-	// 	return
-	// }
-	// fmt.Println(t)
-	token := "brg_v1_TTqTKHxCuJ1y491EZBWGDMFHI4ybwgymEQV6J-MZjew"
-	_ = token
-	u, err := a.GetUserFromTokenString(ctx, token)
-	if err != nil {
-		logger.Error(err.Error())
-		return
-	}
-	fmt.Println(u)
-
 	m := mediamanager.New(slogHandler, db, scfg.Paths.MusicDir)
 
-	s := server.New(slogHandler, &m, scfg)
+	s := server.New(slogHandler, &m, &a, scfg)
 
 	logger.Info(fmt.Sprintf("serving on port %d", scfg.Port))
 	if err = http.ListenAndServe(fmt.Sprintf(":%d", scfg.Port), s.Handler()); err != nil {
