@@ -7,6 +7,7 @@ import (
 
 	"github.com/bragemusic/core/pkg/audiointerface"
 	"github.com/bragemusic/core/pkg/audioplayer"
+	"github.com/bragemusic/core/pkg/authclient"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/migrations"
@@ -26,6 +27,7 @@ type Config struct {
 }
 
 type Client struct {
+	authclient.AuthClient
 	*audioplayer.AudioPlayer
 	sc      *serverclient.ServerClient
 	mm      *mediamanager.MediaManager
@@ -43,6 +45,11 @@ func (c *Client) RegisterServerAvailabilityCallback(f func(bool)) {
 
 func (c *Client) RegisterSyncInProgressCallback(f func(bool)) {
 	c.sy.RegisterSyncInProgressCallback(f)
+}
+
+func (c *Client) RegisterUserCallback(f func(*types.UserDetails)) {
+	c.sy.RegisterUserCallback(f)
+	c.AuthClient.RegisterUserCallback(f)
 }
 
 func (c Client) Sync(ctx context.Context) error {
@@ -183,6 +190,7 @@ func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c 
 	}
 
 	c = &Client{
+		AuthClient:  authclient.New(&sc, slogHandler),
 		sc:          &sc,
 		mm:          &mm,
 		sy:          &sy,

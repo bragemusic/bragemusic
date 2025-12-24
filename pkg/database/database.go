@@ -26,6 +26,8 @@ const (
 	SortDesc SortOrder = "DESC"
 )
 
+var ErrNoRowDeleted = errors.New("no row was deleted")
+
 type DatabaseFace interface {
 	Begin(ctx context.Context) (DatabaseFace, error)
 	driver.Tx
@@ -72,10 +74,7 @@ type DatabaseFace interface {
 	AddPlayHistoryStruct(ctx context.Context, ph types.PlayHistory) (string, error)
 	ListUpdatedPlayHistory(ctx context.Context, since time.Time) (updatedItems []types.PlayHistory, err error)
 
-	// // User Handling
-	// AddUser(ctx context.Context, user *DbUser) (bool, error)
-	// UserExists(ctx context.Context, username string) (bool, error)
-	// GetUser(ctx context.Context, username string) (user *DbUser, err error)
+	AuthFace
 
 	// // Login Session
 	// NewLoginSession(ctx context.Context, username string) (dbLoginSession *DbLoginSession, err error)
@@ -128,6 +127,11 @@ func New(db *sqlx.DB) (Database, error) {
 		return conn.RegisterFunc("normalize", normalizeForCompare, true)
 	}
 
+	// Allows for cascade deleting of foreign rows (user related at the moment)
+	_, err := db.Exec("PRAGMA foreign_keys = ON;")
+	if err != nil {
+		return Database{}, err
+	}
 	// db.Exec("PRAGMA journal_mode = WAL;")
 	// db.Exec("PRAGMA synchronous = NORMAL;") // optional, faster writes
 	// db.SetMaxOpenConns(1)

@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/go-chi/chi/v5"
 )
@@ -17,28 +18,18 @@ type (
 type Server struct {
 	log      *slog.Logger
 	mediamgr *mediamanager.MediaManager
+	authPkg  *auth.Auth
 	config   Config
 }
 
 func (s Server) Handler() http.Handler {
 	r := chi.NewRouter()
+	r.Use(LoggerMiddleware(*s.log, []string{"/healthz"}))
 
 	r.Get("/healthz", s.healthz())
 
-	r.Get("/img/*", s.getImage())
-
-	r.Get("/artists", s.listArtists())
-	r.Get("/artists/{artistID}", s.getArtist())
-	r.Get("/artists/{artistID}/albums", s.listAlbums())
-
-	r.Get("/albums/{albumID}", s.getAlbum())
-	r.Get("/albums/{albumID}/tracks", s.listAlbumTracks())
-
-	r.Get("/tracks/{trackID}", s.getTrack())
-	r.Get("/tracks/{trackID}/file", s.getTrackFile())
-
-	r.Post("/sync", s.sync())
-	r.Post("/sync/play-history", s.syncPlayHistory())
+	r.Mount("/api", s.api())
+	r.Mount("/auth", s.auth())
 
 	return r
 }
@@ -46,9 +37,7 @@ func (s Server) Handler() http.Handler {
 func (s Server) healthz() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		return http.StatusOK, Healthz{
-			Application: "brage-server",
-			Version:     "v0.0.1",
-			Status:      HealthzRunning,
+			Status: HealthzRunning,
 		}, nil
 	})
 }
@@ -113,10 +102,11 @@ func (s Server) handleJSON(f handlerFuncErrJson) http.HandlerFunc {
 	}
 }
 
-func New(slogHandler slog.Handler, m *mediamanager.MediaManager, c Config) Server {
+func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, c Config) Server {
 	return Server{
 		log:      slog.New(slogHandler).With("service", "server"),
 		mediamgr: m,
 		config:   c,
+		authPkg:  a,
 	}
 }

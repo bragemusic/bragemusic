@@ -25,8 +25,10 @@ type Syncer struct {
 	imgDir                   string
 	serverAvailable          bool
 	syncInProgress           bool
+	user                     *types.UserDetails
 	serverAvailableCallbacks []func(bool)
 	syncInProgressCallbacks  []func(bool)
+	userCallbacks            []func(*types.UserDetails)
 }
 
 func (s *Syncer) RegisterServerAvailabilityCallback(f func(bool)) {
@@ -35,6 +37,10 @@ func (s *Syncer) RegisterServerAvailabilityCallback(f func(bool)) {
 
 func (s *Syncer) RegisterSyncInProgressCallback(f func(bool)) {
 	s.syncInProgressCallbacks = append(s.syncInProgressCallbacks, f)
+}
+
+func (s *Syncer) RegisterUserCallback(f func(*types.UserDetails)) {
+	s.userCallbacks = append(s.userCallbacks, f)
 }
 
 func (s *Syncer) StartDaemon(ctx context.Context, done func()) {
@@ -56,6 +62,17 @@ func (s *Syncer) StartDaemon(ctx context.Context, done func()) {
 					s.serverAvailable = false
 				} else {
 					s.serverAvailable = true
+					if s.user == nil {
+						user, err := s.sc.GetUser(ctx)
+						if err != nil {
+							s.log.ErrorContext(ctx, err.Error())
+						} else {
+							s.user = &user
+							for _, f := range s.userCallbacks {
+								f(s.user)
+							}
+						}
+					}
 				}
 
 				for _, f := range s.serverAvailableCallbacks {
@@ -82,7 +99,7 @@ func (s *Syncer) StartDaemon(ctx context.Context, done func()) {
 }
 
 func (s Syncer) updateServerAvailability(ctx context.Context) error {
-	h, err := s.sc.CheckHealth(ctx)
+	h, err := s.sc.CheckStatus(ctx)
 	if err != nil {
 		return err
 	}

@@ -4,22 +4,51 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 
 	"github.com/bragemusic/core/pkg/server"
+	"github.com/bragemusic/core/pkg/types"
 )
 
+type ErrStatus struct {
+	Status int
+}
+
+func (e ErrStatus) Error() string {
+	return fmt.Sprintf("server returned status %d", e.Status)
+}
+
 type ServerClient struct {
-	log     *slog.Logger
-	baseUrl string
-	client  *http.Client
+	log       *slog.Logger
+	baseUrl   string
+	authToken string
+	client    *http.Client
+}
+
+func (s *ServerClient) SetAuthToken(token string) {
+	s.authToken = token
 }
 
 func (s ServerClient) do(ctx context.Context, req *http.Request) (*http.Response, error) {
-	return s.client.Do(req)
+	if s.authToken != "" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.authToken))
+	}
+
+	resp, err := s.client.Do(req)
+	if err != nil {
+		return resp, err
+	}
+
+	if resp.StatusCode >= 400 {
+		resp.Body.Close()
+		return resp, ErrStatus{Status: resp.StatusCode}
+	}
+
+	return resp, nil
 }
 
 func (s ServerClient) doGetJson(ctx context.Context, u string, target any) error {
@@ -85,17 +114,30 @@ func (s ServerClient) downloadFile(ctx context.Context, u string, w io.Writer) e
 	return nil
 }
 
-func (s ServerClient) CheckHealth(ctx context.Context) (h server.Healthz, err error) {
-	u, err := url.JoinPath(s.baseUrl, "healthz")
+func (s ServerClient) CheckStatus(ctx context.Context) (h server.Status, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "status")
 	if err != nil {
-		return server.Healthz{}, err
+		return server.Status{}, err
 	}
 
 	if err := s.doGetJson(ctx, u, &h); err != nil {
-		return server.Healthz{}, err
+		return server.Status{}, err
 	}
 
 	return h, nil
+}
+
+func (s ServerClient) GetUser(ctx context.Context) (user types.UserDetails, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "user")
+	if err != nil {
+		return types.UserDetails{}, err
+	}
+
+	if err := s.doGetJson(ctx, u, &user); err != nil {
+		return types.UserDetails{}, err
+	}
+
+	return user, nil
 }
 
 func New(baseUrl string, slogHandler slog.Handler) ServerClient {

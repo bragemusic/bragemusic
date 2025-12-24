@@ -18,15 +18,17 @@ require (
 	github.com/mewpkg/term v0.0.0-20241026122259-37a80af23985 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
-	golang.org/x/text v0.27.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
 )
 
 require (
+	github.com/adrg/xdg v0.5.3
 	github.com/amacneil/dbmate/v2 v2.28.0
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/godbus/dbus/v5 v5.2.0
 	github.com/gordonklaus/portaudio v0.0.0-20250206071425-98a94950218b
 	github.com/mewkiz/flac v1.0.13
 	github.com/samber/lo v1.52.0
+	golang.org/x/crypto v0.46.0
 )

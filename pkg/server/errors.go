@@ -21,3 +21,13 @@ func (e ErrIDNotFound) UserError() string {
 func (e ErrIDNotFound) Error() string {
 	return e.err.Error()
 }
+
+type ErrUnauthorized struct{}
+
+func (e ErrUnauthorized) UserError() string {
+	return "email or password is incorrect"
+}
+
+func (e ErrUnauthorized) Error() string {
+	return "email or password is incorrect"
+}
