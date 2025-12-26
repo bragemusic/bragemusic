@@ -24,14 +24,15 @@ type Syncer struct {
 	musicDir                 string
 	imgDir                   string
 	serverAvailable          bool
+	serverStatus             server.Status
 	syncInProgress           bool
 	user                     *types.UserDetails
-	serverAvailableCallbacks []func(bool)
+	serverAvailableCallbacks []func(server.Status)
 	syncInProgressCallbacks  []func(bool)
 	userCallbacks            []func(*types.UserDetails)
 }
 
-func (s *Syncer) RegisterServerAvailabilityCallback(f func(bool)) {
+func (s *Syncer) RegisterServerAvailabilityCallback(f func(server.Status)) {
 	s.serverAvailableCallbacks = append(s.serverAvailableCallbacks, f)
 }
 
@@ -43,14 +44,12 @@ func (s *Syncer) RegisterUserCallback(f func(*types.UserDetails)) {
 	s.userCallbacks = append(s.userCallbacks, f)
 }
 
-func (s *Syncer) StartDaemon(ctx context.Context, done func()) {
+func (s *Syncer) StartStatusDaemon(ctx context.Context, done func()) {
 	go func() {
 		defer done()
 
 		tickerStatus := time.NewTicker(10 * time.Second)
-		tickerSync := time.NewTicker(15 * time.Minute)
 		defer tickerStatus.Stop()
-		defer tickerSync.Stop()
 
 		for {
 			select {
@@ -75,10 +74,23 @@ func (s *Syncer) StartDaemon(ctx context.Context, done func()) {
 					}
 				}
 
-				for _, f := range s.serverAvailableCallbacks {
-					f(s.serverAvailable)
-				}
+			case <-ctx.Done():
+				s.log.InfoContext(ctx, "terminating status check")
+				return
+			}
+		}
+	}()
+}
 
+func (s *Syncer) StartSyncDaemon(ctx context.Context, done func()) {
+	go func() {
+		defer done()
+
+		tickerSync := time.NewTicker(15 * time.Minute)
+		defer tickerSync.Stop()
+
+		for {
+			select {
 			case <-tickerSync.C:
 				if s.serverAvailable {
 					s.log.InfoContext(ctx, "starting periodic sync")
@@ -98,8 +110,19 @@ func (s *Syncer) StartDaemon(ctx context.Context, done func()) {
 	}()
 }
 
-func (s Syncer) updateServerAvailability(ctx context.Context) error {
+func (s *Syncer) updateServerAvailability(ctx context.Context) error {
 	h, err := s.sc.CheckStatus(ctx)
+	if err != nil {
+		h = server.Status{
+			Status: server.HealthzUnavailable,
+		}
+	}
+
+	s.serverStatus = h
+
+	for _, f := range s.serverAvailableCallbacks {
+		f(h)
+	}
 	if err != nil {
 		return err
 	}
@@ -113,6 +136,10 @@ func (s Syncer) updateServerAvailability(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (s *Syncer) ServerStatus() server.Status {
+	return s.serverStatus
 }
 
 func (s *Syncer) Sync(ctx context.Context) error {
@@ -369,10 +396,11 @@ func (s Syncer) syncPlayHistory(ctx context.Context, tx database.DatabaseFace, l
 
 func New(sc *serverclient.ServerClient, db database.DatabaseFace, musicDir, imgDir string, slogHandler slog.Handler) Syncer {
 	return Syncer{
-		sc:       sc,
-		db:       db,
-		musicDir: musicDir,
-		imgDir:   imgDir,
-		log:      slog.New(slogHandler).With("service", "syncer"),
+		sc:           sc,
+		db:           db,
+		musicDir:     musicDir,
+		imgDir:       imgDir,
+		serverStatus: server.Status{Status: server.HealthzUnavailable},
+		log:          slog.New(slogHandler).With("service", "syncer"),
 	}
 }
