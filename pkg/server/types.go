@@ -9,7 +9,8 @@ import (
 type HealthzStatus string
 
 const (
-	HealthzRunning HealthzStatus = "running"
+	HealthzRunning     HealthzStatus = "running"
+	HealthzUnavailable HealthzStatus = "unavailable"
 )
 
 type Healthz struct {
@@ -18,6 +19,7 @@ type Healthz struct {
 
 type Status struct {
 	Application string        `json:"application"`
+	Name        string        `json:"name"`
 	Version     string        `json:"version"`
 	Status      HealthzStatus `json:"status"`
 }

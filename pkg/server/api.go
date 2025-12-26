@@ -35,7 +35,8 @@ func (s Server) api() http.Handler {
 func (s Server) status() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		return http.StatusOK, Status{
-			Application: "brage-server",
+			Application: "brage-server", // hardcoded
+			Name:        "Brage Server", // from config
 			Version:     "v0.0.1",
 			Status:      HealthzRunning,
 		}, nil

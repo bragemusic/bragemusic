@@ -11,6 +11,7 @@ import (
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/migrations"
+	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/types"
@@ -39,7 +40,7 @@ type Client struct {
 	// tracks []types.TrackEnhanced
 }
 
-func (c *Client) RegisterServerAvailabilityCallback(f func(bool)) {
+func (c *Client) RegisterServerAvailabilityCallback(f func(server.Status)) {
 	c.sy.RegisterServerAvailabilityCallback(f)
 }
 
@@ -54,6 +55,10 @@ func (c *Client) RegisterUserCallback(f func(*types.UserDetails)) {
 
 func (c Client) Sync(ctx context.Context) error {
 	return c.sy.Sync(ctx)
+}
+
+func (c Client) ServerStatus() server.Status {
+	return c.sy.ServerStatus()
 }
 
 func (c *Client) Close() error {
@@ -134,7 +139,11 @@ func (c Client) GetArtistTopTracks(ctx context.Context, artistID string) ([]type
 }
 
 func (c *Client) StartSyncDaemon(ctx context.Context, done func()) {
-	c.sy.StartDaemon(ctx, done)
+	c.sy.StartSyncDaemon(ctx, done)
+}
+
+func (c *Client) StartStatusDaemon(ctx context.Context, done func()) {
+	c.sy.StartStatusDaemon(ctx, done)
 }
 
 func (c *Client) updatePlayCount(trackID string) {
