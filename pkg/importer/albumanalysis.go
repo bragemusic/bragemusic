@@ -68,6 +68,10 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalys
 
 		for discNmbr, media := range mbAlbum.Media {
 			for _, mbT := range media.Tracks {
+				if lo.ContainsBy(aares.Tracks, func(item Track) bool { return *item.Name == mbT.Title }) {
+					continue
+				}
+
 				if lo.ContainsBy(aid, func(item acoustid.AcoustMatch) bool {
 					return item.TrackID == mbT.ID
 				}) {
