@@ -2,6 +2,7 @@ package importer
 
 import (
 	"context"
+	"slices"
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
@@ -21,6 +22,8 @@ func (i Importer) addMultipleTracks(ctx context.Context, tx database.DatabaseFac
 		}
 	}
 
+	addedTrackIdx := []int{}
+
 	for _, track := range albumAnalysis.Tracks {
 		if track.MbID != nil {
 			for tidx := range tracks {
@@ -33,7 +36,7 @@ func (i Importer) addMultipleTracks(ctx context.Context, tx database.DatabaseFac
 					}
 
 					albumTracks[tidx].TrackID = tracks[tidx].ID
-
+					addedTrackIdx = append(addedTrackIdx, tidx)
 					break
 				}
 			}
@@ -55,6 +58,20 @@ func (i Importer) addMultipleTracks(ctx context.Context, tx database.DatabaseFac
 				TrackID:     t.ID,
 			})
 		}
+	}
+
+	// Add unmatched tracks
+	for tidx := range tracks {
+		if slices.Contains(addedTrackIdx, tidx) {
+			continue
+		}
+
+		tracks[tidx].ID, _, err = i.addOrUpdateTrack(ctx, tx, tracks[tidx], existingAlbumID)
+		if err != nil {
+			return nil, err
+		}
+
+		albumTracks[tidx].TrackID = tracks[tidx].ID
 	}
 
 	return albumTracks, nil

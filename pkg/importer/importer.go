@@ -244,7 +244,7 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 	}
 	defer ftx.Rollback()
 
-	mediaFiles, err := i.importMediaFiles(ctx, tx, ftx, folder)
+	mediaFiles, err := i.importMediaFiles(ctx, tx, &ftx, folder)
 	if err != nil {
 		return err
 	}

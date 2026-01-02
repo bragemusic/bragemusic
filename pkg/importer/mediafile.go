@@ -16,7 +16,7 @@ import (
 	"github.com/dhowden/tag"
 )
 
-func (i Importer) importMediaFiles(ctx context.Context, tx database.DatabaseFace, ftx filetx.FileTx, folder string) (mediaFiles []types.MediaFile, err error) {
+func (i Importer) importMediaFiles(ctx context.Context, tx database.DatabaseFace, ftx *filetx.FileTx, folder string) (mediaFiles []types.MediaFile, err error) {
 	tempFiles, err := os.ReadDir(folder)
 	if err != nil {
 		return nil, err
