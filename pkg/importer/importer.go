@@ -13,6 +13,7 @@ import (
 
 	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/filetx"
 	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
@@ -204,7 +205,7 @@ func (i Importer) downloadAlbumCover(ctx context.Context, album types.Album, mdP
 	if album.MusicBrainzID != nil {
 		i.log.InfoContext(ctx, "downloading album cover from MusicBrainz", "album", album.Name)
 
-		err := i.mb.DownloadCoverArt(ctx, *album.MusicBrainzID, album.ID, dir)
+		err := i.mb.DownloadCoverArt(ctx, *album.MusicBrainzID, album.ID.String(), dir)
 		if err == nil {
 			return nil
 		}
@@ -228,6 +229,76 @@ func (i Importer) downloadAlbumCover(ctx context.Context, album types.Album, mdP
 	}
 
 	return fmt.Errorf("could not get album cover for album '%s'", album.ID)
+}
+
+func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
+	tx, err := i.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	ftx, err := filetx.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer ftx.Rollback()
+
+	mediaFiles, err := i.importMediaFiles(ctx, tx, ftx, folder)
+	if err != nil {
+		return err
+	}
+
+	albumAnalysis, err := i.analyzeAlbum(ctx, mediaFiles)
+	if err != nil {
+		if errors.Is(err, ErrAlbumMbIDNotFound) {
+			i.log.WarnContext(ctx, "no album musicbrainz ID found, using ID3")
+		} else {
+			return err
+		}
+	} else {
+		i.log.InfoContext(ctx, "album musicbrainz ID found", "mbID", albumAnalysis.AlbumID)
+	}
+
+	existingAlbum, err := i.getExistingAlbum(ctx, tx, albumAnalysis)
+	if err != nil {
+		if !errors.Is(err, ErrAlbumNotFound) {
+			return err
+		}
+	}
+
+	albumTracks, err := i.addMultipleTracks(ctx, tx, albumAnalysis, existingAlbum.ID)
+	if err != nil {
+		return err
+	}
+
+	album, err := i.addAlbum(ctx, tx, albumAnalysis, existingAlbum)
+	if err != nil {
+		return err
+	}
+
+	if err = i.addAlbumTracks(ctx, tx, albumTracks, album.ID); err != nil {
+		return err
+	}
+
+	artistID, err := i.addArtist(ctx, tx, albumAnalysis)
+	if err != nil {
+		return err
+	}
+
+	if err = i.addAlbumArtists(ctx, tx, album.ID, artistID); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+
+	if err := ftx.Commit(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (i *Importer) Run(ctx context.Context) {

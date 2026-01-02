@@ -4,19 +4,22 @@ import (
 	"cmp"
 	"context"
 	"errors"
+	"path/filepath"
 	"slices"
 
 	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/musicbrainz"
+	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
 	"github.com/samber/lo"
 )
 
-func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalysisResults, error) {
+func (i Importer) analyzeAlbum(ctx context.Context, files []types.MediaFile) (AlbumAnalysisResults, error) {
 	aids := [][]acoustid.AcoustMatch{}
 
 	for _, f := range files {
-		aid, err := i.aid.GetMusicBrainzAlbumID(f)
+		filename := filepath.Join(i.musicDir, f.Filename())
+		aid, err := i.aid.GetMusicBrainzAlbumID(filename)
 		if err != nil {
 			return AlbumAnalysisResults{}, err
 		}
@@ -41,7 +44,7 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalys
 				Id3Artist:      id3Artist,
 				Id3Album:       id3Album,
 				Id3ReleaseDate: id3Year,
-				Files:          files,
+				MediaFiles:     files,
 				Tracks:         id3Tracks,
 				Covers:         mdPics,
 			}, ErrAlbumMbIDNotFound
@@ -80,7 +83,7 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalys
 						DiscNumber:  utils.Ptr(discNmbr + 1),
 						Name:        &mbT.Title,
 						MbID:        &mbT.ID,
-						File:        file,
+						MediaFileID: file.ID,
 					})
 					found = true
 					break
@@ -94,7 +97,7 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []string) (AlbumAnalys
 				TrackNumber: id3Track.TrackNumber,
 				DiscNumber:  id3Track.DiscNumber,
 				Name:        id3Track.Name,
-				File:        file,
+				MediaFileID: file.ID,
 			})
 		}
 	}
@@ -167,7 +170,7 @@ func (i Importer) matchTrack(ctx context.Context, track Track, availableTracks [
 		for tidx, t := range availableTracks {
 			if *t.DiscNumber == *track.DiscNumber && *t.TrackNumber == *track.TrackNumber {
 				i.log.DebugContext(ctx, "matched track using disc and track number", "track_id", *t.MbID)
-				t.File = track.File
+				t.MediaFileID = track.MediaFileID
 				availableTracks = slices.Delete(availableTracks, tidx, tidx)
 				return t, availableTracks, nil
 			}
@@ -196,7 +199,7 @@ func (i Importer) matchTrack(ctx context.Context, track Track, availableTracks [
 
 	i.log.DebugContext(ctx, "matched track using name", "track_id", *t.MbID, "match_score", stringMatch[0].V)
 
-	t.File = track.File
+	t.MediaFileID = track.MediaFileID
 	availableTracks = slices.Delete(availableTracks, tidx, tidx)
 
 	return t, availableTracks, nil

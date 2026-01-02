@@ -1,9 +1,13 @@
 package types
 
-import "time"
+import (
+	"time"
+
+	"github.com/gofrs/uuid/v5"
+)
 
 type Artist struct {
-	ID            string    `db:"id" json:"id"`
+	ID            uuid.UUID `db:"id" json:"id"`
 	MusicBrainzID *string   `db:"musicbrainz_id" json:"musicbrainz_id"`
 	Name          string    `db:"name" json:"name"`
 	SortName      string    `db:"sort_name" json:"sort_name"`

@@ -10,46 +10,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddTracks(ctx context.Context, tracks []types.Track) (ids []string, err error) {
-	for _, track := range tracks {
-		trackExistsMbID := false
-		if track.MusicBrainzID != nil {
-			trackExistsMbID, err = d.TrackExistsByMbID(ctx, *track.MusicBrainzID)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		trackExists, err := d.TrackExistsByNameAndAlbumID(ctx, track.Title, *track.AlbumID)
-		if err != nil {
-			return nil, err
-		}
-
-		if trackExistsMbID || trackExists {
-			if err = d.UpdateTrackFromMbID(ctx, track); err != nil {
-				return nil, err
-			}
-			ids = append(ids, track.ID)
-		} else {
-			id, err := d.AddTrack(ctx, track)
-			if err != nil {
-				return nil, err
-			}
-			ids = append(ids, id)
-		}
-
-	}
-
-	return ids, nil
-}
-
-func (d Database) AddTrack(ctx context.Context, t types.Track) (string, error) {
-	if t.ID == "" {
+func (d Database) AddTrack(ctx context.Context, t types.Track) (uuid.UUID, error) {
+	if t.ID == uuid.Nil {
 		uid, err := uuid.NewV4()
 		if err != nil {
-			return "", err
+			return uuid.Nil, err
 		}
-		t.ID = uid.String()
+		t.ID = uid
 	}
 
 	now := time.Now()
@@ -58,12 +25,11 @@ func (d Database) AddTrack(ctx context.Context, t types.Track) (string, error) {
 
 	query := `
         INSERT INTO tracks (
-            id, title, album_id, musicbrainz_id, track_artist, track_number, disc_number,
-            genre, year, composer, comment, duration_ms, bitrate, sample_rate,
-            file_path, file_size, mime_type,
+            id, title, musicbrainz_id,
+            genre, comment, media_file,
             created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
     `
 
 	_, err := d.ext.ExecContext(
@@ -71,26 +37,15 @@ func (d Database) AddTrack(ctx context.Context, t types.Track) (string, error) {
 		query,
 		t.ID,
 		t.Title,
-		t.AlbumID,
 		t.MusicBrainzID,
-		t.TrackArtist,
-		t.TrackNumber,
-		t.DiscNumber,
 		t.Genre,
-		t.Year,
-		t.Composer,
 		t.Comment,
-		t.DurationMS,
-		t.Bitrate,
-		t.SampleRate,
-		t.FilePath,
-		t.FileSize,
-		t.MimeType,
+		t.MediaFile,
 		t.CreatedAt,
 		t.UpdatedAt,
 	)
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
 
 	return t.ID, nil
@@ -148,21 +103,10 @@ func (d Database) UpdateTrack(ctx context.Context, t types.Track) error {
 	query := `
         UPDATE tracks SET
             title = :title,
-            album_id = :album_id,
             musicbrainz_id = :musicbrainz_id,
-            track_artist = :track_artist,
-            track_number = :track_number,
-            disc_number = :disc_number,
             genre = :genre,
-            year = :year,
-            composer = :composer,
             comment = :comment,
-            duration_ms = :duration_ms,
-            bitrate = :bitrate,
-            sample_rate = :sample_rate,
-            file_path = :file_path,
-            file_size = :file_size,
-            mime_type = :mime_type
+            media_file = :media_file
         WHERE id = :id;
     `
 
@@ -313,20 +257,23 @@ func (d Database) GetEnhancedTracksFromArtistID(ctx context.Context, artistID st
 	return
 }
 
-func (d Database) GetTrackFromName(ctx context.Context, albumID string, trackName string) (track types.Track, err error) {
+func (d Database) GetTrackFromName(ctx context.Context, albumID uuid.UUID, trackName string) (track types.Track, err error) {
 	query := `
-        SELECT *
-        FROM tracks
-        WHERE album_id = ?
-        AND normalize(title) = normalize(?)
-        LIMIT 1;
-    `
-	err = sqlx.GetContext(ctx, d.ext, &track, query, albumID, trackName)
+		SELECT t.*
+		FROM album_tracks at
+		JOIN tracks t ON t.id = at.track_id
+		WHERE at.album_id = ?
+		  AND normalize(t.title) = normalize(?)
+		ORDER BY at.disc_number, at.track_number
+		LIMIT 1;
+	`
+
+	err = sqlx.GetContext(ctx, d.ext, &track, query, albumID.String(), trackName)
 	if err != nil {
 		return types.Track{}, err
 	}
 
-	return
+	return track, nil
 }
 
 func (d Database) ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error) {

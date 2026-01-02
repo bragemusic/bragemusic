@@ -1,6 +1,10 @@
 package types
 
-import "time"
+import (
+	"time"
+
+	"github.com/gofrs/uuid/v5"
+)
 
 type ArtistRole string
 
@@ -19,8 +23,8 @@ const (
 )
 
 type AlbumArtist struct {
-	AlbumID   string     `db:"album_id" json:"album_id"`
-	ArtistID  string     `db:"artist_id" json:"artist_id"`
+	AlbumID   uuid.UUID  `db:"album_id" json:"album_id"`
+	ArtistID  uuid.UUID  `db:"artist_id" json:"artist_id"`
 	Role      ArtistRole `db:"role" json:"role"`
 	Position  int        `db:"position" json:"position"`
 	CreatedAt time.Time  `db:"created_at" json:"created_at"`

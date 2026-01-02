@@ -344,8 +344,9 @@ func (s Syncer) syncTracks(ctx context.Context, tx database.DatabaseFace, trackI
 			}
 			created += 1
 
-			if serverTrack.FilePath != "" {
-				trackPath := filepath.Join(s.musicDir, serverTrack.FilePath)
+			if serverTrack.MediaFile != nil {
+				// FIXME: Find correct media file
+				trackPath := filepath.Join(s.musicDir, "FILEPATH")
 
 				if err = os.MkdirAll(filepath.Dir(trackPath), os.ModePerm); err != nil {
 					return 0, 0, err

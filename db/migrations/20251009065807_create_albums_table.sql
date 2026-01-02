@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS albums (
     musicbrainz_id  TEXT UNIQUE,
     name            TEXT NOT NULL,
     sort_name       TEXT NOT NULL,
-    artist_id       TEXT NOT NULL,
     release_date    DATETIME,
     tracks          INTEGER,
     discs           INTEGER,

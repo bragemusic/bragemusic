@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS media_files (
     duration_ms     INTEGER NOT NULL,
     bitrate         INTEGER NOT NULL,
     sample_rate     INTEGER NOT NULL,
-    file_path       TEXT NOT NULL,
     file_size       INTEGER NOT NULL,
     codec           TEXT NOT NULL,
     checksum        TEXT NOT NULL,

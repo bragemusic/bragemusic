@@ -26,11 +26,12 @@ func (m MediaManager) GetTrackFile(ctx context.Context, trackID string, w io.Wri
 		return err
 	}
 
-	if track.FilePath == "" {
+	if track.MediaFile == nil {
 		return fmt.Errorf("file does not exist for track '%s'", trackID)
 	}
 
-	f, err := os.Open(filepath.Join(m.musicDir, track.FilePath))
+	// FIXME: Find correct media file
+	f, err := os.Open(filepath.Join(m.musicDir, "FILEPATH"))
 	if err != nil {
 		return err
 	}

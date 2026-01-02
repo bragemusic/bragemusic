@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -10,13 +11,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddAlbum(ctx context.Context, a types.Album) (string, error) {
-	if a.ID == "" {
+func (d Database) AddAlbum(ctx context.Context, a types.Album) (uuid.UUID, error) {
+	if a.ID == uuid.Nil {
 		uid, err := uuid.NewV4()
 		if err != nil {
-			return "", err
+			return uuid.Nil, err
 		}
-		a.ID = uid.String()
+		a.ID = uid
 	}
 
 	now := time.Now()
@@ -25,9 +26,9 @@ func (d Database) AddAlbum(ctx context.Context, a types.Album) (string, error) {
 
 	const query = `
 		INSERT INTO albums (
-			id, musicbrainz_id, name, sort_name, artist_id, release_date, tracks, discs,
+			id, musicbrainz_id, name, sort_name, release_date, tracks, discs,
 			description, owner, public, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 	`
 
 	_, err := d.ext.ExecContext(
@@ -37,7 +38,6 @@ func (d Database) AddAlbum(ctx context.Context, a types.Album) (string, error) {
 		a.MusicBrainzID,
 		a.Name,
 		a.SortName,
-		a.ArtistID,
 		a.ReleaseDate,
 		a.Tracks,
 		a.Discs,
@@ -48,7 +48,7 @@ func (d Database) AddAlbum(ctx context.Context, a types.Album) (string, error) {
 		a.UpdatedAt,
 	)
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
 
 	return a.ID, nil
@@ -71,6 +71,7 @@ func (d Database) AlbumExists(ctx context.Context, ID string) (bool, error) {
 }
 
 func (d Database) GetAlbumFromArtistAndName(ctx context.Context, artistName, albumName string) (album types.Album, err error) {
+	return types.Album{}, sql.ErrNoRows
 	query := `
        SELECT a.*
        FROM albums a

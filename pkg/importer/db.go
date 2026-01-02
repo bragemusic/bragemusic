@@ -7,9 +7,51 @@ import (
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 )
 
-func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, artist types.Artist) (id string, retArtist *types.Artist, err error) {
+func (i Importer) addAlbumTracks(ctx context.Context, tx database.DatabaseFace, albumTracks []types.AlbumTrack, albumID uuid.UUID) error {
+	for _, at := range albumTracks {
+		at.AlbumID = albumID
+		exists, err := tx.AlbumTrackExists(ctx, at.AlbumID, at.TrackID)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			if err := tx.AddAlbumTrack(ctx, at); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (i Importer) addAlbumArtists(ctx context.Context, tx database.DatabaseFace, albumID, artistID uuid.UUID) error {
+	role := types.ArPrimary
+
+	exists, err := tx.AlbumArtistExists(ctx, albumID, artistID, role)
+	if err != nil {
+		return err
+	}
+
+	aa := types.AlbumArtist{
+		AlbumID:  albumID,
+		ArtistID: artistID,
+		Role:     role,
+		Position: 0,
+	}
+
+	if !exists {
+		if err = tx.AddAlbumArtist(ctx, aa); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, artist types.Artist) (id uuid.UUID, retArtist *types.Artist, err error) {
 	var existingArtist types.Artist
 
 	if artist.MusicBrainzID != nil {
@@ -23,14 +65,14 @@ func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, 
 			existingArtist, err = tx.GetArtistFromName(ctx, artist.Name)
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
-					return "", nil, err
+					return uuid.Nil, nil, err
 				}
 			} else {
 				i.log.InfoContext(ctx, "found existsing artist using name", "id", existingArtist.ID)
 				return existingArtist.ID, &existingArtist, nil
 			}
 		} else {
-			return "", nil, err
+			return uuid.Nil, nil, err
 		}
 	} else {
 		i.log.InfoContext(ctx, "found existsing artist using musicbrainz id", "id", existingArtist.ID)
@@ -43,7 +85,7 @@ func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, 
 	return id, nil, err
 }
 
-func (i Importer) addOrGetAlbum(ctx context.Context, tx database.DatabaseFace, album types.Album, artistName string) (id string, err error) {
+func (i Importer) addOrGetAlbum(ctx context.Context, tx database.DatabaseFace, album types.Album, artistName string) (id uuid.UUID, err error) {
 	var existingAlbum types.Album
 
 	if album.MusicBrainzID != nil {
@@ -57,14 +99,14 @@ func (i Importer) addOrGetAlbum(ctx context.Context, tx database.DatabaseFace, a
 			existingAlbum, err = tx.GetAlbumFromArtistAndName(ctx, artistName, album.Name)
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
-					return "", err
+					return uuid.Nil, err
 				}
 			} else {
 				i.log.InfoContext(ctx, "found existsing album using name", "id", existingAlbum.ID)
 				return existingAlbum.ID, nil
 			}
 		} else {
-			return "", err
+			return uuid.Nil, err
 		}
 	} else {
 		i.log.InfoContext(ctx, "found existsing album using musicbrainz id", "id", existingAlbum.ID)
@@ -75,7 +117,7 @@ func (i Importer) addOrGetAlbum(ctx context.Context, tx database.DatabaseFace, a
 	return tx.AddAlbum(ctx, album)
 }
 
-func (i Importer) addOrUpdateTrack(ctx context.Context, tx database.DatabaseFace, track types.Track) (id string, err error) {
+func (i Importer) addOrUpdateTrack(ctx context.Context, tx database.DatabaseFace, track types.Track, albumID uuid.UUID) (id uuid.UUID, new bool, err error) {
 	var existingTrack types.Track
 
 	if track.MusicBrainzID != nil {
@@ -86,30 +128,31 @@ func (i Importer) addOrUpdateTrack(ctx context.Context, tx database.DatabaseFace
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			existingTrack, err = tx.GetTrackFromName(ctx, *track.AlbumID, track.Title)
+			existingTrack, err = tx.GetTrackFromName(ctx, albumID, track.Title)
 			if err != nil {
 				if !errors.Is(err, sql.ErrNoRows) {
-					return "", err
+					return uuid.Nil, false, err
 				}
 			} else {
 				i.log.InfoContext(ctx, "found existing track using name", "id", existingTrack.ID)
 			}
 		} else {
-			return "", err
+			return uuid.Nil, false, err
 		}
 	} else {
 		i.log.InfoContext(ctx, "found existing track using musicbrainz id", "id", existingTrack.ID)
 	}
 
-	if existingTrack.ID != "" {
+	if existingTrack.ID != uuid.Nil {
 		track.ID = existingTrack.ID
 		err = tx.UpdateTrack(ctx, track)
 		if err != nil {
-			return "", err
+			return uuid.Nil, false, err
 		}
-		return track.ID, nil
+		return track.ID, false, nil
 	} else {
 		i.log.InfoContext(ctx, "creating new track")
-		return tx.AddTrack(ctx, track)
+		id, err := tx.AddTrack(ctx, track)
+		return id, true, err
 	}
 }

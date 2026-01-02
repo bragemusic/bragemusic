@@ -2,6 +2,7 @@ package importer
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"os"
@@ -10,20 +11,53 @@ import (
 	"time"
 
 	"github.com/bragemusic/core/pkg/acoustid"
+	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/files"
 	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
 	"github.com/dhowden/tag"
+	"github.com/gofrs/uuid/v5"
 )
 
 var (
 	ErrAlbumMbIDNotFound  = errors.New("could not find MusicBrainz ID for album")
 	ErrArtistMbIDNotFound = errors.New("could not find MusicBrainz ID for artist")
 	ErrId3AlbumNotFound   = errors.New("could not get album name from ID3")
+	ErrAlbumNotFound      = errors.New("no existing album found")
 )
 
-func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
+func (i Importer) addAlbum(ctx context.Context, tx database.DatabaseFace, albumAnalysis AlbumAnalysisResults, existingAlbum types.Album) (album types.Album, err error) {
+	if albumAnalysis.AlbumID != "" {
+		album, err = i.generateAlbumFromMbID(ctx, albumAnalysis.AlbumID)
+		if err != nil {
+			return types.Album{}, err
+		}
+	} else {
+		album = i.generateAlbumFromID3(ctx, albumAnalysis)
+	}
+
+	if existingAlbum.ID != uuid.Nil {
+		// Exisiting album is not created from musicbrainz id but new one is, update it
+		if existingAlbum.MusicBrainzID == nil && album.MusicBrainzID != nil {
+			album.ID = existingAlbum.ID
+			if err = tx.UpdateAlbum(ctx, album); err != nil {
+				return types.Album{}, err
+			}
+		} else {
+			album = existingAlbum
+		}
+	} else {
+		album.ID, err = tx.AddAlbum(ctx, album)
+		if err != nil {
+			return types.Album{}, err
+		}
+	}
+
+	return album, nil
+}
+
+func (i Importer) importAlbumFilesOld(ctx context.Context, folder string) error {
 	osFiles, err := os.ReadDir(folder)
 	if err != nil {
 		return err
@@ -36,7 +70,7 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 
 	var album types.Album
 
-	albumAnalysis, err := i.analyzeAlbum(ctx, filenames)
+	albumAnalysis, err := i.analyzeAlbum(ctx, []types.MediaFile{})
 	if err != nil {
 		if errors.Is(err, ErrAlbumMbIDNotFound) {
 			i.log.WarnContext(ctx, "no album musicbrainz ID found, using ID3")
@@ -54,13 +88,14 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 
 	var artist types.Artist
 	var tracks []types.Track
+	var albumTracks []types.AlbumTrack
 
 	if album.MusicBrainzID != nil {
 		artist, err = i.generateArtistFromAlbumMbID(ctx, *album.MusicBrainzID)
 		if err != nil {
 			return err
 		}
-		tracks, err = i.generateTracksFromAlbumMbID(ctx, *album.MusicBrainzID)
+		tracks, albumTracks, err = i.generateTracksFromAlbumMbID(ctx, *album.MusicBrainzID)
 		if err != nil {
 			return err
 		}
@@ -69,23 +104,20 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 		artist = i.generateArtistFromID3(ctx, albumAnalysis)
 	}
 
-	albumFolderPath := utils.GenerateAlbumFolderPath(artist.Name, album.Name)
+	tx, err := i.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
 	for _, track := range albumAnalysis.Tracks {
-		if track.File == "" {
+		// if track.File == "" {
+		if "" == "" {
 			return fmt.Errorf("track '%s' does not have a file", *track.MbID)
 		}
 
-		tfp, err := utils.GenerateTrackPath(*track.DiscNumber, *track.TrackNumber, *track.Name, tag.FLAC, albumFolderPath)
-		if err != nil {
-			return err
-		}
-
-		if err = i.copyFile(ctx, track.File, filepath.Join(i.musicDir, tfp)); err != nil {
-			return err
-		}
-
-		f, err := os.OpenFile(track.File, os.O_RDONLY, os.ModePerm)
+		// f, err := os.OpenFile(track.File, os.O_RDONLY, os.ModePerm)
+		f, err := os.OpenFile("", os.O_RDONLY, os.ModePerm)
 		if err != nil {
 			return err
 		}
@@ -98,31 +130,53 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 		}
 		f.Close()
 
+		// checksum, err := utils.FileSHA256(track.File)
+		checksum, err := utils.FileSHA256("")
+		if err != nil {
+			return err
+		}
+
+		mediafile := types.MediaFile{
+			DurationMs: af.DurationMS(),
+			Bitrate:    af.Bitrate(),
+			SampleRate: af.SampleRate(),
+			FileSize:   af.FileSize(),
+			// FIXME: Do not hardcode Flac
+			Codec:    types.CodecFlac,
+			Checksum: checksum,
+		}
+
+		mfId, err := tx.AddMediaFile(ctx, mediafile)
+		if err != nil {
+			return err
+		}
+
+		mffp := filepath.Join(i.musicDir, fmt.Sprintf("%s.%s", mfId.String(), mediafile.Codec))
+
+		if err = i.copyFile(ctx, "", mffp); err != nil {
+			// if err = i.copyFile(ctx, track.File, mffp); err != nil {
+			return err
+		}
+
 		if track.MbID != nil {
 			for tidx := range tracks {
 				if *tracks[tidx].MusicBrainzID == *track.MbID {
-					// FIXME: Do not hardcode Flac
-					tracks[tidx] = i.updateTrackData(tracks[tidx], af, tfp, tag.FLAC)
+					tracks[tidx].MediaFile = utils.Ptr(mfId)
 					break
 				}
 			}
 		} else {
 			t := types.Track{
-				Title:       *track.Name,
-				TrackNumber: track.TrackNumber,
-				DiscNumber:  track.DiscNumber,
+				Title:     *track.Name,
+				MediaFile: utils.Ptr(mfId),
 			}
-
-			t = i.updateTrackData(t, af, tfp, tag.FLAC)
 			tracks = append(tracks, t)
+			albumTracks = append(albumTracks, types.AlbumTrack{
+				DiscNumber:  *track.DiscNumber,
+				TrackNumber: *track.TrackNumber,
+			})
 		}
 	}
-
-	tx, err := i.db.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
 
 	var existingArtist *types.Artist
 
@@ -140,18 +194,30 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 		}
 	}
 
-	album.ArtistID = artist.ID
+	// FIXME: new tables
+	// album.ArtistID = artist.ID
 
 	album.ID, err = i.addOrGetAlbum(ctx, tx, album, artist.Name)
 	if err != nil {
 		return err
 	}
 
-	for _, track := range tracks {
-		track.AlbumID = &album.ID
-		_, err := i.addOrUpdateTrack(ctx, tx, track)
+	// FIXME: create album artist link
+
+	fmt.Println(len(tracks), len(albumTracks))
+	for idx := range tracks {
+		// track.AlbumID = &album.ID
+		trackID, newTrack, err := i.addOrUpdateTrack(ctx, tx, tracks[idx], album.ID)
 		if err != nil {
 			return err
+		}
+		albumTracks[idx].AlbumID = album.ID
+		albumTracks[idx].TrackID = trackID
+
+		if newTrack {
+			if err = tx.AddAlbumTrack(ctx, albumTracks[idx]); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -179,7 +245,7 @@ type AlbumAnalysisResults struct {
 	Id3ReleaseDate    int
 	MatchedTracks     int
 	ID3AlbumNameMatch float32
-	Files             []string
+	MediaFiles        []types.MediaFile
 	Tracks            []Track
 	Covers            []*tag.Picture
 }
@@ -189,7 +255,7 @@ type Track struct {
 	DiscNumber  *int
 	Name        *string
 	MbID        *string
-	File        string
+	MediaFileID uuid.UUID
 }
 
 func (i Importer) generateAlbumFromMbID(ctx context.Context, mbID string) (types.Album, error) {
@@ -298,38 +364,46 @@ func (i Importer) generateArtistFromID3(ctx context.Context, analysis AlbumAnaly
 	return artist
 }
 
-func (i Importer) generateTracksFromAlbumMbID(ctx context.Context, albumMbID string) (tracks []types.Track, err error) {
+func (i Importer) generateTracksFromAlbumMbID(ctx context.Context, albumMbID string) (tracks []types.Track, albumTracks []types.AlbumTrack, err error) {
 	mbAlbum, err := i.mb.GetAlbum(ctx, albumMbID)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	for discIdx, media := range mbAlbum.Media {
 		for _, mbTrack := range media.Tracks {
-			tr := i.generateTrack(mbTrack, discIdx+1)
+			tr := i.generateTrack(mbTrack)
+			atr := i.generateAlbumTrack(mbTrack, discIdx+1)
 			tracks = append(tracks, tr)
+			albumTracks = append(albumTracks, atr)
 		}
 	}
 
-	return tracks, nil
+	return tracks, albumTracks, nil
 }
 
-func (i Importer) generateTrack(mbTrack musicbrainz.Track, discNumber int) types.Track {
+func (i Importer) generateTrack(mbTrack musicbrainz.Track) types.Track {
 	return types.Track{
 		Title:         mbTrack.Title,
 		MusicBrainzID: &mbTrack.ID,
-		TrackNumber:   &mbTrack.Position,
-		DiscNumber:    &discNumber,
 	}
 }
 
-func (i Importer) getID3Info(ctx context.Context, files []string) (artist, album string, releaseYear int, tracks []Track, pics []*tag.Picture, err error) {
+func (i Importer) generateAlbumTrack(mbTrack musicbrainz.Track, discNumber int) types.AlbumTrack {
+	return types.AlbumTrack{
+		DiscNumber:  discNumber,
+		TrackNumber: mbTrack.Position,
+	}
+}
+
+func (i Importer) getID3Info(ctx context.Context, files []types.MediaFile) (artist, album string, releaseYear int, tracks []Track, pics []*tag.Picture, err error) {
 	albums := []string{}
 	artists := []string{}
 	releaseYears := []int{}
 
 	for _, f := range files {
-		r, err := os.Open(f)
+		filename := filepath.Join(i.musicDir, f.Filename())
+		r, err := os.Open(filename)
 		if err != nil {
 			return "", "", 0, nil, nil, err
 		}
@@ -349,7 +423,7 @@ func (i Importer) getID3Info(ctx context.Context, files []string) (artist, album
 		releaseYears = append(releaseYears, md.Year())
 
 		track := Track{}
-		track.File = f
+		track.MediaFileID = f.ID
 		tn, _ := md.Track()
 		dn, _ := md.Disc()
 
@@ -379,4 +453,28 @@ func (i Importer) getID3Info(ctx context.Context, files []string) (artist, album
 	}
 
 	return utils.HighestCount(artists), utils.HighestCount(albums), utils.HighestCount(releaseYears), tracks, pics, nil
+}
+
+func (i Importer) getExistingAlbum(ctx context.Context, tx database.DatabaseFace, albumAnalysis AlbumAnalysisResults) (types.Album, error) {
+	if albumAnalysis.AlbumID != "" {
+		album, err := tx.GetAlbumFromMbID(ctx, albumAnalysis.AlbumID)
+		if err != nil {
+			if !errors.Is(err, sql.ErrNoRows) {
+				return types.Album{}, err
+			}
+		} else {
+			return album, nil
+		}
+	}
+
+	album, err := tx.GetAlbumFromArtistAndName(ctx, albumAnalysis.Id3Artist, albumAnalysis.Id3Album)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return types.Album{}, err
+		}
+	} else {
+		return album, nil
+	}
+
+	return types.Album{}, ErrAlbumNotFound
 }

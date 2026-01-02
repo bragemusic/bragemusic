@@ -10,13 +10,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddArtist(ctx context.Context, a types.Artist) (string, error) {
-	if a.ID == "" {
+func (d Database) AddArtist(ctx context.Context, a types.Artist) (uuid.UUID, error) {
+	if a.ID == uuid.Nil {
 		uid, err := uuid.NewV4()
 		if err != nil {
-			return "", err
+			return uuid.Nil, err
 		}
-		a.ID = uid.String()
+		a.ID = uid
 	}
 
 	now := time.Now()
@@ -46,7 +46,7 @@ func (d Database) AddArtist(ctx context.Context, a types.Artist) (string, error)
 		a.UpdatedAt,
 	)
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
 
 	return a.ID, nil
