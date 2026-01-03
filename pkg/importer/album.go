@@ -427,16 +427,26 @@ func (i Importer) getID3Info(ctx context.Context, files []types.MediaFile) (arti
 		tn, _ := md.Track()
 		dn, _ := md.Disc()
 
+		discNumber, trackNumber, ok := utils.ExtractDiscAndTrack(f.OrgFilename)
+
 		if tn != 0 {
 			track.TrackNumber = &tn
 		} else {
-			track.TrackNumber = utils.Ptr(1)
+			if ok {
+				track.TrackNumber = utils.Ptr(trackNumber)
+			} else {
+				track.TrackNumber = utils.Ptr(1)
+			}
 		}
 
 		if dn != 0 {
 			track.DiscNumber = &dn
 		} else {
-			track.DiscNumber = utils.Ptr(1)
+			if ok {
+				track.DiscNumber = utils.Ptr(discNumber)
+			} else {
+				track.DiscNumber = utils.Ptr(1)
+			}
 		}
 		track.Name = utils.Ptr(md.Title())
 

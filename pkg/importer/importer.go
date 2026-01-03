@@ -290,6 +290,11 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 		return err
 	}
 
+	err = i.downloadAlbumCover(ctx, album, albumAnalysis.Covers)
+	if err != nil {
+		i.log.ErrorContext(ctx, "could not download album cover", "id", album.ID, "error", err.Error())
+	}
+
 	if err := tx.Commit(); err != nil {
 		return err
 	}

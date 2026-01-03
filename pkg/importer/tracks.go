@@ -57,6 +57,8 @@ func (i Importer) addMultipleTracks(ctx context.Context, tx database.DatabaseFac
 				TrackNumber: *track.TrackNumber,
 				TrackID:     t.ID,
 			})
+
+			addedTrackIdx = append(addedTrackIdx, len(tracks)-1)
 		}
 	}
 

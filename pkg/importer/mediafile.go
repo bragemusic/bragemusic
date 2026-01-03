@@ -76,6 +76,7 @@ func (i Importer) importMediaFiles(ctx context.Context, tx database.DatabaseFace
 			i.log.InfoContext(ctx, "media file already imported")
 		}
 
+		mf.OrgFilename = f.Name()
 		mediaFiles = append(mediaFiles, mf)
 	}
 

@@ -27,6 +27,7 @@ func (i Importer) addArtist(ctx context.Context, tx database.DatabaseFace, album
 	}
 
 	if existingArtist != nil {
+		artist.ID = existingArtist.ID
 		if existingArtist.MusicBrainzID == nil && artist.MusicBrainzID != nil {
 			err = tx.UpdateArtist(ctx, artist)
 			if err != nil {
