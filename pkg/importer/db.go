@@ -85,38 +85,6 @@ func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, 
 	return id, nil, err
 }
 
-func (i Importer) addOrGetAlbum(ctx context.Context, tx database.DatabaseFace, album types.Album, artistName string) (id uuid.UUID, err error) {
-	var existingAlbum types.Album
-
-	if album.MusicBrainzID != nil {
-		existingAlbum, err = tx.GetAlbumFromMbID(ctx, *album.MusicBrainzID)
-	} else {
-		err = sql.ErrNoRows
-	}
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			existingAlbum, err = tx.GetAlbumFromArtistAndName(ctx, artistName, album.Name)
-			if err != nil {
-				if !errors.Is(err, sql.ErrNoRows) {
-					return uuid.Nil, err
-				}
-			} else {
-				i.log.InfoContext(ctx, "found existsing album using name", "id", existingAlbum.ID)
-				return existingAlbum.ID, nil
-			}
-		} else {
-			return uuid.Nil, err
-		}
-	} else {
-		i.log.InfoContext(ctx, "found existsing album using musicbrainz id", "id", existingAlbum.ID)
-		return existingAlbum.ID, nil
-	}
-
-	i.log.InfoContext(ctx, "creating new album")
-	return tx.AddAlbum(ctx, album)
-}
-
 func (i Importer) addOrUpdateTrack(ctx context.Context, tx database.DatabaseFace, track types.Track, albumID uuid.UUID) (id uuid.UUID, new bool, err error) {
 	var existingTrack types.Track
 
