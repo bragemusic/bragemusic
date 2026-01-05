@@ -10,6 +10,7 @@ import (
 	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/filetx"
 	"github.com/bragemusic/core/pkg/importer"
 	"github.com/bragemusic/core/pkg/metasyncer"
 	"github.com/bragemusic/core/pkg/musicbrainz"
@@ -33,6 +34,8 @@ func main() {
 	})
 
 	logger := slog.New(slogHandler)
+
+	filetx.Init(slogHandler)
 
 	dbSqlite, err := sqlx.Open("sqlite3", scfg.DBPath)
 	if err != nil {

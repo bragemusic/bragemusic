@@ -10,46 +10,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddTracks(ctx context.Context, tracks []types.Track) (ids []string, err error) {
-	for _, track := range tracks {
-		trackExistsMbID := false
-		if track.MusicBrainzID != nil {
-			trackExistsMbID, err = d.TrackExistsByMbID(ctx, *track.MusicBrainzID)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		trackExists, err := d.TrackExistsByNameAndAlbumID(ctx, track.Title, *track.AlbumID)
-		if err != nil {
-			return nil, err
-		}
-
-		if trackExistsMbID || trackExists {
-			if err = d.UpdateTrackFromMbID(ctx, track); err != nil {
-				return nil, err
-			}
-			ids = append(ids, track.ID)
-		} else {
-			id, err := d.AddTrack(ctx, track)
-			if err != nil {
-				return nil, err
-			}
-			ids = append(ids, id)
-		}
-
-	}
-
-	return ids, nil
-}
-
-func (d Database) AddTrack(ctx context.Context, t types.Track) (string, error) {
-	if t.ID == "" {
+func (d Database) AddTrack(ctx context.Context, t types.Track) (uuid.UUID, error) {
+	if t.ID == uuid.Nil {
 		uid, err := uuid.NewV4()
 		if err != nil {
-			return "", err
+			return uuid.Nil, err
 		}
-		t.ID = uid.String()
+		t.ID = uid
 	}
 
 	now := time.Now()
@@ -58,12 +25,11 @@ func (d Database) AddTrack(ctx context.Context, t types.Track) (string, error) {
 
 	query := `
         INSERT INTO tracks (
-            id, title, album_id, musicbrainz_id, track_artist, track_number, disc_number,
-            genre, year, composer, comment, duration_ms, bitrate, sample_rate,
-            file_path, file_size, mime_type,
+            id, title, musicbrainz_id,
+            genre, comment, media_file,
             created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?);
     `
 
 	_, err := d.ext.ExecContext(
@@ -71,26 +37,15 @@ func (d Database) AddTrack(ctx context.Context, t types.Track) (string, error) {
 		query,
 		t.ID,
 		t.Title,
-		t.AlbumID,
 		t.MusicBrainzID,
-		t.TrackArtist,
-		t.TrackNumber,
-		t.DiscNumber,
 		t.Genre,
-		t.Year,
-		t.Composer,
 		t.Comment,
-		t.DurationMS,
-		t.Bitrate,
-		t.SampleRate,
-		t.FilePath,
-		t.FileSize,
-		t.MimeType,
+		t.MediaFile,
 		t.CreatedAt,
 		t.UpdatedAt,
 	)
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
 
 	return t.ID, nil
@@ -148,21 +103,10 @@ func (d Database) UpdateTrack(ctx context.Context, t types.Track) error {
 	query := `
         UPDATE tracks SET
             title = :title,
-            album_id = :album_id,
             musicbrainz_id = :musicbrainz_id,
-            track_artist = :track_artist,
-            track_number = :track_number,
-            disc_number = :disc_number,
             genre = :genre,
-            year = :year,
-            composer = :composer,
             comment = :comment,
-            duration_ms = :duration_ms,
-            bitrate = :bitrate,
-            sample_rate = :sample_rate,
-            file_path = :file_path,
-            file_size = :file_size,
-            mime_type = :mime_type
+            media_file = :media_file
         WHERE id = :id;
     `
 
@@ -239,94 +183,95 @@ func (d Database) GetTracksFromAlbumID(ctx context.Context, albumID string) (tra
 	return
 }
 
-func (d Database) GetEnhancedTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.TrackEnhanced, err error) {
-	query := `
-        SELECT
-            t.*,
-            al.name  AS album_name,
-            ar.id    AS artist_id,
-            ar.name  AS artist_name,
-            COALESCE(tp.play_count, 0) AS play_count
-        FROM tracks t
-        JOIN albums al ON t.album_id = al.id
-        JOIN artists ar ON al.artist_id = ar.id
-        LEFT JOIN (
-            SELECT track_id, COUNT(*) AS play_count
-            FROM play_history
-            GROUP BY track_id
-        ) tp ON tp.track_id = t.id
-        WHERE t.album_id = ?;
-`
-	err = sqlx.SelectContext(ctx, d.ext, &tracks, query, albumID)
-	if err != nil {
-		return nil, err
-	}
-
-	return
-}
-
-func (d Database) GetEnhancedTracksFromArtistID(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackEnhanced, err error) {
-	sortByStr := ""
-
-	if !includeMissingFiles {
-		sortByStr = "AND WHERE t.file_path != '' "
-	}
+func (d Database) GetTracksDetailedFromArtistID(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackDetailed, err error) {
+	orderBy := "t.title"
 
 	switch sortBy {
 	case SortByDate:
-		sortByStr = "created_at"
+		orderBy = "t.created_at"
 	case SortByName:
-		sortByStr = "title"
+		orderBy = "t.title"
 	case SortByPlayCount:
-		sortByStr = "play_count"
+		orderBy = "play_count"
 	}
 
-	sortLimit := fmt.Sprintf("ORDER BY %s %s", sortByStr, sortOrder)
+	whereExtra := ""
+	if !includeMissingFiles {
+		whereExtra = "AND t.media_file IS NOT NULL"
+	}
+
+	limitClause := ""
 	if limit != nil {
-		sortLimit += fmt.Sprintf(" LIMIT %d", *limit)
+		limitClause = fmt.Sprintf("LIMIT %d", *limit)
 	}
 
 	query := fmt.Sprintf(`
-        SELECT
-            t.*,
-            al.name  AS album_name,
-            ar.id    AS artist_id,
-            ar.name  AS artist_name,
-            COALESCE(tp.play_count, 0) AS play_count
-        FROM tracks t
-        JOIN albums al ON t.album_id = al.id
-        JOIN artists ar ON al.artist_id = ar.id
-        LEFT JOIN (
-            SELECT track_id, COUNT(*) AS play_count
-            FROM play_history
-            GROUP BY track_id
-        ) tp ON tp.track_id = t.id
-        WHERE artist_id = ?
-        %s
-;
-`, sortLimit)
+		SELECT
+			t.id,
+			t.title,
+			at.album_id,
+			al.name AS album_name,
+			t.musicbrainz_id,
+			at.track_number,
+			at.disc_number,
+			t.genre,
+			t.comment,
+			t.created_at,
+			t.updated_at,
+			COALESCE(tp.play_count, 0) AS play_count
+
+		FROM album_artists aa
+		JOIN albums al        ON al.id = aa.album_id
+		JOIN album_tracks at ON at.album_id = al.id
+		JOIN tracks t        ON t.id = at.track_id
+
+		LEFT JOIN (
+			SELECT track_id, COUNT(*) AS play_count
+			FROM play_history
+			GROUP BY track_id
+		) tp ON tp.track_id = t.id
+
+		WHERE aa.artist_id = ?
+		%s
+
+		ORDER BY %s %s
+		%s;
+	`, whereExtra, orderBy, sortOrder, limitClause)
+
 	err = sqlx.SelectContext(ctx, d.ext, &tracks, query, artistID)
 	if err != nil {
 		return nil, err
 	}
 
-	return
+	// attach optional relations
+	if err := d.attachMediaFiles(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachTrackArtists(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	return tracks, nil
 }
 
-func (d Database) GetTrackFromName(ctx context.Context, albumID string, trackName string) (track types.Track, err error) {
+func (d Database) GetTrackFromName(ctx context.Context, albumID uuid.UUID, trackName string) (track types.Track, err error) {
 	query := `
-        SELECT *
-        FROM tracks
-        WHERE album_id = ?
-        AND normalize(title) = normalize(?)
-        LIMIT 1;
-    `
-	err = sqlx.GetContext(ctx, d.ext, &track, query, albumID, trackName)
+		SELECT t.*
+		FROM album_tracks at
+		JOIN tracks t ON t.id = at.track_id
+		WHERE at.album_id = ?
+		  AND normalize(t.title) = normalize(?)
+		ORDER BY at.disc_number, at.track_number
+		LIMIT 1;
+	`
+
+	err = sqlx.GetContext(ctx, d.ext, &track, query, albumID.String(), trackName)
 	if err != nil {
 		return types.Track{}, err
 	}
 
-	return
+	return track, nil
 }
 
 func (d Database) ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error) {
@@ -345,4 +290,46 @@ func (d Database) ListUpdatedTracks(ctx context.Context, since time.Time) (track
 	}
 
 	return
+}
+
+func (d Database) ListAlbumTracksDetailed(ctx context.Context, albumID uuid.UUID) (tracks []types.TrackDetailed, err error) {
+	tracksQuery := `
+		SELECT
+			t.id,
+			t.title,
+			at.album_id,
+			al.name AS album_name,
+			t.musicbrainz_id,
+			at.track_number,
+			at.disc_number,
+			t.genre,
+			t.comment,
+			t.created_at,
+			t.updated_at,
+			COALESCE(tp.play_count, 0) AS play_count
+		FROM album_tracks at
+		JOIN tracks t ON t.id = at.track_id
+		JOIN albums al ON al.id = at.album_id
+		LEFT JOIN (
+			SELECT track_id, COUNT(*) AS play_count
+			FROM play_history
+			GROUP BY track_id
+		) tp ON tp.track_id = t.id
+		WHERE at.album_id = ?
+		ORDER BY at.disc_number, at.track_number;
+	`
+
+	if err := sqlx.SelectContext(ctx, d.ext, &tracks, tracksQuery, albumID); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachTrackArtists(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachMediaFiles(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	return tracks, nil
 }

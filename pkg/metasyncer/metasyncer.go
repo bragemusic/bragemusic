@@ -84,8 +84,8 @@ func (m MetaSyncer) Sync(ctx context.Context) {
 
 		m.log.InfoContext(ctx, "updated artist description", "artist", a.Name)
 
-		if wikiData.ImageUrl != nil && !m.artistHasImage(a.ID) {
-			imgFilename := filepath.Join(m.imageDir, "artists", a.ID+".jpg")
+		if wikiData.ImageUrl != nil && !m.artistHasImage(a.ID.String()) {
+			imgFilename := filepath.Join(m.imageDir, "artists", a.ID.String()+".jpg")
 			if err = m.wiki.DownloadFile(ctx, *wikiData.ImageUrl, imgFilename); err != nil {
 				m.log.ErrorContext(ctx, "could not download artist image", "error", err.Error(), "artist", a.Name)
 				continue

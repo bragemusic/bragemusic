@@ -10,13 +10,13 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddAlbum(ctx context.Context, a types.Album) (string, error) {
-	if a.ID == "" {
+func (d Database) AddAlbum(ctx context.Context, a types.Album) (uuid.UUID, error) {
+	if a.ID == uuid.Nil {
 		uid, err := uuid.NewV4()
 		if err != nil {
-			return "", err
+			return uuid.Nil, err
 		}
-		a.ID = uid.String()
+		a.ID = uid
 	}
 
 	now := time.Now()
@@ -25,9 +25,9 @@ func (d Database) AddAlbum(ctx context.Context, a types.Album) (string, error) {
 
 	const query = `
 		INSERT INTO albums (
-			id, musicbrainz_id, name, sort_name, artist_id, release_date, tracks, discs,
+			id, musicbrainz_id, name, sort_name, release_date, tracks, discs,
 			description, owner, public, created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 	`
 
 	_, err := d.ext.ExecContext(
@@ -37,7 +37,6 @@ func (d Database) AddAlbum(ctx context.Context, a types.Album) (string, error) {
 		a.MusicBrainzID,
 		a.Name,
 		a.SortName,
-		a.ArtistID,
 		a.ReleaseDate,
 		a.Tracks,
 		a.Discs,
@@ -48,7 +47,7 @@ func (d Database) AddAlbum(ctx context.Context, a types.Album) (string, error) {
 		a.UpdatedAt,
 	)
 	if err != nil {
-		return "", err
+		return uuid.Nil, err
 	}
 
 	return a.ID, nil
@@ -72,19 +71,48 @@ func (d Database) AlbumExists(ctx context.Context, ID string) (bool, error) {
 
 func (d Database) GetAlbumFromArtistAndName(ctx context.Context, artistName, albumName string) (album types.Album, err error) {
 	query := `
-       SELECT a.*
-       FROM albums a
-       JOIN artists ar ON a.artist_id = ar.id
-       WHERE normalize(a.name) = normalize(?)
-         AND normalize(ar.name) = normalize(?)
-       LIMIT 1;
-    `
+		SELECT
+			a.id,
+			a.musicbrainz_id,
+			a.name,
+			a.sort_name,
+			a.release_date,
+			a.description,
+			a.owner,
+			a.public,
+			a.created_at,
+			a.updated_at,
+
+			-- track count
+			(
+				SELECT COUNT(*)
+				FROM album_tracks at
+				WHERE at.album_id = a.id
+			) AS tracks,
+
+			-- disc count
+			(
+				SELECT COUNT(DISTINCT disc_number)
+				FROM album_tracks at
+				WHERE at.album_id = a.id
+			) AS discs
+
+		FROM albums a
+		JOIN album_artists aa ON aa.album_id = a.id
+		JOIN artists ar ON ar.id = aa.artist_id
+
+		WHERE normalize(a.name) = normalize(?)
+		  AND normalize(ar.name) = normalize(?)
+
+		LIMIT 1;
+	`
+
 	err = sqlx.GetContext(ctx, d.ext, &album, query, albumName, artistName)
 	if err != nil {
 		return types.Album{}, err
 	}
 
-	return
+	return album, nil
 }
 
 func (d Database) GetAlbumFromMbID(ctx context.Context, mbID string) (album types.Album, err error) {
@@ -117,23 +145,6 @@ func (d Database) GetAlbumFromID(ctx context.Context, id string) (album types.Al
 	return
 }
 
-func (d Database) GetEnhancedAlbumFromID(ctx context.Context, id string) (album types.AlbumEnhanced, err error) {
-	query := `
-        SELECT
-            al.*,
-            ar.name  AS artist_name
-        FROM albums al
-        JOIN artists ar ON al.artist_id = ar.id
-        WHERE al.id = ?;
-    `
-	err = sqlx.GetContext(ctx, d.ext, &album, query, id)
-	if err != nil {
-		return types.AlbumEnhanced{}, err
-	}
-
-	return
-}
-
 func (d Database) GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]types.Album, error) {
 	query, args, err := sqlx.In(`
         SELECT *
@@ -155,7 +166,7 @@ func (d Database) GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]
 	return albums, nil
 }
 
-func (d Database) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.Album, err error) {
+func (d Database) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error) {
 	sortByStr := ""
 
 	switch sortBy {
@@ -166,11 +177,21 @@ func (d Database) ListAlbumsByArtist(ctx context.Context, artistID string, sortB
 	}
 
 	query := fmt.Sprintf(`
-        SELECT *
-        FROM albums
-        WHERE artist_id = ?
-        ORDER BY %s %s
-        ;
+		SELECT DISTINCT
+			al.id,
+			al.musicbrainz_id,
+			al.name,
+			al.sort_name,
+			al.release_date,
+			al.description,
+			al.owner,
+			al.public,
+			al.created_at,
+			al.updated_at
+		FROM albums al
+		JOIN album_artists aa ON aa.album_id = al.id
+		WHERE aa.artist_id = ?
+		ORDER BY %s %s;
     `, sortByStr, sortOrder)
 	err = sqlx.SelectContext(ctx, d.ext, &albums, query, artistID)
 	if err != nil {
@@ -221,4 +242,51 @@ func (d Database) UpdateAlbum(ctx context.Context, a types.Album) error {
 	}
 
 	return nil
+}
+
+func (d Database) GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (album types.AlbumDetailed, err error) {
+	// 1. Album core info
+	albumQuery := `
+		SELECT
+			id,
+			musicbrainz_id,
+			name,
+			sort_name,
+			release_date,
+			description,
+			owner,
+			public,
+			created_at,
+			updated_at
+		FROM albums
+		WHERE id = ?
+		LIMIT 1;
+	`
+	if err := sqlx.GetContext(ctx, d.ext, &album, albumQuery, albumID); err != nil {
+		return album, err
+	}
+
+	// 2. Album artists
+	artistQuery := `
+		SELECT a.id, a.name
+		FROM album_artists aa
+		JOIN artists a ON a.id = aa.artist_id
+		WHERE aa.album_id = ?
+		ORDER BY aa.position;
+	`
+	type artistRow struct {
+		ID   string `db:"id"`
+		Name string `db:"name"`
+	}
+	var artistRows []artistRow
+	if err := sqlx.SelectContext(ctx, d.ext, &artistRows, artistQuery, albumID); err != nil {
+		return album, err
+	}
+
+	for _, a := range artistRows {
+		album.ArtistIDs = append(album.ArtistIDs, a.ID)
+		album.ArtistNames = append(album.ArtistNames, a.Name)
+	}
+
+	return album, nil
 }

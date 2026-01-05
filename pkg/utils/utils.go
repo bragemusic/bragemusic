@@ -2,7 +2,9 @@ package utils
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -123,4 +125,21 @@ func fixDate(d acoustid.Date) acoustid.Date {
 	}
 
 	return d
+}
+
+func FileSHA256(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	hasher := sha256.New()
+
+	if _, err := io.Copy(hasher, file); err != nil {
+		return "", err
+	}
+
+	checksum := hasher.Sum(nil)
+	return fmt.Sprintf("%x", checksum), nil
 }
