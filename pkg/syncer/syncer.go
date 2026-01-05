@@ -255,8 +255,11 @@ func (s Syncer) syncArtists(ctx context.Context, tx database.DatabaseFace, artis
 		s.log.DebugContext(ctx, fmt.Sprintf("downloading artist image '%s' to '%s'", aID, filename))
 
 		if err = s.sc.DownloadArtistImage(ctx, aID, dst); err != nil {
-			dst.Close()
-			return 0, 0, err
+			serr, ok := err.(serverclient.ErrStatus)
+			if !ok || serr.Status >= 500 {
+				dst.Close()
+				return 0, 0, err
+			}
 		}
 
 		if err = dst.Close(); err != nil {
@@ -306,8 +309,11 @@ func (s Syncer) syncAlbums(ctx context.Context, tx database.DatabaseFace, albumI
 		s.log.DebugContext(ctx, fmt.Sprintf("downloading album cover '%s' to '%s'", aID, filename))
 
 		if err = s.sc.DownloadAlbumCover(ctx, aID, dst); err != nil {
-			dst.Close()
-			return 0, 0, err
+			serr, ok := err.(serverclient.ErrStatus)
+			if !ok || serr.Status >= 500 {
+				dst.Close()
+				return 0, 0, err
+			}
 		}
 
 		if err = dst.Close(); err != nil {
@@ -343,32 +349,6 @@ func (s Syncer) syncTracks(ctx context.Context, tx database.DatabaseFace, trackI
 				return 0, 0, err
 			}
 			created += 1
-
-			if serverTrack.MediaFile != nil {
-				// FIXME: Find correct media file
-				trackPath := filepath.Join(s.musicDir, "FILEPATH")
-
-				if err = os.MkdirAll(filepath.Dir(trackPath), os.ModePerm); err != nil {
-					return 0, 0, err
-				}
-
-				dst, err := os.Create(trackPath)
-				if err != nil {
-					return 0, 0, err
-				}
-
-				s.log.InfoContext(ctx, fmt.Sprintf("downloading track '%s' to '%s'", tID, trackPath))
-
-				if err = s.sc.DownloadTrackFile(ctx, tID, dst); err != nil {
-					dst.Close()
-					return 0, 0, err
-				}
-
-				if err = dst.Close(); err != nil {
-					return 0, 0, err
-				}
-
-			}
 		}
 	}
 

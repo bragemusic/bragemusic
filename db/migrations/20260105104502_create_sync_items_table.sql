@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS sync_items (
     type            TEXT NOT NULL,
     state           TEXT NOT NULL,
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- migrate:down
