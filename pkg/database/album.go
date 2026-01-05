@@ -156,7 +156,7 @@ func (d Database) GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]
 	return albums, nil
 }
 
-func (d Database) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.Album, err error) {
+func (d Database) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error) {
 	sortByStr := ""
 
 	switch sortBy {
@@ -167,11 +167,21 @@ func (d Database) ListAlbumsByArtist(ctx context.Context, artistID string, sortB
 	}
 
 	query := fmt.Sprintf(`
-        SELECT *
-        FROM albums
-        WHERE artist_id = ?
-        ORDER BY %s %s
-        ;
+		SELECT DISTINCT
+			al.id,
+			al.musicbrainz_id,
+			al.name,
+			al.sort_name,
+			al.release_date,
+			al.description,
+			al.owner,
+			al.public,
+			al.created_at,
+			al.updated_at
+		FROM albums al
+		JOIN album_artists aa ON aa.album_id = al.id
+		WHERE aa.artist_id = ?
+		ORDER BY %s %s;
     `, sortByStr, sortOrder)
 	err = sqlx.SelectContext(ctx, d.ext, &albums, query, artistID)
 	if err != nil {
@@ -225,6 +235,7 @@ func (d Database) UpdateAlbum(ctx context.Context, a types.Album) error {
 }
 
 func (d Database) GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (album types.AlbumDetailed, err error) {
+	// 1. Album core info
 	albumQuery := `
 		SELECT
 			id,
@@ -241,106 +252,152 @@ func (d Database) GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (albu
 		WHERE id = ?
 		LIMIT 1;
 	`
-
-	err = sqlx.GetContext(
-		ctx,
-		d.ext,
-		&album,
-		albumQuery,
-		albumID.String(),
-	)
-	if err != nil {
-		return types.AlbumDetailed{}, err
+	if err := sqlx.GetContext(ctx, d.ext, &album, albumQuery, albumID); err != nil {
+		return album, err
 	}
 
+	// 2. Album artists
 	artistQuery := `
-		SELECT a.*
+		SELECT a.id, a.name
 		FROM album_artists aa
 		JOIN artists a ON a.id = aa.artist_id
 		WHERE aa.album_id = ?
 		ORDER BY aa.position;
 	`
-
-	var artists []types.Artist
-	err = sqlx.SelectContext(
-		ctx,
-		d.ext,
-		&artists,
-		artistQuery,
-		albumID.String(),
-	)
-	if err != nil {
-		return types.AlbumDetailed{}, err
+	type artistRow struct {
+		ID   string `db:"id"`
+		Name string `db:"name"`
 	}
-	album.Artists = artists
-
-	tracksQuery := `
-        SELECT
-            t.id,
-            t.title,
-            at.album_id,
-            al.name AS album_name,
-            at.disc_number,
-            at.track_number,
-            t.musicbrainz_id,
-            t.genre,
-            t.comment,
-            t.created_at,
-            t.updated_at,
-            COALESCE(tp.play_count, 0) AS play_count,
-            mf.id AS "media_file.id",
-            mf.duration_ms AS "media_file.duration_ms",
-            mf.bitrate AS "media_file.bitrate",
-            mf.sample_rate AS "media_file.sample_rate",
-            mf.file_size AS "media_file.file_size",
-            mf.codec AS "media_file.codec",
-            mf.checksum AS "media_file.checksum",
-            mf.created_at AS "media_file.created_at",
-            mf.updated_at AS "media_file.updated_at"
-        FROM album_tracks at
-        JOIN tracks t ON t.id = at.track_id
-        JOIN albums al ON al.id = at.album_id
-        LEFT JOIN (
-            SELECT track_id, COUNT(*) AS play_count
-            FROM play_history
-            GROUP BY track_id
-        ) tp ON tp.track_id = t.id
-        LEFT JOIN media_files mf ON mf.id = t.media_file
-        WHERE at.album_id = ?
-        ORDER BY at.disc_number, at.track_number;
-	`
-
-	var tracks []types.TrackDetailed
-	err = sqlx.SelectContext(
-		ctx,
-		d.ext,
-		&tracks,
-		tracksQuery,
-		albumID.String(),
-	)
-	if err != nil {
-		return types.AlbumDetailed{}, err
+	var artistRows []artistRow
+	if err := sqlx.SelectContext(ctx, d.ext, &artistRows, artistQuery, albumID); err != nil {
+		return album, err
 	}
-	album.Tracks = tracks
 
-	album.TrackCount = len(tracks)
-
-	discQuery := `
-		SELECT COUNT(DISTINCT disc_number)
-		FROM album_tracks
-		WHERE album_id = ?;
-	`
-
-	err = sqlx.GetContext(
-		ctx,
-		d.ext,
-		&album.DiscCount,
-		discQuery,
-		albumID.String(),
-	)
-	if err != nil {
-		return types.AlbumDetailed{}, err
+	for _, a := range artistRows {
+		album.ArtistIDs = append(album.ArtistIDs, a.ID)
+		album.ArtistNames = append(album.ArtistNames, a.Name)
 	}
 
 	return album, nil
 }
+
+// func (d Database) GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (album types.AlbumDetailed, err error) {
+// 	albumQuery := `
+// 		SELECT
+// 			id,
+// 			musicbrainz_id,
+// 			name,
+// 			sort_name,
+// 			release_date,
+// 			description,
+// 			owner,
+// 			public,
+// 			created_at,
+// 			updated_at
+// 		FROM albums
+// 		WHERE id = ?
+// 		LIMIT 1;
+// 	`
+
+// 	err = sqlx.GetContext(
+// 		ctx,
+// 		d.ext,
+// 		&album,
+// 		albumQuery,
+// 		albumID.String(),
+// 	)
+// 	if err != nil {
+// 		return types.AlbumDetailed{}, err
+// 	}
+
+// 	artistQuery := `
+// 		SELECT a.*
+// 		FROM album_artists aa
+// 		JOIN artists a ON a.id = aa.artist_id
+// 		WHERE aa.album_id = ?
+// 		ORDER BY aa.position;
+// 	`
+
+// 	var artists []types.Artist
+// 	err = sqlx.SelectContext(
+// 		ctx,
+// 		d.ext,
+// 		&artists,
+// 		artistQuery,
+// 		albumID.String(),
+// 	)
+// 	if err != nil {
+// 		return types.AlbumDetailed{}, err
+// 	}
+// 	album.Artists = artists
+
+// 	tracksQuery := `
+//         SELECT
+//             t.id,
+//             t.title,
+//             at.album_id,
+//             al.name AS album_name,
+//             at.disc_number,
+//             at.track_number,
+//             t.musicbrainz_id,
+//             t.genre,
+//             t.comment,
+//             t.created_at,
+//             t.updated_at,
+//             COALESCE(tp.play_count, 0) AS play_count,
+//             mf.id AS "media_file.id",
+//             mf.duration_ms AS "media_file.duration_ms",
+//             mf.bitrate AS "media_file.bitrate",
+//             mf.sample_rate AS "media_file.sample_rate",
+//             mf.file_size AS "media_file.file_size",
+//             mf.codec AS "media_file.codec",
+//             mf.checksum AS "media_file.checksum",
+//             mf.created_at AS "media_file.created_at",
+//             mf.updated_at AS "media_file.updated_at"
+//         FROM album_tracks at
+//         JOIN tracks t ON t.id = at.track_id
+//         JOIN albums al ON al.id = at.album_id
+//         LEFT JOIN (
+//             SELECT track_id, COUNT(*) AS play_count
+//             FROM play_history
+//             GROUP BY track_id
+//         ) tp ON tp.track_id = t.id
+//         LEFT JOIN media_files mf ON mf.id = t.media_file
+//         WHERE at.album_id = ?
+//         ORDER BY at.disc_number, at.track_number;
+// 	`
+
+// 	var tracks []types.TrackDetailed
+// 	err = sqlx.SelectContext(
+// 		ctx,
+// 		d.ext,
+// 		&tracks,
+// 		tracksQuery,
+// 		albumID.String(),
+// 	)
+// 	if err != nil {
+// 		return types.AlbumDetailed{}, err
+// 	}
+// 	album.Tracks = tracks
+
+// 	album.TrackCount = len(tracks)
+
+// 	discQuery := `
+// 		SELECT COUNT(DISTINCT disc_number)
+// 		FROM album_tracks
+// 		WHERE album_id = ?;
+// 	`
+
+// 	err = sqlx.GetContext(
+// 		ctx,
+// 		d.ext,
+// 		&album.DiscCount,
+// 		discQuery,
+// 		albumID.String(),
+// 	)
+// 	if err != nil {
+// 		return types.AlbumDetailed{}, err
+// 	}
+
+// 	return album, nil
+// }

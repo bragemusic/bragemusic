@@ -210,6 +210,8 @@ func (d Database) GetEnhancedTracksFromAlbumID(ctx context.Context, albumID stri
 }
 
 func (d Database) GetEnhancedTracksFromArtistID(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackEnhanced, err error) {
+	// FIXME MUST DO
+	return []types.TrackEnhanced{}, nil
 	sortByStr := ""
 
 	if !includeMissingFiles {
@@ -292,4 +294,46 @@ func (d Database) ListUpdatedTracks(ctx context.Context, since time.Time) (track
 	}
 
 	return
+}
+
+func (d Database) ListAlbumTracksDetailed(ctx context.Context, albumID uuid.UUID) (tracks []types.TrackDetailed, err error) {
+	tracksQuery := `
+		SELECT
+			t.id,
+			t.title,
+			at.album_id,
+			al.name AS album_name,
+			t.musicbrainz_id,
+			at.track_number,
+			at.disc_number,
+			t.genre,
+			t.comment,
+			t.created_at,
+			t.updated_at,
+			COALESCE(tp.play_count, 0) AS play_count
+		FROM album_tracks at
+		JOIN tracks t ON t.id = at.track_id
+		JOIN albums al ON al.id = at.album_id
+		LEFT JOIN (
+			SELECT track_id, COUNT(*) AS play_count
+			FROM play_history
+			GROUP BY track_id
+		) tp ON tp.track_id = t.id
+		WHERE at.album_id = ?
+		ORDER BY at.disc_number, at.track_number;
+	`
+
+	if err := sqlx.SelectContext(ctx, d.ext, &tracks, tracksQuery, albumID); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachTrackArtists(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachMediaFiles(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	return tracks, nil
 }

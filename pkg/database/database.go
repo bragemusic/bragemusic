@@ -41,7 +41,7 @@ type DatabaseFace interface {
 	GetEnhancedAlbumFromID(ctx context.Context, id string) (album types.AlbumEnhanced, err error)
 	GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (album types.AlbumDetailed, err error)
 	GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]types.Album, error)
-	ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.Album, err error)
+	ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
 	ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error)
 
 	AddArtist(ctx context.Context, a types.Artist) (uuid.UUID, error)
@@ -64,6 +64,7 @@ type DatabaseFace interface {
 	GetTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.Track, err error)
 	GetEnhancedTracksFromArtistID(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackEnhanced, err error)
 	GetEnhancedTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.TrackEnhanced, err error)
+	ListAlbumTracksDetailed(ctx context.Context, albumID uuid.UUID) (tracks []types.TrackDetailed, err error)
 	GetTrackFromName(ctx context.Context, albumID uuid.UUID, trackName string) (track types.Track, err error)
 	ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error)
 

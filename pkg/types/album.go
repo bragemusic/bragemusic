@@ -22,20 +22,20 @@ type Album struct {
 }
 
 type AlbumDetailed struct {
-	ID            uuid.UUID       `db:"id" json:"id"`
-	MusicBrainzID *string         `db:"musicbrainz_id" json:"musicbrainz_id"`
-	Name          string          `db:"name" json:"name"`
-	SortName      string          `db:"sort_name" json:"sort_name"`
-	Artists       []Artist        `db:"artists" json:"artists,omitempty"`
-	ReleaseDate   *time.Time      `db:"release_date" json:"release_date,omitempty"`
-	Tracks        []TrackDetailed `db:"tracks" json:"tracks"`
-	TrackCount    int             `db:"track_count" json:"track_count"`
-	DiscCount     int             `db:"disc_count" json:"disc_count"`
-	Description   *string         `db:"description" json:"description,omitempty"`
-	Owner         string          `db:"owner" json:"owner"`
-	Public        *bool           `db:"public" json:"public,omitempty"`
-	CreatedAt     time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt     time.Time       `db:"updated_at" json:"updated_at"`
+	ID            string     `db:"id" json:"id"`
+	MusicBrainzID *string    `db:"musicbrainz_id" json:"musicbrainz_id"`
+	Name          string     `db:"name" json:"name"`
+	SortName      string     `db:"sort_name" json:"sort_name"`
+	ArtistIDs     []string   `db:"artist_ids" json:"artist_ids,omitempty"`
+	ArtistNames   []string   `db:"artist_names" json:"artist_names,omitempty"`
+	ReleaseDate   *time.Time `db:"release_date" json:"release_date,omitempty"`
+	TrackCount    int        `db:"track_count" json:"track_count"`
+	DiscCount     int        `db:"disc_count" json:"disc_count"`
+	Description   *string    `db:"description" json:"description,omitempty"`
+	Owner         string     `db:"owner" json:"owner"`
+	Public        *bool      `db:"public" json:"public,omitempty"`
+	CreatedAt     time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt     time.Time  `db:"updated_at" json:"updated_at"`
 }
 
 type AlbumEnhanced struct {

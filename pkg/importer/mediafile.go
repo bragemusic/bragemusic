@@ -13,7 +13,6 @@ import (
 	"github.com/bragemusic/core/pkg/filetx"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
-	"github.com/dhowden/tag"
 )
 
 func (i Importer) importMediaFiles(ctx context.Context, tx database.DatabaseFace, ftx *filetx.FileTx, folder string) (mediaFiles []types.MediaFile, err error) {
@@ -42,7 +41,7 @@ func (i Importer) importMediaFiles(ctx context.Context, tx database.DatabaseFace
 			}
 
 			// FIXME: Do not hardcode Flac
-			af, err := files.ParseAudioFile(f, tag.FLAC)
+			af, err := files.ParseAudioFile(f, types.CodecFlac)
 			if err != nil {
 				f.Close()
 				return nil, err

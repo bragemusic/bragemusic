@@ -14,8 +14,8 @@ const (
 type PlayContext struct {
 	Type            PlayContextType       `json:"type"`
 	RefID           string                `json:"ref_id"`
-	Tracks          []types.TrackEnhanced `json:"tracks"`
-	Queue           []types.TrackEnhanced `json:"queue"`
+	Tracks          []types.TrackDetailed `json:"tracks"`
+	Queue           []types.TrackDetailed `json:"queue"`
 	CurrentTrackIdx int                   `json:"current_track_idx"`
-	CurrentTrack    *types.TrackEnhanced  `json:"current_track"`
+	CurrentTrack    *types.TrackDetailed  `json:"current_track"`
 }

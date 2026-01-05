@@ -58,3 +58,55 @@ func (d Database) AlbumArtistExists(ctx context.Context, albumID uuid.UUID, arti
 
 	return exists, nil
 }
+
+func (d Database) attachTrackArtists(ctx context.Context, tracks []types.TrackDetailed) error {
+	trackIDs := make([]string, 0, len(tracks))
+	trackIndex := make(map[string]*types.TrackDetailed)
+
+	for i := range tracks {
+		trackIDs = append(trackIDs, tracks[i].ID)
+		trackIndex[tracks[i].ID] = &tracks[i]
+	}
+
+	query := `
+		SELECT
+			at.track_id,
+			ar.id   AS artist_id,
+			ar.name AS artist_name
+		FROM album_tracks at
+		JOIN album_artists aa ON aa.album_id = at.album_id
+		JOIN artists ar ON ar.id = aa.artist_id
+		WHERE at.track_id IN (?);
+	`
+
+	query, args, err := sqlx.In(query, trackIDs)
+	if err != nil {
+		return err
+	}
+	query = d.ext.Rebind(query)
+
+	rows, err := d.ext.QueryxContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			trackID    string
+			artistID   string
+			artistName string
+		)
+
+		if err := rows.Scan(&trackID, &artistID, &artistName); err != nil {
+			return err
+		}
+
+		if t := trackIndex[trackID]; t != nil {
+			t.ArtistIDs = append(t.ArtistIDs, artistID)
+			t.ArtistNames = append(t.ArtistNames, artistName)
+		}
+	}
+
+	return rows.Err()
+}

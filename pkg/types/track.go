@@ -19,11 +19,12 @@ type Track struct {
 }
 
 type TrackDetailed struct {
-	ID            uuid.UUID  `db:"id" json:"id"` // UUID
+	ID            string     `db:"id" json:"id"` // UUID
 	Title         string     `db:"title" json:"title"`
-	AlbumID       uuid.UUID  `db:"album_id" json:"album_id,omitempty"`
+	AlbumID       string     `db:"album_id" json:"album_id,omitempty"`
 	AlbumName     string     `db:"album_name" json:"album_name,omitempty"`
-	Artists       []Artist   `db:"artists" json:"artists,omitempty"`
+	ArtistIDs     []string   `db:"artist_ids" json:"artist_ids,omitempty"`
+	ArtistNames   []string   `db:"artist_names" json:"artist_names,omitempty"`
 	MusicBrainzID *string    `db:"musicbrainz_id" json:"musicbrainz_id"`
 	TrackNumber   int        `db:"track_number" json:"track_number,omitempty"`
 	DiscNumber    int        `db:"disc_number" json:"disc_number,omitempty"`

@@ -16,6 +16,7 @@ import (
 	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
+	"github.com/gofrs/uuid/v5"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -66,7 +67,12 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID string, trackNumber int) error {
-	tracks, err := c.mm.ListEnhancedTracksByAlbum(ctx, albumID)
+	albumUID, err := uuid.FromString(albumID)
+	if err != nil {
+		return err
+	}
+
+	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumUID)
 	if err != nil {
 		return err
 	}
@@ -75,7 +81,7 @@ func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID string, track
 		Type:            audioplayer.PlayContextAlbum,
 		RefID:           albumID,
 		Tracks:          tracks,
-		Queue:           []types.TrackEnhanced{},
+		Queue:           []types.TrackDetailed{},
 		CurrentTrackIdx: trackNumber,
 	}
 
@@ -106,7 +112,7 @@ func (c Client) GetArtist(ctx context.Context, artistID string) (types.Artist, e
 	return artist, nil
 }
 
-func (c Client) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Album, error) {
+func (c Client) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error) {
 	albums, err := c.mm.ListAlbumsByArtist(ctx, artistID, sortBy, sortOrder)
 	if err != nil {
 		return nil, err
@@ -114,16 +120,27 @@ func (c Client) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy 
 	return albums, nil
 }
 
-func (c Client) GetAlbum(ctx context.Context, albumID string) (types.AlbumEnhanced, error) {
-	album, err := c.mm.GetAlbumEnhanced(ctx, albumID)
+func (c Client) GetAlbum(ctx context.Context, albumID string) (types.AlbumDetailed, error) {
+	uid, err := uuid.FromString(albumID)
 	if err != nil {
-		return types.AlbumEnhanced{}, err
+		return types.AlbumDetailed{}, err
 	}
+
+	album, err := c.mm.GetAlbumDetailed(ctx, uid)
+	if err != nil {
+		return types.AlbumDetailed{}, err
+	}
+
 	return album, nil
 }
 
-func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.TrackEnhanced, error) {
-	tracks, err := c.mm.ListEnhancedTracksByAlbum(ctx, albumID)
+func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.TrackDetailed, error) {
+	albumUID, err := uuid.FromString(albumID)
+	if err != nil {
+		return nil, err
+	}
+
+	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumUID)
 	if err != nil {
 		return nil, err
 	}

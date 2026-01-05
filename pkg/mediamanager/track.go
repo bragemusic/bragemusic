@@ -9,6 +9,7 @@ import (
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 )
 
 func (m MediaManager) GetTrack(ctx context.Context, trackID string) (types.Track, error) {
@@ -54,8 +55,8 @@ func (m MediaManager) ListTracksByAlbum(ctx context.Context, albumID string) ([]
 	return tracks, nil
 }
 
-func (m MediaManager) ListEnhancedTracksByAlbum(ctx context.Context, albumID string) ([]types.TrackEnhanced, error) {
-	tracks, err := m.db.GetEnhancedTracksFromAlbumID(ctx, albumID)
+func (m MediaManager) ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.UUID) ([]types.TrackDetailed, error) {
+	tracks, err := m.db.ListAlbumTracksDetailed(ctx, albumID)
 	if err != nil {
 		return nil, err
 	}

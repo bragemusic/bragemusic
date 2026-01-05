@@ -13,7 +13,6 @@ import (
 	"github.com/bragemusic/core/pkg/files"
 	"github.com/bragemusic/core/pkg/mpris"
 	"github.com/bragemusic/core/pkg/types"
-	"github.com/dhowden/tag"
 )
 
 const playCountCountFrac = 0.75
@@ -99,7 +98,7 @@ func (a *AudioPlayer) PlayContext() PlayContext {
 	return a.playCtx
 }
 
-func (a *AudioPlayer) currentTrack() *types.TrackEnhanced {
+func (a *AudioPlayer) currentTrack() *types.TrackDetailed {
 	return a.playCtx.CurrentTrack
 	// if len(a.playCtx.Tracks) == 0 {
 	// 	return nil
@@ -150,15 +149,13 @@ func (a *AudioPlayer) startProgressPrinter() {
 					}
 
 					if !a.playCountReported {
-						totMs := a.currentTrack().DurationMS
-						if totMs != nil {
-							percPlayed := float32(ms) / float32(*totMs)
-							if percPlayed > playCountCountFrac {
-								for _, f := range a.playCountCallbacks {
-									f(a.currentTrack().ID)
-								}
-								a.playCountReported = true
+						totMs := a.currentTrack().MediaFile.DurationMs
+						percPlayed := float32(ms) / float32(totMs)
+						if percPlayed > playCountCountFrac {
+							for _, f := range a.playCountCallbacks {
+								f(a.currentTrack().ID)
 							}
+							a.playCountReported = true
 						}
 					}
 				}
@@ -176,22 +173,22 @@ func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
 		return err
 	}
 
-	if a.currentTrack().FilePath == "" {
+	if a.currentTrack().MediaFile == nil {
 		return ErrFileNotFound
 	}
 
-	trackFilePath := filepath.Join(a.musicDirPath, a.currentTrack().FilePath)
+	trackFilePath := filepath.Join(a.musicDirPath, a.currentTrack().MediaFile.Filename())
 
 	a.currentFile, err = os.Open(trackFilePath)
 	if err != nil {
 		return err
 	}
 
-	af, err := files.ParseAudioFile(a.currentFile, tag.FileType(*a.currentTrack().MimeType))
+	af, err := files.ParseAudioFile(a.currentFile, a.currentTrack().MediaFile.Codec)
 	if err != nil {
 		return err
 	}
-	a.log.InfoContext(ctx, "start track", "title", a.currentTrack().Title, "artist", *a.currentTrack().ArtistName, "album", *a.currentTrack().AlbumName)
+	a.log.InfoContext(ctx, "start track", "title", a.currentTrack().Title, "artist", a.currentTrack().ArtistNames, "album", a.currentTrack().AlbumName)
 
 	a.ai.StartAudioFile(ctx, af, a.NextTrack)
 	a.mp.SetStatus(mpris.MprisPlaying)
