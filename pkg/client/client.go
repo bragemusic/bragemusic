@@ -147,8 +147,8 @@ func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.
 	return tracks, nil
 }
 
-func (c Client) GetArtistTopTracks(ctx context.Context, artistID string) ([]types.TrackEnhanced, error) {
-	tracks, err := c.mm.ListEnhancedTracksByArtist(ctx, artistID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
+func (c Client) GetArtistTopTracks(ctx context.Context, artistID string) ([]types.TrackDetailed, error) {
+	tracks, err := c.mm.ListTracksDetailedByArtist(ctx, artistID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
 	if err != nil {
 		return nil, err
 	}

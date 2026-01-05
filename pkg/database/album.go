@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"time"
 
@@ -71,21 +70,49 @@ func (d Database) AlbumExists(ctx context.Context, ID string) (bool, error) {
 }
 
 func (d Database) GetAlbumFromArtistAndName(ctx context.Context, artistName, albumName string) (album types.Album, err error) {
-	return types.Album{}, sql.ErrNoRows
 	query := `
-       SELECT a.*
-       FROM albums a
-       JOIN artists ar ON a.artist_id = ar.id
-       WHERE normalize(a.name) = normalize(?)
-         AND normalize(ar.name) = normalize(?)
-       LIMIT 1;
-    `
+		SELECT
+			a.id,
+			a.musicbrainz_id,
+			a.name,
+			a.sort_name,
+			a.release_date,
+			a.description,
+			a.owner,
+			a.public,
+			a.created_at,
+			a.updated_at,
+
+			-- track count
+			(
+				SELECT COUNT(*)
+				FROM album_tracks at
+				WHERE at.album_id = a.id
+			) AS tracks,
+
+			-- disc count
+			(
+				SELECT COUNT(DISTINCT disc_number)
+				FROM album_tracks at
+				WHERE at.album_id = a.id
+			) AS discs
+
+		FROM albums a
+		JOIN album_artists aa ON aa.album_id = a.id
+		JOIN artists ar ON ar.id = aa.artist_id
+
+		WHERE normalize(a.name) = normalize(?)
+		  AND normalize(ar.name) = normalize(?)
+
+		LIMIT 1;
+	`
+
 	err = sqlx.GetContext(ctx, d.ext, &album, query, albumName, artistName)
 	if err != nil {
 		return types.Album{}, err
 	}
 
-	return
+	return album, nil
 }
 
 func (d Database) GetAlbumFromMbID(ctx context.Context, mbID string) (album types.Album, err error) {

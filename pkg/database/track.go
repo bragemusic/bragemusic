@@ -183,80 +183,76 @@ func (d Database) GetTracksFromAlbumID(ctx context.Context, albumID string) (tra
 	return
 }
 
-func (d Database) GetEnhancedTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.TrackEnhanced, err error) {
-	query := `
-        SELECT
-            t.*,
-            al.name  AS album_name,
-            ar.id    AS artist_id,
-            ar.name  AS artist_name,
-            COALESCE(tp.play_count, 0) AS play_count
-        FROM tracks t
-        JOIN albums al ON t.album_id = al.id
-        JOIN artists ar ON al.artist_id = ar.id
-        LEFT JOIN (
-            SELECT track_id, COUNT(*) AS play_count
-            FROM play_history
-            GROUP BY track_id
-        ) tp ON tp.track_id = t.id
-        WHERE t.album_id = ?;
-`
-	err = sqlx.SelectContext(ctx, d.ext, &tracks, query, albumID)
-	if err != nil {
-		return nil, err
-	}
-
-	return
-}
-
-func (d Database) GetEnhancedTracksFromArtistID(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackEnhanced, err error) {
-	// FIXME MUST DO
-	return []types.TrackEnhanced{}, nil
-	sortByStr := ""
-
-	if !includeMissingFiles {
-		sortByStr = "AND WHERE t.file_path != '' "
-	}
+func (d Database) GetTracksDetailedFromArtistID(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackDetailed, err error) {
+	orderBy := "t.title"
 
 	switch sortBy {
 	case SortByDate:
-		sortByStr = "created_at"
+		orderBy = "t.created_at"
 	case SortByName:
-		sortByStr = "title"
+		orderBy = "t.title"
 	case SortByPlayCount:
-		sortByStr = "play_count"
+		orderBy = "play_count"
 	}
 
-	sortLimit := fmt.Sprintf("ORDER BY %s %s", sortByStr, sortOrder)
+	whereExtra := ""
+	if !includeMissingFiles {
+		whereExtra = "AND t.media_file IS NOT NULL"
+	}
+
+	limitClause := ""
 	if limit != nil {
-		sortLimit += fmt.Sprintf(" LIMIT %d", *limit)
+		limitClause = fmt.Sprintf("LIMIT %d", *limit)
 	}
 
 	query := fmt.Sprintf(`
-        SELECT
-            t.*,
-            al.name  AS album_name,
-            ar.id    AS artist_id,
-            ar.name  AS artist_name,
-            COALESCE(tp.play_count, 0) AS play_count
-        FROM tracks t
-        JOIN albums al ON t.album_id = al.id
-        JOIN artists ar ON al.artist_id = ar.id
-        LEFT JOIN (
-            SELECT track_id, COUNT(*) AS play_count
-            FROM play_history
-            GROUP BY track_id
-        ) tp ON tp.track_id = t.id
-        WHERE artist_id = ?
-        %s
-;
-`, sortLimit)
+		SELECT
+			t.id,
+			t.title,
+			at.album_id,
+			al.name AS album_name,
+			t.musicbrainz_id,
+			at.track_number,
+			at.disc_number,
+			t.genre,
+			t.comment,
+			t.created_at,
+			t.updated_at,
+			COALESCE(tp.play_count, 0) AS play_count
+
+		FROM album_artists aa
+		JOIN albums al        ON al.id = aa.album_id
+		JOIN album_tracks at ON at.album_id = al.id
+		JOIN tracks t        ON t.id = at.track_id
+
+		LEFT JOIN (
+			SELECT track_id, COUNT(*) AS play_count
+			FROM play_history
+			GROUP BY track_id
+		) tp ON tp.track_id = t.id
+
+		WHERE aa.artist_id = ?
+		%s
+
+		ORDER BY %s %s
+		%s;
+	`, whereExtra, orderBy, sortOrder, limitClause)
+
 	err = sqlx.SelectContext(ctx, d.ext, &tracks, query, artistID)
 	if err != nil {
 		return nil, err
 	}
 
-	return
+	// attach optional relations
+	if err := d.attachMediaFiles(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachTrackArtists(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	return tracks, nil
 }
 
 func (d Database) GetTrackFromName(ctx context.Context, albumID uuid.UUID, trackName string) (track types.Track, err error) {

@@ -64,8 +64,8 @@ func (m MediaManager) ListTracksDetailedByAlbum(ctx context.Context, albumID uui
 	return tracks, nil
 }
 
-func (m MediaManager) ListEnhancedTracksByArtist(ctx context.Context, artistID string, sortBy database.SortBy, sortOrder database.SortOrder, limit *int, includeMissingFiles bool) ([]types.TrackEnhanced, error) {
-	tracks, err := m.db.GetEnhancedTracksFromArtistID(ctx, artistID, sortBy, sortOrder, limit, includeMissingFiles)
+func (m MediaManager) ListTracksDetailedByArtist(ctx context.Context, artistID string, sortBy database.SortBy, sortOrder database.SortOrder, limit *int, includeMissingFiles bool) ([]types.TrackDetailed, error) {
+	tracks, err := m.db.GetTracksDetailedFromArtistID(ctx, artistID, sortBy, sortOrder, limit, includeMissingFiles)
 	if err != nil {
 		return nil, err
 	}
