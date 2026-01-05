@@ -38,7 +38,6 @@ type DatabaseFace interface {
 	GetAlbumFromArtistAndName(ctx context.Context, artistName, albumName string) (album types.Album, err error)
 	GetAlbumFromMbID(ctx context.Context, mbID string) (album types.Album, err error)
 	GetAlbumFromID(ctx context.Context, id string) (album types.Album, err error)
-	GetEnhancedAlbumFromID(ctx context.Context, id string) (album types.AlbumEnhanced, err error)
 	GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (album types.AlbumDetailed, err error)
 	GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]types.Album, error)
 	ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
