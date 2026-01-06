@@ -196,6 +196,11 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 
+	_, _, err = s.syncAlbumArtists(ctx, tx, syncState.AlbumArtists)
+	if err != nil {
+		return err
+	}
+
 	if err := s.syncPlayHistory(ctx, tx, lastSync.SyncedAt); err != nil {
 		return err
 	}
@@ -339,13 +344,41 @@ func (s Syncer) syncTracks(ctx context.Context, tx database.DatabaseFace, trackI
 		}
 
 		if exists {
-			// FIXME: We need a file_updated_at field. So we dont download files too many times
 			if err = tx.UpdateTrack(ctx, serverTrack); err != nil {
 				return 0, 0, err
 			}
 			updated += 1
 		} else {
 			if _, err = tx.AddTrack(ctx, serverTrack); err != nil {
+				return 0, 0, err
+			}
+			created += 1
+		}
+	}
+
+	return created, updated, nil
+}
+
+func (s Syncer) syncAlbumArtists(ctx context.Context, tx database.DatabaseFace, albumArtists []types.AlbumArtistKey) (created, updated int, err error) {
+	for _, aa := range albumArtists {
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing album artist '%s'", aa.ArtistID.String()))
+		exists, err := tx.AlbumArtistExists(ctx, aa.AlbumID, aa.ArtistID, aa.Role)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		albumArtist, err := s.sc.GetAlbumArtist(ctx, aa.AlbumID, aa.ArtistID, aa.Role)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		if exists {
+			if err = tx.UpdateAlbumArtist(ctx, albumArtist); err != nil {
+				return 0, 0, err
+			}
+			updated += 1
+		} else {
+			if err = tx.AddAlbumArtist(ctx, albumArtist); err != nil {
 				return 0, 0, err
 			}
 			created += 1

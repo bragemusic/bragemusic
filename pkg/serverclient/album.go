@@ -7,6 +7,7 @@ import (
 	"net/url"
 
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 )
 
 func (s ServerClient) DownloadAlbumCover(ctx context.Context, albumID string, w io.Writer) error {
@@ -42,4 +43,17 @@ func (s ServerClient) ListAlbumsByArtist(ctx context.Context, artistID string) (
 	}
 
 	return albums, nil
+}
+
+func (s ServerClient) GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role types.ArtistRole) (albumArtist types.AlbumArtist, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID.String(), "artists", artistID.String(), "roles", string(role))
+	if err != nil {
+		return types.AlbumArtist{}, err
+	}
+
+	if err := s.doGetJson(ctx, u, &albumArtist); err != nil {
+		return types.AlbumArtist{}, err
+	}
+
+	return albumArtist, nil
 }

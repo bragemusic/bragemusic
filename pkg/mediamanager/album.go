@@ -34,3 +34,22 @@ func (m MediaManager) ListAlbumsByArtist(ctx context.Context, artistID string, s
 
 	return albums, nil
 }
+
+func (m MediaManager) GetAlbumArtist(ctx context.Context, albumID, artistID, role string) (types.AlbumArtist, error) {
+	albumUID, err := uuid.FromString(albumID)
+	if err != nil {
+		return types.AlbumArtist{}, err
+	}
+
+	artistUID, err := uuid.FromString(artistID)
+	if err != nil {
+		return types.AlbumArtist{}, err
+	}
+
+	albumArtist, err := m.db.GetAlbumArtist(ctx, albumUID, artistUID, types.ArtistRole(role))
+	if err != nil {
+		return types.AlbumArtist{}, err
+	}
+
+	return albumArtist, nil
+}

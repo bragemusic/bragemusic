@@ -11,8 +11,14 @@ import (
 
 func (d Database) AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) error {
 	now := time.Now()
-	aa.CreatedAt = now
-	aa.UpdatedAt = now
+
+	if aa.CreatedAt.IsZero() {
+		aa.CreatedAt = now
+	}
+
+	if aa.UpdatedAt.IsZero() {
+		aa.UpdatedAt = now
+	}
 
 	query := `
         INSERT INTO album_artists (
@@ -128,4 +134,35 @@ func (d Database) ListUpdatedAlbumArtists(ctx context.Context, since time.Time) 
 	}
 
 	return
+}
+
+func (d Database) GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role types.ArtistRole) (albumArtist types.AlbumArtist, err error) {
+	query := `
+		SELECT *
+		FROM album_artists
+		WHERE
+			album_id = ?
+			AND artist_id = ?
+			AND role = ?;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &albumArtist, query, albumID, artistID, role)
+	if err != nil {
+		return types.AlbumArtist{}, err
+	}
+
+	return
+}
+
+func (d Database) UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist) error {
+	query := `
+        UPDATE album_artists SET
+            position = :position,
+        WHERE
+            album_id = :album_id
+            AND artist_id = :artist_id
+            AND role = :role;
+    `
+
+	_, err := sqlx.NamedExecContext(ctx, d.ext, query, aa)
+	return err
 }

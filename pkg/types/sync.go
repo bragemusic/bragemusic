@@ -20,9 +20,9 @@ const (
 )
 
 type AlbumArtistKey struct {
-	AlbumID  uuid.UUID `db:"album_id" json:"album_id"`
-	ArtistID uuid.UUID `db:"artist_id" json:"artist_id"`
-	Role     string    `db:"role" json:"role"`
+	AlbumID  uuid.UUID  `db:"album_id" json:"album_id"`
+	ArtistID uuid.UUID  `db:"artist_id" json:"artist_id"`
+	Role     ArtistRole `db:"role" json:"role"`
 }
 
 type AlbumTrackKey struct {
