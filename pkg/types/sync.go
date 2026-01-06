@@ -25,12 +25,18 @@ type AlbumArtistKey struct {
 	Role     string    `db:"role" json:"role"`
 }
 
+type AlbumTrackKey struct {
+	AlbumID     uuid.UUID `db:"album_id" json:"album_id"`
+	DiscNumber  int       `db:"disc_number" json:"disc_number"`
+	TrackNumber int       `db:"track_number" json:"track_number"`
+}
+
 type SyncState struct {
 	Time         time.Time        `json:"time"`
 	Artists      []string         `json:"artists"`
 	Albums       []string         `json:"albums"`
 	Tracks       []string         `json:"tracks"`
-	AlbumTracks  []uuid.UUID      `json:"album_tracks"`
+	AlbumTracks  []AlbumTrackKey  `json:"album_tracks"`
 	AlbumArtists []AlbumArtistKey `json:"album_artists"`
 	MediaFiles   []uuid.UUID      `json:"media_files"`
 }

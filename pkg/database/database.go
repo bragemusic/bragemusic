@@ -71,6 +71,7 @@ type DatabaseFace interface {
 
 	AddAlbumTrack(ctx context.Context, at types.AlbumTrack) error
 	AlbumTrackExists(ctx context.Context, albumID uuid.UUID, trackID uuid.UUID) (bool, error)
+	ListUpdatedAlbumTracks(ctx context.Context, since time.Time) (albumTracks []types.AlbumTrackKey, err error)
 
 	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) error
 	AlbumArtistExists(ctx context.Context, albumID uuid.UUID, artistID uuid.UUID, role types.ArtistRole) (bool, error)
@@ -84,10 +85,6 @@ type DatabaseFace interface {
 	ListUpdatedPlayHistory(ctx context.Context, since time.Time) (updatedItems []types.PlayHistory, err error)
 
 	AuthFace
-
-	// // Login Session
-	// NewLoginSession(ctx context.Context, username string) (dbLoginSession *DbLoginSession, err error)
-	// GetLoginSessionByID(ctx context.Context, loginSessionId string) (dbLoginSession *DbLoginSession, err error)
 }
 
 type executor interface {

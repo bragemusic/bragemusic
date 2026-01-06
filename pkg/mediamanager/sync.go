@@ -31,6 +31,11 @@ func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st typ
 		return types.SyncState{}, err
 	}
 
+	st.AlbumTracks, err = m.db.ListUpdatedAlbumTracks(ctx, since)
+	if err != nil {
+		return types.SyncState{}, err
+	}
+
 	return
 }
 

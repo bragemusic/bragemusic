@@ -57,3 +57,22 @@ func (d Database) AlbumTrackExists(ctx context.Context, albumID uuid.UUID, track
 
 	return exists, nil
 }
+
+func (d Database) ListUpdatedAlbumTracks(ctx context.Context, since time.Time) (albumTracks []types.AlbumTrackKey, err error) {
+	query := `
+		SELECT
+			album_id,
+            disc_number,
+            track_number
+		FROM album_tracks
+		WHERE
+			created_at > ?
+			OR updated_at > ?;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &albumTracks, query, since, since)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
