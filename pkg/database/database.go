@@ -68,6 +68,7 @@ type DatabaseFace interface {
 
 	AddMediaFile(ctx context.Context, mf types.MediaFile) (uuid.UUID, error)
 	GetMediaFileFromChecksum(ctx context.Context, cs string) (mf types.MediaFile, err error)
+	ListUpdatedMediaFiles(ctx context.Context, since time.Time) (mediaFileIDs []uuid.UUID, err error)
 
 	AddAlbumTrack(ctx context.Context, at types.AlbumTrack) error
 	AlbumTrackExists(ctx context.Context, albumID uuid.UUID, trackID uuid.UUID) (bool, error)

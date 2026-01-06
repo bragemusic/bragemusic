@@ -116,3 +116,21 @@ func (d Database) attachMediaFiles(ctx context.Context, tracks []types.TrackDeta
 
 	return nil
 }
+
+func (d Database) ListUpdatedMediaFiles(ctx context.Context, since time.Time) (mediaFileIDs []uuid.UUID, err error) {
+	query := `
+        SELECT id
+        FROM media_files
+        WHERE
+          created_at > ?
+          OR
+          updated_at > ?
+        ;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &mediaFileIDs, query, since, since)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
