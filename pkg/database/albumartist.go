@@ -110,3 +110,22 @@ func (d Database) attachTrackArtists(ctx context.Context, tracks []types.TrackDe
 
 	return rows.Err()
 }
+
+func (d Database) ListUpdatedAlbumArtists(ctx context.Context, since time.Time) (albumArtists []types.AlbumArtistKey, err error) {
+	query := `
+		SELECT
+			album_id,
+			artist_id,
+			role
+		FROM album_artists
+		WHERE
+			created_at > ?
+			OR updated_at > ?;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &albumArtists, query, since, since)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}

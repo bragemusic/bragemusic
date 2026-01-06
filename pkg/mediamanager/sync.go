@@ -26,6 +26,11 @@ func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st typ
 		return types.SyncState{}, err
 	}
 
+	st.AlbumArtists, err = m.db.ListUpdatedAlbumArtists(ctx, since)
+	if err != nil {
+		return types.SyncState{}, err
+	}
+
 	return
 }
 
