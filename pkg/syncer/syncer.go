@@ -13,6 +13,7 @@ import (
 	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 )
 
 const expectedServerApplication = "brage-server"
@@ -206,6 +207,10 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 
+	if err = s.syncMediaFiles(ctx, tx, syncState.MediaFiles); err != nil {
+		return err
+	}
+
 	if err := s.syncPlayHistory(ctx, tx, lastSync.SyncedAt); err != nil {
 		return err
 	}
@@ -223,6 +228,7 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		s.log.InfoContext(ctx, fmt.Sprintf("sync finished. %d entries added and %d updated", totalCreations, totalUpdates))
 	}
 
+	efter denna ar klar maste syncitems kickas igang i en egen trad
 	return tx.Commit()
 }
 
@@ -420,6 +426,25 @@ func (s Syncer) syncAlbumTracks(ctx context.Context, tx database.DatabaseFace, a
 	}
 
 	return created, updated, nil
+}
+
+func (s Syncer) syncMediaFiles(ctx context.Context, tx database.DatabaseFace, mediaFiles []uuid.UUID) error {
+	for _, mfID := range mediaFiles {
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing media file '%s'", mfID.String()))
+
+		_, err := tx.AddSyncItem(ctx, types.SyncItem{
+			// FIXME: This should be added
+			SyncID: uuid.Nil,
+			ItemID: mfID,
+			Type:   types.SiTypeMediaFile,
+			State:  types.SiStateNotStarted,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s Syncer) syncPlayHistory(ctx context.Context, tx database.DatabaseFace, lastSync time.Time) error {

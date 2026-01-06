@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
@@ -65,4 +66,43 @@ func (d Database) GetLastSync(ctx context.Context) (sync types.DBSyncState, err 
 	}
 
 	return
+}
+
+func (d Database) AddSyncItem(ctx context.Context, s types.SyncItem) (uuid.UUID, error) {
+	if s.ID == uuid.Nil {
+		uid, err := uuid.NewV4()
+		if err != nil {
+			return uuid.Nil, err
+		}
+		s.ID = uid
+	}
+
+	now := time.Now()
+	s.CreatedAt = now
+	s.UpdatedAt = now
+
+	query := `
+        INSERT INTO sync_items (
+            id, sync_id, item_id, type, state,
+            created_at, updated_at
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?);
+    `
+
+	_, err := d.ext.ExecContext(
+		ctx,
+		query,
+		s.ID,
+		s.SyncID,
+		s.ItemID,
+		s.Type,
+		s.State,
+		s.CreatedAt,
+		s.UpdatedAt,
+	)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return s.ID, nil
 }

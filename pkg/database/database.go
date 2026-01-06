@@ -67,6 +67,7 @@ type DatabaseFace interface {
 	ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error)
 
 	AddMediaFile(ctx context.Context, mf types.MediaFile) (uuid.UUID, error)
+	GetMediaFile(ctx context.Context, id uuid.UUID) (mf types.MediaFile, err error)
 	GetMediaFileFromChecksum(ctx context.Context, cs string) (mf types.MediaFile, err error)
 	ListUpdatedMediaFiles(ctx context.Context, since time.Time) (mediaFileIDs []uuid.UUID, err error)
 
@@ -85,6 +86,8 @@ type DatabaseFace interface {
 
 	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
 	GetLastSync(ctx context.Context) (sync types.DBSyncState, err error)
+
+	AddSyncItem(ctx context.Context, s types.SyncItem) (uuid.UUID, error)
 
 	AddPlayHistory(ctx context.Context, trackID, userID uuid.UUID) (string, error)
 	AddPlayHistoryStruct(ctx context.Context, ph types.PlayHistory) (string, error)

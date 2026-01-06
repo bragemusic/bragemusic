@@ -51,6 +51,21 @@ func (d Database) AddMediaFile(ctx context.Context, mf types.MediaFile) (uuid.UU
 	return mf.ID, nil
 }
 
+func (d Database) GetMediaFile(ctx context.Context, id uuid.UUID) (mf types.MediaFile, err error) {
+	query := `
+        SELECT *
+        FROM media_files
+        WHERE id = ?
+        LIMIT 1;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &mf, query, id)
+	if err != nil {
+		return types.MediaFile{}, err
+	}
+
+	return
+}
+
 func (d Database) GetMediaFileFromChecksum(ctx context.Context, cs string) (mf types.MediaFile, err error) {
 	query := `
         SELECT *

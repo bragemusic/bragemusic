@@ -26,7 +26,9 @@ func (s Server) api() http.Handler {
 	r.Get("/albums/{albumID}/disc/{discNumber}/track/{trackNumber}", s.getAlbumTrack())
 
 	r.Get("/tracks/{trackID}", s.getTrack())
-	r.Get("/tracks/{trackID}/file", s.getTrackFile())
+
+	r.Get("/mediafiles/{mediafileID}", s.getMediaFile())
+	r.Get("/mediafiles/{mediafileID}/file", s.getMediaFileFile())
 
 	r.Post("/sync", s.sync())
 	r.Post("/sync/play-history", s.syncPlayHistory())
