@@ -201,6 +201,11 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 
+	_, _, err = s.syncAlbumTracks(ctx, tx, syncState.AlbumTracks)
+	if err != nil {
+		return err
+	}
+
 	if err := s.syncPlayHistory(ctx, tx, lastSync.SyncedAt); err != nil {
 		return err
 	}
@@ -379,6 +384,35 @@ func (s Syncer) syncAlbumArtists(ctx context.Context, tx database.DatabaseFace, 
 			updated += 1
 		} else {
 			if err = tx.AddAlbumArtist(ctx, albumArtist); err != nil {
+				return 0, 0, err
+			}
+			created += 1
+		}
+	}
+
+	return created, updated, nil
+}
+
+func (s Syncer) syncAlbumTracks(ctx context.Context, tx database.DatabaseFace, albumTracks []types.AlbumTrackKey) (created, updated int, err error) {
+	for _, at := range albumTracks {
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing album track '%s'", at.AlbumID.String()))
+		exists, err := tx.AlbumTrackExistsByPos(ctx, at.AlbumID, at.DiscNumber, at.TrackNumber)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		albumTrack, err := s.sc.GetAlbumTrack(ctx, at.AlbumID, at.DiscNumber, at.TrackNumber)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		if exists {
+			if err = tx.UpdateAlbumTrack(ctx, albumTrack); err != nil {
+				return 0, 0, err
+			}
+			updated += 1
+		} else {
+			if err = tx.AddAlbumTrack(ctx, albumTrack); err != nil {
 				return 0, 0, err
 			}
 			created += 1

@@ -53,3 +53,12 @@ func (m MediaManager) GetAlbumArtist(ctx context.Context, albumID, artistID, rol
 
 	return albumArtist, nil
 }
+
+func (m MediaManager) GetAlbumTrack(ctx context.Context, albumID uuid.UUID, discNumber, trackNumber int) (types.AlbumTrack, error) {
+	albumArtist, err := m.db.GetAlbumTrack(ctx, albumID, discNumber, trackNumber)
+	if err != nil {
+		return types.AlbumTrack{}, err
+	}
+
+	return albumArtist, nil
+}

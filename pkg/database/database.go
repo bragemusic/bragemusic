@@ -72,7 +72,10 @@ type DatabaseFace interface {
 
 	AddAlbumTrack(ctx context.Context, at types.AlbumTrack) error
 	AlbumTrackExists(ctx context.Context, albumID uuid.UUID, trackID uuid.UUID) (bool, error)
+	AlbumTrackExistsByPos(ctx context.Context, albumID uuid.UUID, discNumber, trackNumber int) (bool, error)
 	ListUpdatedAlbumTracks(ctx context.Context, since time.Time) (albumTracks []types.AlbumTrackKey, err error)
+	GetAlbumTrack(ctx context.Context, albumID uuid.UUID, discNumber, trackNumber int) (albumTrack types.AlbumTrack, err error)
+	UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) error
 
 	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) error
 	AlbumArtistExists(ctx context.Context, albumID uuid.UUID, artistID uuid.UUID, role types.ArtistRole) (bool, error)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/go-chi/chi/v5"
+	"github.com/gofrs/uuid/v5"
 )
 
 func (s Server) getAlbum() http.HandlerFunc {
@@ -94,6 +95,41 @@ func (s Server) getAlbumArtist() http.HandlerFunc {
 		}
 
 		albumArtist, err := s.mediamgr.GetAlbumArtist(ctx, albumID, artistID, role)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return http.StatusBadRequest, nil, ErrIDNotFound{
+					idKey: "albumID",
+					err:   err,
+				}
+			} else {
+				return http.StatusInternalServerError, nil, err
+			}
+		}
+
+		return http.StatusOK, albumArtist, nil
+	})
+}
+
+func (s Server) getAlbumTrack() http.HandlerFunc {
+	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
+		ctx := r.Context()
+
+		albumID, err := getParameter[uuid.UUID](ctx, "albumID")
+		if err != nil {
+			return http.StatusBadRequest, nil, err
+		}
+
+		discNumber, err := getParameter[int](ctx, "discNumber")
+		if err != nil {
+			return http.StatusBadRequest, nil, err
+		}
+
+		trackNumber, err := getParameter[int](ctx, "trackNumber")
+		if err != nil {
+			return http.StatusBadRequest, nil, err
+		}
+
+		albumArtist, err := s.mediamgr.GetAlbumTrack(ctx, albumID, discNumber, trackNumber)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				return http.StatusBadRequest, nil, ErrIDNotFound{
