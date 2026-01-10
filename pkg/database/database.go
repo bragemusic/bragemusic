@@ -67,26 +67,37 @@ type DatabaseFace interface {
 	ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error)
 
 	AddMediaFile(ctx context.Context, mf types.MediaFile) (uuid.UUID, error)
+	GetMediaFile(ctx context.Context, id uuid.UUID) (mf types.MediaFile, err error)
 	GetMediaFileFromChecksum(ctx context.Context, cs string) (mf types.MediaFile, err error)
+	ListUpdatedMediaFiles(ctx context.Context, since time.Time) (mediaFileIDs []uuid.UUID, err error)
+	MediaFileExists(ctx context.Context, ID uuid.UUID) (bool, error)
+	UpdateMediaFile(ctx context.Context, mf types.MediaFile) error
 
 	AddAlbumTrack(ctx context.Context, at types.AlbumTrack) error
 	AlbumTrackExists(ctx context.Context, albumID uuid.UUID, trackID uuid.UUID) (bool, error)
+	AlbumTrackExistsByPos(ctx context.Context, albumID uuid.UUID, discNumber, trackNumber int) (bool, error)
+	ListUpdatedAlbumTracks(ctx context.Context, since time.Time) (albumTracks []types.AlbumTrackKey, err error)
+	GetAlbumTrack(ctx context.Context, albumID uuid.UUID, discNumber, trackNumber int) (albumTrack types.AlbumTrack, err error)
+	UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) error
 
 	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) error
 	AlbumArtistExists(ctx context.Context, albumID uuid.UUID, artistID uuid.UUID, role types.ArtistRole) (bool, error)
+	ListUpdatedAlbumArtists(ctx context.Context, since time.Time) (albumArtists []types.AlbumArtistKey, err error)
+	GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role types.ArtistRole) (albumArtist types.AlbumArtist, err error)
+	UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist) error
 
 	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
 	GetLastSync(ctx context.Context) (sync types.DBSyncState, err error)
+
+	AddSyncItem(ctx context.Context, s types.SyncItem) (uuid.UUID, error)
+	GetUnsyncedItem(ctx context.Context) (si types.SyncItem, err error)
+	SetSyncItemState(ctx context.Context, id uuid.UUID, state types.SyncItemState) error
 
 	AddPlayHistory(ctx context.Context, trackID, userID uuid.UUID) (string, error)
 	AddPlayHistoryStruct(ctx context.Context, ph types.PlayHistory) (string, error)
 	ListUpdatedPlayHistory(ctx context.Context, since time.Time) (updatedItems []types.PlayHistory, err error)
 
 	AuthFace
-
-	// // Login Session
-	// NewLoginSession(ctx context.Context, username string) (dbLoginSession *DbLoginSession, err error)
-	// GetLoginSessionByID(ctx context.Context, loginSessionId string) (dbLoginSession *DbLoginSession, err error)
 }
 
 type executor interface {

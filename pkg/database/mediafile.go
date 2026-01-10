@@ -19,8 +19,13 @@ func (d Database) AddMediaFile(ctx context.Context, mf types.MediaFile) (uuid.UU
 	}
 
 	now := time.Now()
-	mf.CreatedAt = now
-	mf.UpdatedAt = now
+	if mf.CreatedAt.IsZero() {
+		mf.CreatedAt = now
+	}
+
+	if mf.UpdatedAt.IsZero() {
+		mf.UpdatedAt = now
+	}
 
 	query := `
         INSERT INTO media_files (
@@ -49,6 +54,21 @@ func (d Database) AddMediaFile(ctx context.Context, mf types.MediaFile) (uuid.UU
 	}
 
 	return mf.ID, nil
+}
+
+func (d Database) GetMediaFile(ctx context.Context, id uuid.UUID) (mf types.MediaFile, err error) {
+	query := `
+        SELECT *
+        FROM media_files
+        WHERE id = ?
+        LIMIT 1;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &mf, query, id)
+	if err != nil {
+		return types.MediaFile{}, err
+	}
+
+	return
 }
 
 func (d Database) GetMediaFileFromChecksum(ctx context.Context, cs string) (mf types.MediaFile, err error) {
@@ -115,4 +135,61 @@ func (d Database) attachMediaFiles(ctx context.Context, tracks []types.TrackDeta
 	}
 
 	return nil
+}
+
+func (d Database) ListUpdatedMediaFiles(ctx context.Context, since time.Time) (mediaFileIDs []uuid.UUID, err error) {
+	query := `
+        SELECT id
+        FROM media_files
+        WHERE
+          created_at > ?
+          OR
+          updated_at > ?
+        ;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &mediaFileIDs, query, since, since)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
+
+func (d Database) MediaFileExists(ctx context.Context, ID uuid.UUID) (bool, error) {
+	const query = `
+        SELECT COUNT(1)
+        FROM media_files
+        WHERE id = ?;
+    `
+
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query, ID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func (d Database) UpdateMediaFile(ctx context.Context, mf types.MediaFile) error {
+	now := time.Now()
+
+	if mf.UpdatedAt.IsZero() {
+		mf.UpdatedAt = now
+	}
+
+	query := `
+        UPDATE media_files SET
+            duration_ms = :duration_ms,
+            bitrate  = :bitrate,
+            sample_rate = :sample_rate,
+            file_size = :file_size,
+            codec = :codec,
+            checksum = :checksum,
+            updated_at = :updated_at
+        WHERE id = :id;
+    `
+
+	_, err := sqlx.NamedExecContext(ctx, d.ext, query, mf)
+	return err
 }

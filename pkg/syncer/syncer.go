@@ -13,6 +13,7 @@ import (
 	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 )
 
 const expectedServerApplication = "brage-server"
@@ -95,6 +96,10 @@ func (s *Syncer) StartSyncDaemon(ctx context.Context, done func()) {
 				if s.serverAvailable {
 					s.log.InfoContext(ctx, "starting periodic sync")
 					err := s.Sync(ctx)
+					if err != nil {
+						s.log.ErrorContext(ctx, "periodic sync finished with errors", "error", err.Error())
+					}
+					err = s.SyncItems(ctx)
 					if err != nil {
 						s.log.ErrorContext(ctx, "periodic sync finished with errors", "error", err.Error())
 					}
@@ -196,6 +201,20 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 
+	_, _, err = s.syncAlbumArtists(ctx, tx, syncState.AlbumArtists)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = s.syncAlbumTracks(ctx, tx, syncState.AlbumTracks)
+	if err != nil {
+		return err
+	}
+
+	if err = s.syncMediaFiles(ctx, tx, syncState.MediaFiles); err != nil {
+		return err
+	}
+
 	if err := s.syncPlayHistory(ctx, tx, lastSync.SyncedAt); err != nil {
 		return err
 	}
@@ -214,6 +233,96 @@ func (s *Syncer) Sync(ctx context.Context) error {
 	}
 
 	return tx.Commit()
+}
+
+func (s *Syncer) SyncItems(ctx context.Context) error {
+	if !s.serverAvailable {
+		return errors.New("server is not available")
+	}
+
+	s.syncInProgress = true
+	for _, f := range s.syncInProgressCallbacks {
+		f(true)
+	}
+
+	defer func() {
+		s.syncInProgress = false
+		for _, f := range s.syncInProgressCallbacks {
+			f(false)
+		}
+	}()
+
+	for {
+		tx, err := s.db.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+
+		si, err := tx.GetUnsyncedItem(ctx)
+		if err != nil {
+			if errors.Is(err, database.ErrNotFound) {
+				break
+			}
+			return err
+		}
+
+		if si.Type != types.SiTypeMediaFile {
+			return errors.New("only media files can be asyncronically synced right now")
+		}
+
+		mf, err := s.sc.GetMediaFile(ctx, si.ItemID)
+		if err != nil {
+			return err
+		}
+
+		exists, err := tx.MediaFileExists(ctx, mf.ID)
+		if err != nil {
+			return err
+		}
+
+		if exists {
+			if err = tx.UpdateMediaFile(ctx, mf); err != nil {
+				return err
+			}
+		} else {
+			if _, err = tx.AddMediaFile(ctx, mf); err != nil {
+				return err
+			}
+		}
+
+		mfPath := filepath.Join(s.musicDir, mf.Filename())
+
+		if err = os.MkdirAll(filepath.Dir(mfPath), os.ModePerm); err != nil {
+			return err
+		}
+
+		dst, err := os.Create(mfPath)
+		if err != nil {
+			return err
+		}
+
+		s.log.InfoContext(ctx, fmt.Sprintf("downloading media file '%s' to '%s'", mf.ID.String(), mfPath))
+
+		if err = s.sc.DownloadMediaFile(ctx, mf.ID, dst); err != nil {
+			dst.Close()
+			return err
+		}
+
+		if err = dst.Close(); err != nil {
+			return err
+		}
+
+		if err = tx.SetSyncItemState(ctx, si.ID, types.SiStateFinished); err != nil {
+			return err
+		}
+
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s Syncer) syncArtists(ctx context.Context, tx database.DatabaseFace, artistIDs []string) (created, updated int, err error) {
@@ -255,8 +364,11 @@ func (s Syncer) syncArtists(ctx context.Context, tx database.DatabaseFace, artis
 		s.log.DebugContext(ctx, fmt.Sprintf("downloading artist image '%s' to '%s'", aID, filename))
 
 		if err = s.sc.DownloadArtistImage(ctx, aID, dst); err != nil {
-			dst.Close()
-			return 0, 0, err
+			serr, ok := err.(serverclient.ErrStatus)
+			if !ok || serr.Status >= 500 {
+				dst.Close()
+				return 0, 0, err
+			}
 		}
 
 		if err = dst.Close(); err != nil {
@@ -306,8 +418,11 @@ func (s Syncer) syncAlbums(ctx context.Context, tx database.DatabaseFace, albumI
 		s.log.DebugContext(ctx, fmt.Sprintf("downloading album cover '%s' to '%s'", aID, filename))
 
 		if err = s.sc.DownloadAlbumCover(ctx, aID, dst); err != nil {
-			dst.Close()
-			return 0, 0, err
+			serr, ok := err.(serverclient.ErrStatus)
+			if !ok || serr.Status >= 500 {
+				dst.Close()
+				return 0, 0, err
+			}
 		}
 
 		if err = dst.Close(); err != nil {
@@ -333,7 +448,6 @@ func (s Syncer) syncTracks(ctx context.Context, tx database.DatabaseFace, trackI
 		}
 
 		if exists {
-			// FIXME: We need a file_updated_at field. So we dont download files too many times
 			if err = tx.UpdateTrack(ctx, serverTrack); err != nil {
 				return 0, 0, err
 			}
@@ -343,36 +457,87 @@ func (s Syncer) syncTracks(ctx context.Context, tx database.DatabaseFace, trackI
 				return 0, 0, err
 			}
 			created += 1
-
-			if serverTrack.MediaFile != nil {
-				// FIXME: Find correct media file
-				trackPath := filepath.Join(s.musicDir, "FILEPATH")
-
-				if err = os.MkdirAll(filepath.Dir(trackPath), os.ModePerm); err != nil {
-					return 0, 0, err
-				}
-
-				dst, err := os.Create(trackPath)
-				if err != nil {
-					return 0, 0, err
-				}
-
-				s.log.InfoContext(ctx, fmt.Sprintf("downloading track '%s' to '%s'", tID, trackPath))
-
-				if err = s.sc.DownloadTrackFile(ctx, tID, dst); err != nil {
-					dst.Close()
-					return 0, 0, err
-				}
-
-				if err = dst.Close(); err != nil {
-					return 0, 0, err
-				}
-
-			}
 		}
 	}
 
 	return created, updated, nil
+}
+
+func (s Syncer) syncAlbumArtists(ctx context.Context, tx database.DatabaseFace, albumArtists []types.AlbumArtistKey) (created, updated int, err error) {
+	for _, aa := range albumArtists {
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing album artist '%s'", aa.ArtistID.String()))
+		exists, err := tx.AlbumArtistExists(ctx, aa.AlbumID, aa.ArtistID, aa.Role)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		albumArtist, err := s.sc.GetAlbumArtist(ctx, aa.AlbumID, aa.ArtistID, aa.Role)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		if exists {
+			if err = tx.UpdateAlbumArtist(ctx, albumArtist); err != nil {
+				return 0, 0, err
+			}
+			updated += 1
+		} else {
+			if err = tx.AddAlbumArtist(ctx, albumArtist); err != nil {
+				return 0, 0, err
+			}
+			created += 1
+		}
+	}
+
+	return created, updated, nil
+}
+
+func (s Syncer) syncAlbumTracks(ctx context.Context, tx database.DatabaseFace, albumTracks []types.AlbumTrackKey) (created, updated int, err error) {
+	for _, at := range albumTracks {
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing album track '%s'", at.AlbumID.String()))
+		exists, err := tx.AlbumTrackExistsByPos(ctx, at.AlbumID, at.DiscNumber, at.TrackNumber)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		albumTrack, err := s.sc.GetAlbumTrack(ctx, at.AlbumID, at.DiscNumber, at.TrackNumber)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		if exists {
+			if err = tx.UpdateAlbumTrack(ctx, albumTrack); err != nil {
+				return 0, 0, err
+			}
+			updated += 1
+		} else {
+			if err = tx.AddAlbumTrack(ctx, albumTrack); err != nil {
+				return 0, 0, err
+			}
+			created += 1
+		}
+	}
+
+	return created, updated, nil
+}
+
+func (s Syncer) syncMediaFiles(ctx context.Context, tx database.DatabaseFace, mediaFiles []uuid.UUID) error {
+	for _, mfID := range mediaFiles {
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing media file '%s'", mfID.String()))
+
+		_, err := tx.AddSyncItem(ctx, types.SyncItem{
+			// FIXME: This should be added
+			SyncID: uuid.Nil,
+			ItemID: mfID,
+			Type:   types.SiTypeMediaFile,
+			State:  types.SiStateNotStarted,
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s Syncer) syncPlayHistory(ctx context.Context, tx database.DatabaseFace, lastSync time.Time) error {

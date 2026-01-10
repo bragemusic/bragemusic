@@ -55,7 +55,15 @@ func (c *Client) RegisterUserCallback(f func(*types.UserDetails)) {
 }
 
 func (c Client) Sync(ctx context.Context) error {
-	return c.sy.Sync(ctx)
+	if err := c.sy.Sync(ctx); err != nil {
+		return err
+	}
+
+	if err := c.sy.SyncItems(ctx); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c Client) ServerStatus() server.Status {
