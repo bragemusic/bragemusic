@@ -14,6 +14,7 @@ import (
 	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/filetx"
+	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
@@ -37,6 +38,7 @@ type Importer struct {
 	db              database.DatabaseFace
 	mb              musicbrainz.MusicBrainz
 	aid             acoustid.AcoustID
+	im              imagemagick.ImageMagick
 	log             *slog.Logger
 }
 
@@ -196,16 +198,32 @@ func (i Importer) copyFile(ctx context.Context, from, to string) error {
 }
 
 func (i Importer) downloadAlbumCover(ctx context.Context, album types.Album, mdPictures []*tag.Picture) error {
-	dir := filepath.Join(i.imageDir, "albums")
+	tempFolder, err := os.MkdirTemp(os.TempDir(), "brage-img")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tempFolder)
 
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err = i.downloadAlbumCoverImage(ctx, album, mdPictures, tempFolder); err != nil {
 		return err
 	}
 
+	imgFilename := filepath.Join(tempFolder, album.ID.String()+".jpg")
+
+	outputFolder := filepath.Join(i.imageDir, "albums", album.ID.String())
+
+	if err = i.im.ResizeAll(ctx, imgFilename, outputFolder); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i Importer) downloadAlbumCoverImage(ctx context.Context, album types.Album, mdPictures []*tag.Picture, outputFolder string) error {
 	if album.MusicBrainzID != nil {
 		i.log.InfoContext(ctx, "downloading album cover from MusicBrainz", "album", album.Name)
 
-		err := i.mb.DownloadCoverArt(ctx, *album.MusicBrainzID, album.ID.String(), dir)
+		err := i.mb.DownloadCoverArt(ctx, *album.MusicBrainzID, album.ID.String(), outputFolder)
 		if err == nil {
 			return nil
 		}
@@ -219,7 +237,7 @@ func (i Importer) downloadAlbumCover(ctx context.Context, album types.Album, mdP
 			continue
 		}
 
-		imgFilename := filepath.Join(dir, fmt.Sprintf("%s.%s", album.ID, pic.Ext))
+		imgFilename := filepath.Join(outputFolder, fmt.Sprintf("%s.%s", album.ID, pic.Ext))
 		err := utils.SaveID3Image(ctx, *pic, imgFilename)
 		if err != nil {
 			i.log.WarnContext(ctx, "could not get image from ID3", "error", err.Error())
@@ -317,7 +335,7 @@ func (i *Importer) Run(ctx context.Context) {
 	i.log.InfoContext(ctx, "import check done")
 }
 
-func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, slogHandler slog.Handler) Importer {
+func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, im imagemagick.ImageMagick, slogHandler slog.Handler) Importer {
 	return Importer{
 		importDir:       cfg.ImportDirPath,
 		musicDir:        cfg.MusicDirPath,
@@ -325,6 +343,7 @@ func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid a
 		db:              db,
 		mb:              mb,
 		aid:             aid,
+		im:              im,
 		log:             slog.New(slogHandler).With("service", "importer"),
 		postImportDir:   cfg.FinishedImportsDirPath,
 		deleteOnSuccess: cfg.DeleteImportsOnSuccess,
