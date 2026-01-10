@@ -70,6 +70,8 @@ type DatabaseFace interface {
 	GetMediaFile(ctx context.Context, id uuid.UUID) (mf types.MediaFile, err error)
 	GetMediaFileFromChecksum(ctx context.Context, cs string) (mf types.MediaFile, err error)
 	ListUpdatedMediaFiles(ctx context.Context, since time.Time) (mediaFileIDs []uuid.UUID, err error)
+	MediaFileExists(ctx context.Context, ID uuid.UUID) (bool, error)
+	UpdateMediaFile(ctx context.Context, mf types.MediaFile) error
 
 	AddAlbumTrack(ctx context.Context, at types.AlbumTrack) error
 	AlbumTrackExists(ctx context.Context, albumID uuid.UUID, trackID uuid.UUID) (bool, error)
@@ -88,6 +90,8 @@ type DatabaseFace interface {
 	GetLastSync(ctx context.Context) (sync types.DBSyncState, err error)
 
 	AddSyncItem(ctx context.Context, s types.SyncItem) (uuid.UUID, error)
+	GetUnsyncedItem(ctx context.Context) (si types.SyncItem, err error)
+	SetSyncItemState(ctx context.Context, id uuid.UUID, state types.SyncItemState) error
 
 	AddPlayHistory(ctx context.Context, trackID, userID uuid.UUID) (string, error)
 	AddPlayHistoryStruct(ctx context.Context, ph types.PlayHistory) (string, error)

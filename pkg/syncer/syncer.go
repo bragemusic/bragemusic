@@ -99,6 +99,10 @@ func (s *Syncer) StartSyncDaemon(ctx context.Context, done func()) {
 					if err != nil {
 						s.log.ErrorContext(ctx, "periodic sync finished with errors", "error", err.Error())
 					}
+					err = s.SyncItems(ctx)
+					if err != nil {
+						s.log.ErrorContext(ctx, "periodic sync finished with errors", "error", err.Error())
+					}
 				} else {
 					s.log.DebugContext(ctx, "periodic sync skipped. Server not available")
 				}
@@ -228,8 +232,97 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		s.log.InfoContext(ctx, fmt.Sprintf("sync finished. %d entries added and %d updated", totalCreations, totalUpdates))
 	}
 
-	efter denna ar klar maste syncitems kickas igang i en egen trad
 	return tx.Commit()
+}
+
+func (s *Syncer) SyncItems(ctx context.Context) error {
+	if !s.serverAvailable {
+		return errors.New("server is not available")
+	}
+
+	s.syncInProgress = true
+	for _, f := range s.syncInProgressCallbacks {
+		f(true)
+	}
+
+	defer func() {
+		s.syncInProgress = false
+		for _, f := range s.syncInProgressCallbacks {
+			f(false)
+		}
+	}()
+
+	for {
+		tx, err := s.db.Begin(ctx)
+		if err != nil {
+			return err
+		}
+		defer tx.Rollback()
+
+		si, err := tx.GetUnsyncedItem(ctx)
+		if err != nil {
+			if errors.Is(err, database.ErrNotFound) {
+				break
+			}
+			return err
+		}
+
+		if si.Type != types.SiTypeMediaFile {
+			return errors.New("only media files can be asyncronically synced right now")
+		}
+
+		mf, err := s.sc.GetMediaFile(ctx, si.ItemID)
+		if err != nil {
+			return err
+		}
+
+		exists, err := tx.MediaFileExists(ctx, mf.ID)
+		if err != nil {
+			return err
+		}
+
+		if exists {
+			if err = tx.UpdateMediaFile(ctx, mf); err != nil {
+				return err
+			}
+		} else {
+			if _, err = tx.AddMediaFile(ctx, mf); err != nil {
+				return err
+			}
+		}
+
+		mfPath := filepath.Join(s.musicDir, mf.Filename())
+
+		if err = os.MkdirAll(filepath.Dir(mfPath), os.ModePerm); err != nil {
+			return err
+		}
+
+		dst, err := os.Create(mfPath)
+		if err != nil {
+			return err
+		}
+
+		s.log.InfoContext(ctx, fmt.Sprintf("downloading media file '%s' to '%s'", mf.ID.String(), mfPath))
+
+		if err = s.sc.DownloadMediaFile(ctx, mf.ID, dst); err != nil {
+			dst.Close()
+			return err
+		}
+
+		if err = dst.Close(); err != nil {
+			return err
+		}
+
+		if err = tx.SetSyncItemState(ctx, si.ID, types.SiStateFinished); err != nil {
+			return err
+		}
+
+		if err := tx.Commit(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s Syncer) syncArtists(ctx context.Context, tx database.DatabaseFace, artistIDs []string) (created, updated int, err error) {

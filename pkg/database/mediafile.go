@@ -19,8 +19,13 @@ func (d Database) AddMediaFile(ctx context.Context, mf types.MediaFile) (uuid.UU
 	}
 
 	now := time.Now()
-	mf.CreatedAt = now
-	mf.UpdatedAt = now
+	if mf.CreatedAt.IsZero() {
+		mf.CreatedAt = now
+	}
+
+	if mf.UpdatedAt.IsZero() {
+		mf.UpdatedAt = now
+	}
 
 	query := `
         INSERT INTO media_files (
@@ -148,4 +153,43 @@ func (d Database) ListUpdatedMediaFiles(ctx context.Context, since time.Time) (m
 	}
 
 	return
+}
+
+func (d Database) MediaFileExists(ctx context.Context, ID uuid.UUID) (bool, error) {
+	const query = `
+        SELECT COUNT(1)
+        FROM media_files
+        WHERE id = ?;
+    `
+
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query, ID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+
+	return count > 0, nil
+}
+
+func (d Database) UpdateMediaFile(ctx context.Context, mf types.MediaFile) error {
+	now := time.Now()
+
+	if mf.UpdatedAt.IsZero() {
+		mf.UpdatedAt = now
+	}
+
+	query := `
+        UPDATE media_files SET
+            duration_ms = :duration_ms,
+            bitrate  = :bitrate,
+            sample_rate = :sample_rate,
+            file_size = :file_size,
+            codec = :codec,
+            checksum = :checksum,
+            updated_at = :updated_at
+        WHERE id = :id;
+    `
+
+	_, err := sqlx.NamedExecContext(ctx, d.ext, query, mf)
+	return err
 }

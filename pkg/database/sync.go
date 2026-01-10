@@ -106,3 +106,41 @@ func (d Database) AddSyncItem(ctx context.Context, s types.SyncItem) (uuid.UUID,
 
 	return s.ID, nil
 }
+
+func (d Database) GetUnsyncedItem(ctx context.Context) (si types.SyncItem, err error) {
+	query := `
+        SELECT *
+        FROM sync_items
+        WHERE state = 'NotStarted'
+        ORDER BY created_at DESC
+        LIMIT 1;
+    `
+
+	err = sqlx.GetContext(ctx, d.ext, &si, query)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return types.SyncItem{}, ErrNotFound
+		}
+		return types.SyncItem{}, err
+	}
+
+	return si, nil
+}
+
+func (d Database) SetSyncItemState(ctx context.Context, id uuid.UUID, state types.SyncItemState) error {
+	now := time.Now()
+	query := `
+        UPDATE sync_items
+        SET
+            state = ?,
+            updated_at = ?
+        WHERE id = ?;
+    `
+
+	_, err := d.ext.ExecContext(ctx, query, state, now, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
