@@ -8,14 +8,17 @@ import (
 	"path/filepath"
 
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/wiki"
+	"github.com/gofrs/uuid/v5"
 )
 
 type MetaSyncer struct {
 	db       database.DatabaseFace
 	mb       musicbrainz.MusicBrainz
 	wiki     wiki.Wiki
+	im       imagemagick.ImageMagick
 	imageDir string
 	log      *slog.Logger
 }
@@ -85,8 +88,7 @@ func (m MetaSyncer) Sync(ctx context.Context) {
 		m.log.InfoContext(ctx, "updated artist description", "artist", a.Name)
 
 		if wikiData.ImageUrl != nil && !m.artistHasImage(a.ID.String()) {
-			imgFilename := filepath.Join(m.imageDir, "artists", a.ID.String()+".jpg")
-			if err = m.wiki.DownloadFile(ctx, *wikiData.ImageUrl, imgFilename); err != nil {
+			if err := m.downloadArtistImage(ctx, *wikiData.ImageUrl, a.ID); err != nil {
 				m.log.ErrorContext(ctx, "could not download artist image", "error", err.Error(), "artist", a.Name)
 				continue
 			}
@@ -95,12 +97,34 @@ func (m MetaSyncer) Sync(ctx context.Context) {
 	}
 }
 
-func New(imageDir string, db database.DatabaseFace, mb musicbrainz.MusicBrainz, wiki wiki.Wiki, slogHandler slog.Handler) MetaSyncer {
+func (m MetaSyncer) downloadArtistImage(ctx context.Context, imageUrl string, artistID uuid.UUID) error {
+	tempFolder, err := os.MkdirTemp(os.TempDir(), "brage-img")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tempFolder)
+
+	imgFilename := filepath.Join(tempFolder, artistID.String()+".jpg")
+	if err = m.wiki.DownloadFile(ctx, imageUrl, imgFilename); err != nil {
+		return err
+	}
+
+	outputFolder := filepath.Join(m.imageDir, "artists", artistID.String())
+
+	if err = m.im.ResizeAll(ctx, imgFilename, outputFolder); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func New(imageDir string, db database.DatabaseFace, mb musicbrainz.MusicBrainz, wiki wiki.Wiki, im imagemagick.ImageMagick, slogHandler slog.Handler) MetaSyncer {
 	return MetaSyncer{
 		db:       db,
 		log:      slog.New(slogHandler).With("service", "meta-syncer"),
 		mb:       mb,
 		wiki:     wiki,
+		im:       im,
 		imageDir: imageDir,
 	}
 }

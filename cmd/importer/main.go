@@ -11,6 +11,7 @@ import (
 	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/filetx"
+	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/importer"
 	"github.com/bragemusic/core/pkg/metasyncer"
 	"github.com/bragemusic/core/pkg/musicbrainz"
@@ -68,9 +69,15 @@ func main() {
 		FinishedImportsDirPath: filepath.Join(datadir, "..", "doneImportsDir"),
 	}
 
-	imp := importer.New(impCfg, &db, mb, aid, slogHandler)
+	im, err := imagemagick.New(slogHandler)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
 
-	ms := metasyncer.New(impCfg.ImageDirPath, &db, musicbrainz.MusicBrainz{}, w, slogHandler)
+	imp := importer.New(impCfg, &db, mb, aid, im, slogHandler)
+
+	ms := metasyncer.New(impCfg.ImageDirPath, &db, musicbrainz.MusicBrainz{}, w, im, slogHandler)
 
 	ctx := context.Background()
 	imp.Run(ctx)

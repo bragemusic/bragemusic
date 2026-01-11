@@ -6,11 +6,12 @@ import (
 	"io"
 	"net/url"
 
+	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/types"
 )
 
-func (s ServerClient) DownloadArtistImage(ctx context.Context, artistID string, w io.Writer) error {
-	u, err := url.JoinPath(s.baseUrl, "api", "img", "artists", fmt.Sprintf("%s.jpg", artistID))
+func (s ServerClient) DownloadArtistImage(ctx context.Context, artistID string, size imagemagick.ImageSize, w io.Writer) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "img", "artists", artistID, fmt.Sprintf("%d.jpg", size))
 	if err != nil {
 		return err
 	}
