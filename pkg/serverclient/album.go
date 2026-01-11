@@ -6,12 +6,13 @@ import (
 	"io"
 	"net/url"
 
+	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s ServerClient) DownloadAlbumCover(ctx context.Context, albumID string, w io.Writer) error {
-	u, err := url.JoinPath(s.baseUrl, "api", "img", "albums", fmt.Sprintf("%s.jpg", albumID))
+func (s ServerClient) DownloadAlbumCover(ctx context.Context, albumID string, size imagemagick.ImageSize, w io.Writer) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "img", "albums", albumID, fmt.Sprintf("%d.jpg", size))
 	if err != nil {
 		return err
 	}

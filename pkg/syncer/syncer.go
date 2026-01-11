@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
@@ -350,30 +351,33 @@ func (s Syncer) syncArtists(ctx context.Context, tx database.DatabaseFace, artis
 			created += 1
 		}
 
-		filename := filepath.Join(s.imgDir, "artists", fmt.Sprintf("%s.jpg", aID))
+		for _, size := range []imagemagick.ImageSize{imagemagick.Size320, imagemagick.Size640, imagemagick.Size1024, imagemagick.Size1600, imagemagick.Size2400} {
+			filename := filepath.Join(s.imgDir, "artists", aID, fmt.Sprintf("%d.jpg", size))
 
-		if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
-			return 0, 0, err
-		}
+			if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
+				return 0, 0, err
+			}
 
-		dst, err := os.Create(filename)
-		if err != nil {
-			return 0, 0, err
-		}
+			dst, err := os.Create(filename)
+			if err != nil {
+				return 0, 0, err
+			}
 
-		s.log.DebugContext(ctx, fmt.Sprintf("downloading artist image '%s' to '%s'", aID, filename))
+			s.log.DebugContext(ctx, fmt.Sprintf("downloading artist image '%s' to '%s'", aID, filename))
 
-		if err = s.sc.DownloadArtistImage(ctx, aID, dst); err != nil {
-			serr, ok := err.(serverclient.ErrStatus)
-			if !ok || serr.Status >= 500 {
-				dst.Close()
+			if err = s.sc.DownloadArtistImage(ctx, aID, size, dst); err != nil {
+				serr, ok := err.(serverclient.ErrStatus)
+				if !ok || serr.Status >= 500 {
+					dst.Close()
+					return 0, 0, err
+				}
+			}
+
+			if err = dst.Close(); err != nil {
 				return 0, 0, err
 			}
 		}
 
-		if err = dst.Close(); err != nil {
-			return 0, 0, err
-		}
 	}
 
 	return created, updated, nil
@@ -404,29 +408,31 @@ func (s Syncer) syncAlbums(ctx context.Context, tx database.DatabaseFace, albumI
 			created += 1
 		}
 
-		filename := filepath.Join(s.imgDir, "albums", fmt.Sprintf("%s.jpg", aID))
+		for _, size := range []imagemagick.ImageSize{imagemagick.Size320, imagemagick.Size640, imagemagick.Size1024, imagemagick.Size1600, imagemagick.Size2400} {
+			filename := filepath.Join(s.imgDir, "albums", aID, fmt.Sprintf("%d.jpg", size))
 
-		if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
-			return 0, 0, err
-		}
-
-		dst, err := os.Create(filename)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		s.log.DebugContext(ctx, fmt.Sprintf("downloading album cover '%s' to '%s'", aID, filename))
-
-		if err = s.sc.DownloadAlbumCover(ctx, aID, dst); err != nil {
-			serr, ok := err.(serverclient.ErrStatus)
-			if !ok || serr.Status >= 500 {
-				dst.Close()
+			if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
 				return 0, 0, err
 			}
-		}
 
-		if err = dst.Close(); err != nil {
-			return 0, 0, err
+			dst, err := os.Create(filename)
+			if err != nil {
+				return 0, 0, err
+			}
+
+			s.log.DebugContext(ctx, fmt.Sprintf("downloading album cover '%s' to '%s'", aID, filename))
+
+			if err = s.sc.DownloadAlbumCover(ctx, aID, size, dst); err != nil {
+				serr, ok := err.(serverclient.ErrStatus)
+				if !ok || serr.Status >= 500 {
+					dst.Close()
+					return 0, 0, err
+				}
+			}
+
+			if err = dst.Close(); err != nil {
+				return 0, 0, err
+			}
 		}
 
 	}
