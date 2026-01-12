@@ -44,3 +44,16 @@ func (s ServerClient) ListArtists(ctx context.Context) (artists []types.Artist, 
 
 	return artists, nil
 }
+
+func (s ServerClient) UpdateArtist(ctx context.Context, artistID string, artistData types.Artist) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "artists", artistID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPutJson(ctx, u, artistData, nil); err != nil {
+		return err
+	}
+
+	return nil
+}

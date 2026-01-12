@@ -19,6 +19,7 @@ func (s Server) api() http.Handler {
 
 	r.Get("/artists", s.listArtists())
 	r.Get("/artists/{artistID}", s.getArtist())
+	r.Put("/artists/{artistID}", s.updateArtist())
 	r.Get("/artists/{artistID}/albums", s.listAlbums())
 
 	r.Get("/albums/{albumID}", s.getAlbum())

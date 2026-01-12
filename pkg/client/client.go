@@ -120,6 +120,14 @@ func (c Client) GetArtist(ctx context.Context, artistID string) (types.Artist, e
 	return artist, nil
 }
 
+func (c Client) UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData types.Artist) error {
+	err := c.sc.UpdateArtist(ctx, artistID.String(), artistData)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c Client) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error) {
 	albums, err := c.mm.ListAlbumsByArtist(ctx, artistID, sortBy, sortOrder)
 	if err != nil {
