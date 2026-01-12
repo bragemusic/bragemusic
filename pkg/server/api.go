@@ -15,6 +15,7 @@ func (s Server) api() http.Handler {
 	r.Get("/user", s.user())
 
 	r.Get("/img/*", s.getImage())
+	r.Post("/img/artists/{artistID}", s.addImage(ArtistImage))
 
 	r.Get("/artists", s.listArtists())
 	r.Get("/artists/{artistID}", s.getArtist())

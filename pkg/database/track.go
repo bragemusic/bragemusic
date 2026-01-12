@@ -100,13 +100,15 @@ func (d Database) TrackExistsByMbID(ctx context.Context, trackMbID string) (bool
 }
 
 func (d Database) UpdateTrack(ctx context.Context, t types.Track) error {
+	t.UpdatedAt = time.Now()
 	query := `
         UPDATE tracks SET
             title = :title,
             musicbrainz_id = :musicbrainz_id,
             genre = :genre,
             comment = :comment,
-            media_file = :media_file
+            media_file = :media_file,
+            updated_at = :updated_at
         WHERE id = :id;
     `
 
