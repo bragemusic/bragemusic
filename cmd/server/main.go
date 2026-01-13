@@ -11,6 +11,7 @@ import (
 
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/server"
 
@@ -56,7 +57,13 @@ func main() {
 		return
 	}
 
-	m := mediamanager.New(slogHandler, db, scfg.Paths.MusicDir)
+	im, err := imagemagick.New(slogHandler)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+
+	m := mediamanager.New(slogHandler, db, &im, scfg.Paths.MusicDir, scfg.Paths.ImageDir)
 
 	s := server.New(slogHandler, &m, &a, scfg)
 

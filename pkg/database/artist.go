@@ -69,6 +69,7 @@ func (d Database) ArtistExists(ctx context.Context, ID string) (bool, error) {
 }
 
 func (d Database) UpdateArtist(ctx context.Context, a types.Artist) error {
+	a.UpdatedAt = time.Now()
 	query := `
         UPDATE artists
         SET
@@ -78,7 +79,8 @@ func (d Database) UpdateArtist(ctx context.Context, a types.Artist) error {
             country = :country,
             year_started = :year_started,
             year_ended = :year_ended,
-            description = :description
+            description = :description,
+            updated_at = :updated_at
         WHERE id = :id;
     `
 

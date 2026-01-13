@@ -23,12 +23,4 @@ CREATE TABLE IF NOT EXISTS tracks (
     updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER IF NOT EXISTS tracks_updated_at_trigger
-AFTER UPDATE ON tracks
-FOR EACH ROW
-BEGIN
-    UPDATE tracks SET updated_at = CURRENT_TIMESTAMP WHERE id = OLD.id;
-END;
-
 -- migrate:down
-

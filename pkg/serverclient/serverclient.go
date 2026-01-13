@@ -70,6 +70,32 @@ func (s ServerClient) doGetJson(ctx context.Context, u string, target any) error
 	return nil
 }
 
+func (s ServerClient) doPutJson(ctx context.Context, u string, payload any, target any) error {
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest(http.MethodPut, u, bytes.NewBuffer(payloadJSON))
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.do(ctx, req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if target != nil {
+		if err := json.NewDecoder(resp.Body).Decode(&target); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s ServerClient) doPostJson(ctx context.Context, u string, payload any, target any) error {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

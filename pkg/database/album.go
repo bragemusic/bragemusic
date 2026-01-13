@@ -220,6 +220,7 @@ func (d Database) ListUpdatedAlbums(ctx context.Context, since time.Time) (album
 }
 
 func (d Database) UpdateAlbum(ctx context.Context, a types.Album) error {
+	a.UpdatedAt = time.Now()
 	query := `
         UPDATE albums
         SET
@@ -232,7 +233,8 @@ func (d Database) UpdateAlbum(ctx context.Context, a types.Album) error {
             discs = :discs,
             description = :description,
             owner = :owner,
-            public = :public
+            public = :public,
+            updated_at = :updated_at
         WHERE id = :id;
     `
 

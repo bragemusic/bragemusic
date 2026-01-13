@@ -5,6 +5,7 @@ import (
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 )
 
 func (m MediaManager) GetArtist(ctx context.Context, artistID string) (types.Artist, error) {
@@ -23,4 +24,14 @@ func (m MediaManager) ListArtists(ctx context.Context, sortBy database.SortBy, s
 	}
 
 	return artists, nil
+}
+
+func (m MediaManager) UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData types.Artist) error {
+	artistData.ID = artistID
+	err := m.db.UpdateArtist(ctx, artistData)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

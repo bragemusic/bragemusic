@@ -120,6 +120,14 @@ func (c Client) GetArtist(ctx context.Context, artistID string) (types.Artist, e
 	return artist, nil
 }
 
+func (c Client) UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData types.Artist) error {
+	err := c.sc.UpdateArtist(ctx, artistID.String(), artistData)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c Client) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error) {
 	albums, err := c.mm.ListAlbumsByArtist(ctx, artistID, sortBy, sortOrder)
 	if err != nil {
@@ -153,6 +161,10 @@ func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.
 		return nil, err
 	}
 	return tracks, nil
+}
+
+func (c Client) UploadArtistImage(ctx context.Context, artistID string, img serverclient.ImageUpload) error {
+	return c.sc.UploadArtistImage(ctx, artistID, img)
 }
 
 func (c Client) GetArtistTopTracks(ctx context.Context, artistID string) ([]types.TrackDetailed, error) {
@@ -205,7 +217,7 @@ func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c 
 	}
 
 	sc := serverclient.New(config.ServerBaseURL, slogHandler)
-	mm := mediamanager.New(slogHandler, &db, config.MusicDirPath)
+	mm := mediamanager.New(slogHandler, &db, nil, config.MusicDirPath, config.ImagePath)
 	sy := syncer.New(&sc, &db, config.MusicDirPath, config.ImagePath, slogHandler)
 
 	pa, err := audiointerface.NewPortAudio(slogHandler)
