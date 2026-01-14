@@ -71,3 +71,16 @@ func (s ServerClient) GetAlbumTrack(ctx context.Context, albumID uuid.UUID, disc
 
 	return albumTrack, nil
 }
+
+func (s ServerClient) UpdateAlbum(ctx context.Context, albumID string, albumData types.AlbumUpdate) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPutJson(ctx, u, albumData, nil); err != nil {
+		return err
+	}
+
+	return nil
+}

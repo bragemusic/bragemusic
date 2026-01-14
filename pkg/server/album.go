@@ -2,10 +2,13 @@ package server
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/core/pkg/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
 )
@@ -142,5 +145,27 @@ func (s Server) getAlbumTrack() http.HandlerFunc {
 		}
 
 		return http.StatusOK, albumArtist, nil
+	})
+}
+
+func (s Server) updateAlbum() http.HandlerFunc {
+	return s.handleVoid(func(w http.ResponseWriter, r *http.Request) (*int, error) {
+		ctx := r.Context()
+
+		id, err := getParameter[uuid.UUID](ctx, "albumID")
+		if err != nil {
+			return utils.Ptr(http.StatusBadRequest), err
+		}
+
+		album := types.AlbumUpdate{}
+		if err := json.NewDecoder(r.Body).Decode(&album); err != nil {
+			return utils.Ptr(http.StatusBadRequest), err
+		}
+
+		if err := s.mediamgr.UpdateAlbum(ctx, id, album); err != nil {
+			return utils.Ptr(http.StatusInternalServerError), err
+		}
+
+		return utils.Ptr(http.StatusNoContent), nil
 	})
 }

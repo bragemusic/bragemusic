@@ -85,6 +85,8 @@ type DatabaseFace interface {
 	ListUpdatedAlbumArtists(ctx context.Context, since time.Time) (albumArtists []types.AlbumArtistKey, err error)
 	GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role types.ArtistRole) (albumArtist types.AlbumArtist, err error)
 	UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist) error
+	ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UUID) (albumArtists []types.AlbumArtistKey, err error)
+	DeleteAlbumArtist(ctx context.Context, albumID uuid.UUID, artistID uuid.UUID, role types.ArtistRole) error
 
 	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
 	GetLastSync(ctx context.Context) (sync types.DBSyncState, err error)

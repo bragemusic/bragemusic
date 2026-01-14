@@ -227,7 +227,6 @@ func (d Database) UpdateAlbum(ctx context.Context, a types.Album) error {
             musicbrainz_id = :musicbrainz_id,
             name = :name,
             sort_name = :sort_name,
-            artist_id = :artist_id,
             release_date = :release_date,
             tracks = :tracks,
             discs = :discs,

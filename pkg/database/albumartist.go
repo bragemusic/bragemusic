@@ -166,3 +166,34 @@ func (d Database) UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist) e
 	_, err := sqlx.NamedExecContext(ctx, d.ext, query, aa)
 	return err
 }
+
+func (d Database) ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UUID) (albumArtists []types.AlbumArtistKey, err error) {
+	query := `
+		SELECT
+			album_id,
+			artist_id,
+			role
+		FROM album_artists
+		WHERE
+			album_id = ?;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &albumArtists, query, albumID)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
+
+func (d Database) DeleteAlbumArtist(ctx context.Context, albumID uuid.UUID, artistID uuid.UUID, role types.ArtistRole) error {
+	query := `
+		DELETE FROM album_artists
+		WHERE
+			album_id = ?
+			AND artist_id = ?
+			AND role = ?;
+	`
+
+	_, err := d.ext.ExecContext(ctx, query, albumID, artistID, role)
+	return err
+}

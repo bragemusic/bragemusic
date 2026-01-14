@@ -70,7 +70,7 @@ func (s Server) addImage(imageType ImageType) http.HandlerFunc {
 		if err != nil {
 			return utils.Ptr(http.StatusInternalServerError), err
 		}
-		// defer os.RemoveAll(tempFolder)
+		defer os.RemoveAll(tempFolder)
 
 		orgImgPath := filepath.Join(tempFolder, fmt.Sprintf("%s.jpg", assetID.String()))
 
@@ -82,12 +82,19 @@ func (s Server) addImage(imageType ImageType) http.HandlerFunc {
 		defer dst.Close()
 
 		// Copy the uploaded file's content to the destination file
-		if _, err := io.Copy(dst, file); err != nil {
+		if _, err = io.Copy(dst, file); err != nil {
 			return utils.Ptr(http.StatusInternalServerError), err
 		}
 
-		if err = s.mediamgr.AddArtistImage(ctx, orgImgPath, assetID); err != nil {
-			return utils.Ptr(http.StatusInternalServerError), err
+		switch imageType {
+		case ArtistImage:
+			if err = s.mediamgr.AddArtistImage(ctx, orgImgPath, assetID); err != nil {
+				return utils.Ptr(http.StatusInternalServerError), err
+			}
+		case AlbumImage:
+			if err = s.mediamgr.AddAlbumImage(ctx, orgImgPath, assetID); err != nil {
+				return utils.Ptr(http.StatusInternalServerError), err
+			}
 		}
 
 		return utils.Ptr(http.StatusCreated), nil
