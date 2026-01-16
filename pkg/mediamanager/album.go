@@ -55,6 +55,15 @@ func (m MediaManager) GetAlbumArtist(ctx context.Context, albumID, artistID, rol
 	return albumArtist, nil
 }
 
+func (m MediaManager) GetAlbumArtistByID(ctx context.Context, id uuid.UUID) (types.AlbumArtist, error) {
+	albumArtist, err := m.db.GetAlbumArtistByID(ctx, id)
+	if err != nil {
+		return types.AlbumArtist{}, err
+	}
+
+	return albumArtist, nil
+}
+
 func (m MediaManager) GetAlbumTrack(ctx context.Context, albumID uuid.UUID, discNumber, trackNumber int) (types.AlbumTrack, error) {
 	albumArtist, err := m.db.GetAlbumTrack(ctx, albumID, discNumber, trackNumber)
 	if err != nil {
@@ -90,7 +99,7 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 	}
 
 	for _, artistID := range albumData.Artists {
-		exists := lo.ContainsBy(existingAlbumArtists, func(item types.AlbumArtistKey) bool {
+		exists := lo.ContainsBy(existingAlbumArtists, func(item types.AlbumArtist) bool {
 			return item.ArtistID == artistID
 		})
 
@@ -102,7 +111,7 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 				// FIXME: Need to do something about positions
 				Position: 0,
 			}
-			if err := tx.AddAlbumArtist(ctx, aa); err != nil {
+			if _, err := tx.AddAlbumArtist(ctx, aa); err != nil {
 				return err
 			}
 		}
@@ -114,7 +123,7 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 		})
 
 		if !exists {
-			if err := tx.DeleteAlbumArtist(ctx, existingAa.AlbumID, existingAa.ArtistID, existingAa.Role); err != nil {
+			if err := tx.DeleteAlbumArtist(ctx, existingAa.ID); err != nil {
 				return err
 			}
 		}

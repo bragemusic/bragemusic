@@ -9,7 +9,15 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) error {
+func (d Database) AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) (uuid.UUID, error) {
+	if aa.ID == uuid.Nil {
+		uid, err := uuid.NewV4()
+		if err != nil {
+			return uuid.Nil, err
+		}
+		aa.ID = uid
+	}
+
 	now := time.Now()
 
 	if aa.CreatedAt.IsZero() {
@@ -22,15 +30,16 @@ func (d Database) AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) erro
 
 	query := `
         INSERT INTO album_artists (
-            album_id, artist_id, role, position,
+            id, album_id, artist_id, role, position,
             created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, ?);
     `
 
 	_, err := d.ext.ExecContext(
 		ctx,
 		query,
+		aa.ID,
 		aa.AlbumID,
 		aa.ArtistID,
 		aa.Role,
@@ -39,10 +48,26 @@ func (d Database) AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) erro
 		aa.UpdatedAt,
 	)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
-	return nil
+	return aa.ID, nil
+}
+
+func (d Database) AlbumArtistExistsByID(ctx context.Context, id uuid.UUID) (bool, error) {
+	query := `
+        SELECT COUNT(1)
+        FROM album_artists
+        WHERE id = ?;
+	`
+
+	var exists bool
+	err := sqlx.GetContext(ctx, d.ext, &exists, query, id)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
 }
 
 func (d Database) AlbumArtistExists(ctx context.Context, albumID uuid.UUID, artistID uuid.UUID, role types.ArtistRole) (bool, error) {
@@ -117,12 +142,10 @@ func (d Database) attachTrackArtists(ctx context.Context, tracks []types.TrackDe
 	return rows.Err()
 }
 
-func (d Database) ListUpdatedAlbumArtists(ctx context.Context, since time.Time) (albumArtists []types.AlbumArtistKey, err error) {
+func (d Database) ListUpdatedAlbumArtists(ctx context.Context, since time.Time) (albumArtists []uuid.UUID, err error) {
 	query := `
 		SELECT
-			album_id,
-			artist_id,
-			role
+			id
 		FROM album_artists
 		WHERE
 			created_at > ?
@@ -153,6 +176,21 @@ func (d Database) GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUI
 	return
 }
 
+func (d Database) GetAlbumArtistByID(ctx context.Context, id uuid.UUID) (albumArtist types.AlbumArtist, err error) {
+	query := `
+		SELECT *
+		FROM album_artists
+		WHERE
+			id = ?;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &albumArtist, query, id)
+	if err != nil {
+		return types.AlbumArtist{}, err
+	}
+
+	return
+}
+
 func (d Database) UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist) error {
 	query := `
         UPDATE album_artists SET
@@ -167,12 +205,9 @@ func (d Database) UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist) e
 	return err
 }
 
-func (d Database) ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UUID) (albumArtists []types.AlbumArtistKey, err error) {
+func (d Database) ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UUID) (albumArtists []types.AlbumArtist, err error) {
 	query := `
-		SELECT
-			album_id,
-			artist_id,
-			role
+		SELECT *
 		FROM album_artists
 		WHERE
 			album_id = ?;
@@ -185,15 +220,17 @@ func (d Database) ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UU
 	return
 }
 
-func (d Database) DeleteAlbumArtist(ctx context.Context, albumID uuid.UUID, artistID uuid.UUID, role types.ArtistRole) error {
+func (d Database) DeleteAlbumArtist(ctx context.Context, id uuid.UUID) error {
 	query := `
 		DELETE FROM album_artists
 		WHERE
-			album_id = ?
-			AND artist_id = ?
-			AND role = ?;
+			id = ?;
 	`
 
-	_, err := d.ext.ExecContext(ctx, query, albumID, artistID, role)
-	return err
+	_, err := d.ext.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityAlbumArtist)
 }

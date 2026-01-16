@@ -113,6 +113,31 @@ func (s Server) getAlbumArtist() http.HandlerFunc {
 	})
 }
 
+func (s Server) getAlbumArtistByID() http.HandlerFunc {
+	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
+		ctx := r.Context()
+
+		albumArtistID, err := getParameter[uuid.UUID](ctx, "albumArtistID")
+		if err != nil {
+			return http.StatusBadRequest, nil, err
+		}
+
+		albumArtist, err := s.mediamgr.GetAlbumArtistByID(ctx, albumArtistID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return http.StatusBadRequest, nil, ErrIDNotFound{
+					idKey: "albumArtistID",
+					err:   err,
+				}
+			} else {
+				return http.StatusInternalServerError, nil, err
+			}
+		}
+
+		return http.StatusOK, albumArtist, nil
+	})
+}
+
 func (s Server) getAlbumTrack() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		ctx := r.Context()

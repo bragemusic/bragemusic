@@ -23,6 +23,7 @@ const (
 )
 
 type AlbumArtist struct {
+	ID        uuid.UUID  `db:"id" json:"id"`
 	AlbumID   uuid.UUID  `db:"album_id" json:"album_id"`
 	ArtistID  uuid.UUID  `db:"artist_id" json:"artist_id"`
 	Role      ArtistRole `db:"role" json:"role"`

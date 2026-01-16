@@ -29,6 +29,8 @@ func (s Server) api() http.Handler {
 	r.Get("/albums/{albumID}/artists/{artistID}/roles/{role}", s.getAlbumArtist())
 	r.Get("/albums/{albumID}/disc/{discNumber}/track/{trackNumber}", s.getAlbumTrack())
 
+	r.Get("/album-artists/{albumArtistID}", s.getAlbumArtistByID())
+
 	r.Get("/tracks/{trackID}", s.getTrack())
 
 	r.Get("/mediafiles/{mediafileID}", s.getMediaFile())

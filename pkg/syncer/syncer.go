@@ -187,32 +187,32 @@ func (s *Syncer) Sync(ctx context.Context) error {
 	}
 	defer tx.Rollback()
 
-	dbSyncState.ArtistsCreated, dbSyncState.ArtistsUpdated, err = s.syncArtists(ctx, tx, syncState.Artists)
+	dbSyncState.ArtistsCreated, dbSyncState.ArtistsUpdated, err = s.syncArtists(ctx, tx, syncState.CreatedOrUpdated.Artists)
 	if err != nil {
 		return err
 	}
 
-	dbSyncState.AlbumsCreated, dbSyncState.AlbumsUpdated, err = s.syncAlbums(ctx, tx, syncState.Albums)
+	dbSyncState.AlbumsCreated, dbSyncState.AlbumsUpdated, err = s.syncAlbums(ctx, tx, syncState.CreatedOrUpdated.Albums)
 	if err != nil {
 		return err
 	}
 
-	dbSyncState.TracksCreated, dbSyncState.TracksUpdated, err = s.syncTracks(ctx, tx, syncState.Tracks)
+	dbSyncState.TracksCreated, dbSyncState.TracksUpdated, err = s.syncTracks(ctx, tx, syncState.CreatedOrUpdated.Tracks)
 	if err != nil {
 		return err
 	}
 
-	_, _, err = s.syncAlbumArtists(ctx, tx, syncState.AlbumArtists)
+	_, _, err = s.syncAlbumArtists(ctx, tx, syncState.CreatedOrUpdated.AlbumArtists, syncState.Deleted.AlbumArtists)
 	if err != nil {
 		return err
 	}
 
-	_, _, err = s.syncAlbumTracks(ctx, tx, syncState.AlbumTracks)
+	_, _, err = s.syncAlbumTracks(ctx, tx, syncState.CreatedOrUpdated.AlbumTracks)
 	if err != nil {
 		return err
 	}
 
-	if err = s.syncMediaFiles(ctx, tx, syncState.MediaFiles); err != nil {
+	if err = s.syncMediaFiles(ctx, tx, syncState.CreatedOrUpdated.MediaFiles); err != nil {
 		return err
 	}
 
@@ -469,15 +469,22 @@ func (s Syncer) syncTracks(ctx context.Context, tx database.DatabaseFace, trackI
 	return created, updated, nil
 }
 
-func (s Syncer) syncAlbumArtists(ctx context.Context, tx database.DatabaseFace, albumArtists []types.AlbumArtistKey) (created, updated int, err error) {
+func (s Syncer) syncAlbumArtists(ctx context.Context, tx database.DatabaseFace, albumArtists []uuid.UUID, deletedAlbumArtists []uuid.UUID) (created, updated int, err error) {
+	for _, aa := range deletedAlbumArtists {
+		s.log.DebugContext(ctx, fmt.Sprintf("deleting album artist '%s'", aa.String()))
+		if err := tx.DeleteAlbumArtist(ctx, aa); err != nil {
+			return 0, 0, err
+		}
+	}
+
 	for _, aa := range albumArtists {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing album artist '%s'", aa.ArtistID.String()))
-		exists, err := tx.AlbumArtistExists(ctx, aa.AlbumID, aa.ArtistID, aa.Role)
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing album artist '%s'", aa.String()))
+		exists, err := tx.AlbumArtistExistsByID(ctx, aa)
 		if err != nil {
 			return 0, 0, err
 		}
 
-		albumArtist, err := s.sc.GetAlbumArtist(ctx, aa.AlbumID, aa.ArtistID, aa.Role)
+		albumArtist, err := s.sc.GetAlbumArtistByID(ctx, aa)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -488,7 +495,7 @@ func (s Syncer) syncAlbumArtists(ctx context.Context, tx database.DatabaseFace, 
 			}
 			updated += 1
 		} else {
-			if err = tx.AddAlbumArtist(ctx, albumArtist); err != nil {
+			if _, err = tx.AddAlbumArtist(ctx, albumArtist); err != nil {
 				return 0, 0, err
 			}
 			created += 1

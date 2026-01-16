@@ -43,7 +43,7 @@ func (i Importer) addAlbumArtists(ctx context.Context, tx database.DatabaseFace,
 	}
 
 	if !exists {
-		if err = tx.AddAlbumArtist(ctx, aa); err != nil {
+		if _, err = tx.AddAlbumArtist(ctx, aa); err != nil {
 			return err
 		}
 	}

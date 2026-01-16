@@ -80,13 +80,15 @@ type DatabaseFace interface {
 	GetAlbumTrack(ctx context.Context, albumID uuid.UUID, discNumber, trackNumber int) (albumTrack types.AlbumTrack, err error)
 	UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) error
 
-	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) error
-	AlbumArtistExists(ctx context.Context, albumID uuid.UUID, artistID uuid.UUID, role types.ArtistRole) (bool, error)
-	ListUpdatedAlbumArtists(ctx context.Context, since time.Time) (albumArtists []types.AlbumArtistKey, err error)
+	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) (uuid.UUID, error)
+	AlbumArtistExistsByID(ctx context.Context, id uuid.UUID) (bool, error)
+	AlbumArtistExists(ctx context.Context, id uuid.UUID, artistID uuid.UUID, role types.ArtistRole) (bool, error)
+	ListUpdatedAlbumArtists(ctx context.Context, since time.Time) (albumArtists []uuid.UUID, err error)
 	GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role types.ArtistRole) (albumArtist types.AlbumArtist, err error)
+	GetAlbumArtistByID(ctx context.Context, id uuid.UUID) (albumArtist types.AlbumArtist, err error)
 	UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist) error
-	ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UUID) (albumArtists []types.AlbumArtistKey, err error)
-	DeleteAlbumArtist(ctx context.Context, albumID uuid.UUID, artistID uuid.UUID, role types.ArtistRole) error
+	ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UUID) (albumArtists []types.AlbumArtist, err error)
+	DeleteAlbumArtist(ctx context.Context, id uuid.UUID) error
 
 	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
 	GetLastSync(ctx context.Context) (sync types.DBSyncState, err error)
@@ -98,6 +100,8 @@ type DatabaseFace interface {
 	AddPlayHistory(ctx context.Context, trackID, userID uuid.UUID) (string, error)
 	AddPlayHistoryStruct(ctx context.Context, ph types.PlayHistory) (string, error)
 	ListUpdatedPlayHistory(ctx context.Context, since time.Time) (updatedItems []types.PlayHistory, err error)
+
+	ListEntityEvents(ctx context.Context, eventType types.EntityEventType, entityType types.EntityType, since time.Time) (ids []uuid.UUID, err error)
 
 	AuthFace
 }

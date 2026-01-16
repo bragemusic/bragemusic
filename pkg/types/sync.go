@@ -19,12 +19,6 @@ const (
 	SiTypeMediaFile SyncItemType = "MediaFile"
 )
 
-type AlbumArtistKey struct {
-	AlbumID  uuid.UUID  `db:"album_id" json:"album_id"`
-	ArtistID uuid.UUID  `db:"artist_id" json:"artist_id"`
-	Role     ArtistRole `db:"role" json:"role"`
-}
-
 type AlbumTrackKey struct {
 	AlbumID     uuid.UUID `db:"album_id" json:"album_id"`
 	DiscNumber  int       `db:"disc_number" json:"disc_number"`
@@ -32,13 +26,18 @@ type AlbumTrackKey struct {
 }
 
 type SyncState struct {
-	Time         time.Time        `json:"time"`
-	Artists      []string         `json:"artists"`
-	Albums       []string         `json:"albums"`
-	Tracks       []string         `json:"tracks"`
-	AlbumTracks  []AlbumTrackKey  `json:"album_tracks"`
-	AlbumArtists []AlbumArtistKey `json:"album_artists"`
-	MediaFiles   []uuid.UUID      `json:"media_files"`
+	Time             time.Time `json:"time"`
+	CreatedOrUpdated SyncData  `json:"created_or_updated"`
+	Deleted          SyncData  `json:"deleted"`
+}
+
+type SyncData struct {
+	Artists      []string        `json:"artists"`
+	Albums       []string        `json:"albums"`
+	Tracks       []string        `json:"tracks"`
+	AlbumTracks  []AlbumTrackKey `json:"album_tracks"`
+	AlbumArtists []uuid.UUID     `json:"album_artists"`
+	MediaFiles   []uuid.UUID     `json:"media_files"`
 }
 
 type DBSyncState struct {
