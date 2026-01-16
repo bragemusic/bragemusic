@@ -21,6 +21,11 @@ type Album struct {
 	UpdatedAt     time.Time  `db:"updated_at" json:"updated_at"`
 }
 
+type AlbumUpdate struct {
+	Album
+	Artists []uuid.UUID `json:"artists"`
+}
+
 type AlbumDetailed struct {
 	ID            string     `db:"id" json:"id"`
 	MusicBrainzID *string    `db:"musicbrainz_id" json:"musicbrainz_id"`
@@ -28,7 +33,7 @@ type AlbumDetailed struct {
 	SortName      string     `db:"sort_name" json:"sort_name"`
 	ArtistIDs     []string   `db:"artist_ids" json:"artist_ids,omitempty"`
 	ArtistNames   []string   `db:"artist_names" json:"artist_names,omitempty"`
-	ReleaseDate   *time.Time `db:"release_date" json:"release_date,omitempty"`
+	ReleaseDate   *time.Time `db:"release_date" json:"release_date,omitempty" ts_type:"string | undefined"`
 	TrackCount    int        `db:"track_count" json:"track_count"`
 	DiscCount     int        `db:"disc_count" json:"disc_count"`
 	Description   *string    `db:"description" json:"description,omitempty"`

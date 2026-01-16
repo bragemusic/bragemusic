@@ -59,6 +59,19 @@ func (s ServerClient) GetAlbumArtist(ctx context.Context, albumID, artistID uuid
 	return albumArtist, nil
 }
 
+func (s ServerClient) GetAlbumArtistByID(ctx context.Context, id uuid.UUID) (albumArtist types.AlbumArtist, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "album-artists", id.String())
+	if err != nil {
+		return types.AlbumArtist{}, err
+	}
+
+	if err := s.doGetJson(ctx, u, &albumArtist); err != nil {
+		return types.AlbumArtist{}, err
+	}
+
+	return albumArtist, nil
+}
+
 func (s ServerClient) GetAlbumTrack(ctx context.Context, albumID uuid.UUID, discNumber, trackNumber int) (albumTrack types.AlbumTrack, err error) {
 	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID.String(), "disc", fmt.Sprint(discNumber), "track", fmt.Sprint(trackNumber))
 	if err != nil {
@@ -70,4 +83,17 @@ func (s ServerClient) GetAlbumTrack(ctx context.Context, albumID uuid.UUID, disc
 	}
 
 	return albumTrack, nil
+}
+
+func (s ServerClient) UpdateAlbum(ctx context.Context, albumID string, albumData types.AlbumUpdate) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID)
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPutJson(ctx, u, albumData, nil); err != nil {
+		return err
+	}
+
+	return nil
 }

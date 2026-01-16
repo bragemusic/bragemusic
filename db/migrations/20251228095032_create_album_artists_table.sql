@@ -1,6 +1,7 @@
 -- migrate:up
 
 CREATE TABLE IF NOT EXISTS album_artists (
+    id              TEXT PRIMARY KEY,
     album_id        TEXT NOT NULL,
     artist_id       TEXT NOT NULL,
     role            TEXT NOT NULL,
@@ -9,7 +10,7 @@ CREATE TABLE IF NOT EXISTS album_artists (
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY (album_id, artist_id, role),
+    UNIQUE (album_id, artist_id, role),
 
     FOREIGN KEY (album_id)
       REFERENCES albums(id)

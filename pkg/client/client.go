@@ -163,6 +163,18 @@ func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.
 	return tracks, nil
 }
 
+func (c Client) UpdateAlbum(ctx context.Context, id uuid.UUID, album types.AlbumUpdate) error {
+	err := c.sc.UpdateAlbum(ctx, id.String(), album)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c Client) UploadAlbumImage(ctx context.Context, id string, img serverclient.ImageUpload) error {
+	return c.sc.UploadAlbumImage(ctx, id, img)
+}
+
 func (c Client) UploadArtistImage(ctx context.Context, artistID string, img serverclient.ImageUpload) error {
 	return c.sc.UploadArtistImage(ctx, artistID, img)
 }

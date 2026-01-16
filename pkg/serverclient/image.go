@@ -18,6 +18,15 @@ func (s ServerClient) UploadArtistImage(ctx context.Context, artistID string, im
 	return s.uploadImage(ctx, u, img)
 }
 
+func (s ServerClient) UploadAlbumImage(ctx context.Context, id string, img ImageUpload) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "img", "albums", id)
+	if err != nil {
+		return err
+	}
+
+	return s.uploadImage(ctx, u, img)
+}
+
 func (s ServerClient) uploadImage(ctx context.Context, u string, img ImageUpload) error {
 	if len(img.Data) == 0 {
 		return errors.New("empty file")
