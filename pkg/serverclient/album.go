@@ -85,6 +85,19 @@ func (s ServerClient) GetAlbumTrack(ctx context.Context, albumID uuid.UUID, disc
 	return albumTrack, nil
 }
 
+func (s ServerClient) GetAlbumTrackByID(ctx context.Context, id uuid.UUID) (albumTrack types.AlbumTrack, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "album-tracks", id.String())
+	if err != nil {
+		return types.AlbumTrack{}, err
+	}
+
+	if err := s.doGetJson(ctx, u, &albumTrack); err != nil {
+		return types.AlbumTrack{}, err
+	}
+
+	return albumTrack, nil
+}
+
 func (s ServerClient) UpdateAlbum(ctx context.Context, albumID string, albumData types.AlbumUpdate) error {
 	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID)
 	if err != nil {

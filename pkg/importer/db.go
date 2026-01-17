@@ -18,7 +18,7 @@ func (i Importer) addAlbumTracks(ctx context.Context, tx database.DatabaseFace, 
 			return err
 		}
 		if !exists {
-			if err := tx.AddAlbumTrack(ctx, at); err != nil {
+			if _, err := tx.AddAlbumTrack(ctx, at); err != nil {
 				return err
 			}
 		}

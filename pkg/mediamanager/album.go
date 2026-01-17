@@ -73,6 +73,15 @@ func (m MediaManager) GetAlbumTrack(ctx context.Context, albumID uuid.UUID, disc
 	return albumArtist, nil
 }
 
+func (m MediaManager) GetAlbumTrackByID(ctx context.Context, id uuid.UUID) (types.AlbumTrack, error) {
+	albumArtist, err := m.db.GetAlbumTrackByID(ctx, id)
+	if err != nil {
+		return types.AlbumTrack{}, err
+	}
+
+	return albumArtist, nil
+}
+
 func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumData types.AlbumUpdate) error {
 	tx, err := m.db.Begin(ctx)
 	if err != nil {

@@ -73,11 +73,14 @@ type DatabaseFace interface {
 	MediaFileExists(ctx context.Context, ID uuid.UUID) (bool, error)
 	UpdateMediaFile(ctx context.Context, mf types.MediaFile) error
 
-	AddAlbumTrack(ctx context.Context, at types.AlbumTrack) error
+	AddAlbumTrack(ctx context.Context, at types.AlbumTrack) (uuid.UUID, error)
 	AlbumTrackExists(ctx context.Context, albumID uuid.UUID, trackID uuid.UUID) (bool, error)
 	AlbumTrackExistsByPos(ctx context.Context, albumID uuid.UUID, discNumber, trackNumber int) (bool, error)
-	ListUpdatedAlbumTracks(ctx context.Context, since time.Time) (albumTracks []types.AlbumTrackKey, err error)
+	AlbumTrackExistsByID(ctx context.Context, id uuid.UUID) (bool, error)
+	ListUpdatedAlbumTracks(ctx context.Context, since time.Time) (albumTracks []uuid.UUID, err error)
 	GetAlbumTrack(ctx context.Context, albumID uuid.UUID, discNumber, trackNumber int) (albumTrack types.AlbumTrack, err error)
+	GetAlbumTrackByID(ctx context.Context, id uuid.UUID) (albumTrack types.AlbumTrack, err error)
+	GetAlbumTrackFromAlbumAndTrack(ctx context.Context, albumID, trackID uuid.UUID) (albumTrack types.AlbumTrack, err error)
 	UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) error
 
 	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) (uuid.UUID, error)

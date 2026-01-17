@@ -505,15 +505,15 @@ func (s Syncer) syncAlbumArtists(ctx context.Context, tx database.DatabaseFace, 
 	return created, updated, nil
 }
 
-func (s Syncer) syncAlbumTracks(ctx context.Context, tx database.DatabaseFace, albumTracks []types.AlbumTrackKey) (created, updated int, err error) {
+func (s Syncer) syncAlbumTracks(ctx context.Context, tx database.DatabaseFace, albumTracks []uuid.UUID) (created, updated int, err error) {
 	for _, at := range albumTracks {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing album track '%s'", at.AlbumID.String()))
-		exists, err := tx.AlbumTrackExistsByPos(ctx, at.AlbumID, at.DiscNumber, at.TrackNumber)
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing album track '%s'", at.String()))
+		exists, err := tx.AlbumTrackExistsByID(ctx, at)
 		if err != nil {
 			return 0, 0, err
 		}
 
-		albumTrack, err := s.sc.GetAlbumTrack(ctx, at.AlbumID, at.DiscNumber, at.TrackNumber)
+		albumTrack, err := s.sc.GetAlbumTrackByID(ctx, at)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -524,7 +524,7 @@ func (s Syncer) syncAlbumTracks(ctx context.Context, tx database.DatabaseFace, a
 			}
 			updated += 1
 		} else {
-			if err = tx.AddAlbumTrack(ctx, albumTrack); err != nil {
+			if _, err = tx.AddAlbumTrack(ctx, albumTrack); err != nil {
 				return 0, 0, err
 			}
 			created += 1

@@ -192,9 +192,11 @@ func (d Database) GetAlbumArtistByID(ctx context.Context, id uuid.UUID) (albumAr
 }
 
 func (d Database) UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist) error {
+	aa.UpdatedAt = time.Now()
 	query := `
         UPDATE album_artists SET
             position = :position,
+            updated_at = :updated_at
         WHERE
             album_id = :album_id
             AND artist_id = :artist_id

@@ -32,3 +32,16 @@ func (s ServerClient) ListTracksByAlbum(ctx context.Context, albumID string) (tr
 
 	return tracks, nil
 }
+
+func (s ServerClient) UpdateTrack(ctx context.Context, id string, data types.TrackUpdate) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "tracks", id)
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPutJson(ctx, u, data, nil); err != nil {
+		return err
+	}
+
+	return nil
+}

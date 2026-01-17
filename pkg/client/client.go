@@ -175,6 +175,14 @@ func (c Client) UploadAlbumImage(ctx context.Context, id string, img serverclien
 	return c.sc.UploadAlbumImage(ctx, id, img)
 }
 
+func (c Client) UpdateTrack(ctx context.Context, id uuid.UUID, track types.TrackUpdate) error {
+	err := c.sc.UpdateTrack(ctx, id.String(), track)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c Client) UploadArtistImage(ctx context.Context, artistID string, img serverclient.ImageUpload) error {
 	return c.sc.UploadArtistImage(ctx, artistID, img)
 }

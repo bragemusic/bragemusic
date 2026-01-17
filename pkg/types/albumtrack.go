@@ -7,6 +7,7 @@ import (
 )
 
 type AlbumTrack struct {
+	ID          uuid.UUID `db:"id" json:"id"`
 	AlbumID     uuid.UUID `db:"album_id" json:"album_id"`
 	TrackID     uuid.UUID `db:"track_id" json:"track_id"`
 	DiscNumber  int       `db:"disc_number" json:"disc_number"`
