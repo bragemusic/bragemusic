@@ -35,3 +35,10 @@ type TrackDetailed struct {
 	CreatedAt     time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt     time.Time  `db:"updated_at" json:"updated_at"`
 }
+
+type TrackUpdate struct {
+	Track
+	DiscNumber  int `json:"disc_number"`
+	TrackNumber int `json:"track_number"`
+	// Artists     []uuid.UUID `json:"artists"`
+}
