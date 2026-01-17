@@ -1,6 +1,7 @@
 -- migrate:up
 
 CREATE TABLE IF NOT EXISTS album_tracks (
+    id              TEXT NOT NULL,
     album_id        TEXT NOT NULL,
     track_id        TEXT NOT NULL,
     disc_number     INTEGER NOT NULL DEFAULT 1,
@@ -9,7 +10,7 @@ CREATE TABLE IF NOT EXISTS album_tracks (
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
 
-    PRIMARY KEY (album_id, disc_number, track_number),
+    UNIQUE (album_id, track_id),
 
     FOREIGN KEY (album_id)
       REFERENCES albums(id)

@@ -38,7 +38,8 @@ type TrackDetailed struct {
 
 type TrackUpdate struct {
 	Track
-	DiscNumber  int `json:"disc_number"`
-	TrackNumber int `json:"track_number"`
+	DiscNumber  int       `json:"disc_number"`
+	TrackNumber int       `json:"track_number"`
+	AlbumID     uuid.UUID `json:"album_id"`
 	// Artists     []uuid.UUID `json:"artists"`
 }

@@ -2,7 +2,6 @@ package mediamanager
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
@@ -60,54 +59,24 @@ func (m MediaManager) UpdateTrack(ctx context.Context, trackID uuid.UUID, trackD
 	trackData.ID = trackID
 	trackData.MediaFile = existingTrack.MediaFile
 
-	fmt.Println(trackData.DiscNumber, trackData.TrackNumber)
-
-	// title = :title,
-	// musicbrainz_id = :musicbrainz_id,
-	// genre = :genre,
-	// comment = :comment,
-	// media_file = :media_file,
-	// updated_at = :updated_at
 	err = tx.UpdateTrack(ctx, trackData.Track)
 	if err != nil {
 		return err
 	}
 
-	// existingAlbumArtists, err := tx.ListAlbumArtistsByAlbumID(ctx, albumID)
-	// if err != nil {
-	// 	return err
-	// }
+	albumTrack, err := tx.GetAlbumTrackFromAlbumAndTrack(ctx, trackData.AlbumID, trackData.ID)
+	if err != nil {
+		return err
+	}
 
-	// for _, artistID := range albumData.Artists {
-	// 	exists := lo.ContainsBy(existingAlbumArtists, func(item types.AlbumArtist) bool {
-	// 		return item.ArtistID == artistID
-	// 	})
+	if albumTrack.DiscNumber != trackData.DiscNumber || albumTrack.TrackNumber != trackData.TrackNumber {
+		albumTrack.DiscNumber = trackData.DiscNumber
+		albumTrack.TrackNumber = trackData.TrackNumber
 
-	// 	if !exists {
-	// 		aa := types.AlbumArtist{
-	// 			AlbumID:  albumID,
-	// 			ArtistID: artistID,
-	// 			Role:     types.ArPrimary,
-	// 			// FIXME: Need to do something about positions
-	// 			Position: 0,
-	// 		}
-	// 		if _, err := tx.AddAlbumArtist(ctx, aa); err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// }
-
-	// for _, existingAa := range existingAlbumArtists {
-	// 	exists := lo.ContainsBy(albumData.Artists, func(item uuid.UUID) bool {
-	// 		return item == existingAa.ArtistID
-	// 	})
-
-	// 	if !exists {
-	// 		if err := tx.DeleteAlbumArtist(ctx, existingAa.ID); err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// }
+		if err = tx.UpdateAlbumTrack(ctx, albumTrack); err != nil {
+			return err
+		}
+	}
 
 	return tx.Commit()
 }

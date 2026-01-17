@@ -9,7 +9,15 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddAlbumTrack(ctx context.Context, at types.AlbumTrack) error {
+func (d Database) AddAlbumTrack(ctx context.Context, at types.AlbumTrack) (uuid.UUID, error) {
+	if at.ID == uuid.Nil {
+		uid, err := uuid.NewV4()
+		if err != nil {
+			return uuid.Nil, err
+		}
+		at.ID = uid
+	}
+
 	now := time.Now()
 
 	if at.CreatedAt.IsZero() {
@@ -22,15 +30,16 @@ func (d Database) AddAlbumTrack(ctx context.Context, at types.AlbumTrack) error 
 
 	query := `
         INSERT INTO album_tracks (
-            album_id, track_id, disc_number, track_number,
+            id, album_id, track_id, disc_number, track_number,
             created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, ?);
     `
 
 	_, err := d.ext.ExecContext(
 		ctx,
 		query,
+		at.ID,
 		at.AlbumID,
 		at.TrackID,
 		at.DiscNumber,
@@ -39,10 +48,10 @@ func (d Database) AddAlbumTrack(ctx context.Context, at types.AlbumTrack) error 
 		at.UpdatedAt,
 	)
 	if err != nil {
-		return err
+		return uuid.Nil, err
 	}
 
-	return nil
+	return at.ID, nil
 }
 
 func (d Database) AlbumTrackExists(ctx context.Context, albumID uuid.UUID, trackID uuid.UUID) (bool, error) {
@@ -84,12 +93,28 @@ func (d Database) AlbumTrackExistsByPos(ctx context.Context, albumID uuid.UUID, 
 	return exists, nil
 }
 
-func (d Database) ListUpdatedAlbumTracks(ctx context.Context, since time.Time) (albumTracks []types.AlbumTrackKey, err error) {
+func (d Database) AlbumTrackExistsByID(ctx context.Context, id uuid.UUID) (bool, error) {
+	query := `
+		SELECT EXISTS (
+			SELECT 1
+			FROM album_tracks
+			WHERE id = ?
+		);
+	`
+
+	var exists bool
+	err := sqlx.GetContext(ctx, d.ext, &exists, query, id)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}
+
+func (d Database) ListUpdatedAlbumTracks(ctx context.Context, since time.Time) (albumTracks []uuid.UUID, err error) {
 	query := `
 		SELECT
-			album_id,
-            disc_number,
-            track_number
+			id
 		FROM album_tracks
 		WHERE
 			created_at > ?
@@ -120,14 +145,47 @@ func (d Database) GetAlbumTrack(ctx context.Context, albumID uuid.UUID, discNumb
 	return
 }
 
+func (d Database) GetAlbumTrackByID(ctx context.Context, id uuid.UUID) (albumTrack types.AlbumTrack, err error) {
+	query := `
+		SELECT *
+		FROM album_tracks
+		WHERE
+			id = ?;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &albumTrack, query, id)
+	if err != nil {
+		return types.AlbumTrack{}, err
+	}
+
+	return
+}
+
+func (d Database) GetAlbumTrackFromAlbumAndTrack(ctx context.Context, albumID, trackID uuid.UUID) (albumTrack types.AlbumTrack, err error) {
+	query := `
+		SELECT *
+		FROM album_tracks
+		WHERE
+			album_id = ?
+			AND track_id = ?;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &albumTrack, query, albumID, trackID)
+	if err != nil {
+		return types.AlbumTrack{}, err
+	}
+
+	return
+}
+
 func (d Database) UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) error {
+	at.UpdatedAt = time.Now()
 	query := `
         UPDATE album_tracks SET
             track_id = :track_id,
+            disc_number= :disc_number,
+            track_number = :track_number,
+            updated_at = :updated_at
         WHERE
-            album_id = :album_id
-            AND disc_number= :disc_number
-            AND track_number = :track_number;
+            id = :id;
     `
 
 	_, err := sqlx.NamedExecContext(ctx, d.ext, query, at)

@@ -31,6 +31,8 @@ func (s Server) api() http.Handler {
 
 	r.Get("/album-artists/{albumArtistID}", s.getAlbumArtistByID())
 
+	r.Get("/album-tracks/{albumTrackID}", s.getAlbumTrackByID())
+
 	r.Get("/tracks/{trackID}", s.getTrack())
 	r.Put("/tracks/{trackID}", s.updateTrack())
 
