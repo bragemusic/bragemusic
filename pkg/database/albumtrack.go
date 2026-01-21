@@ -176,6 +176,21 @@ func (d Database) GetAlbumTrackFromAlbumAndTrack(ctx context.Context, albumID, t
 	return
 }
 
+func (d Database) ListAlbumTracksByTrackID(ctx context.Context, trackID uuid.UUID) (results []types.AlbumTrack, err error) {
+	query := `
+		SELECT *
+		FROM album_tracks
+		WHERE
+			track_id = ?;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &results, query, trackID)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
+
 func (d Database) UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) error {
 	at.UpdatedAt = time.Now()
 	query := `

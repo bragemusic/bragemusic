@@ -276,6 +276,21 @@ func (d Database) GetTrackFromName(ctx context.Context, albumID uuid.UUID, track
 	return track, nil
 }
 
+func (d Database) ListTracks(ctx context.Context) (tracks []types.Track, err error) {
+	query := `
+        SELECT *
+        FROM tracks
+        ;
+    `
+
+	err = sqlx.SelectContext(ctx, d.ext, &tracks, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return tracks, nil
+}
+
 func (d Database) ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error) {
 	query := `
         SELECT id

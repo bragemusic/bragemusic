@@ -40,6 +40,7 @@ type DatabaseFace interface {
 	GetAlbumFromID(ctx context.Context, id string) (album types.Album, err error)
 	GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (album types.AlbumDetailed, err error)
 	GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]types.Album, error)
+	ListAlbums(ctx context.Context) (albums []types.Album, err error)
 	ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
 	ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error)
 
@@ -62,6 +63,7 @@ type DatabaseFace interface {
 	GetTrackFromID(ctx context.Context, ID string) (track types.Track, err error)
 	GetTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.Track, err error)
 	GetTracksDetailedFromArtistID(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackDetailed, err error)
+	ListTracks(ctx context.Context) (tracks []types.Track, err error)
 	ListAlbumTracksDetailed(ctx context.Context, albumID uuid.UUID) (tracks []types.TrackDetailed, err error)
 	GetTrackFromName(ctx context.Context, albumID uuid.UUID, trackName string) (track types.Track, err error)
 	ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error)
@@ -81,6 +83,7 @@ type DatabaseFace interface {
 	GetAlbumTrack(ctx context.Context, albumID uuid.UUID, discNumber, trackNumber int) (albumTrack types.AlbumTrack, err error)
 	GetAlbumTrackByID(ctx context.Context, id uuid.UUID) (albumTrack types.AlbumTrack, err error)
 	GetAlbumTrackFromAlbumAndTrack(ctx context.Context, albumID, trackID uuid.UUID) (albumTrack types.AlbumTrack, err error)
+	ListAlbumTracksByTrackID(ctx context.Context, trackID uuid.UUID) (results []types.AlbumTrack, err error)
 	UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) error
 
 	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) (uuid.UUID, error)
@@ -105,6 +108,10 @@ type DatabaseFace interface {
 	ListUpdatedPlayHistory(ctx context.Context, since time.Time) (updatedItems []types.PlayHistory, err error)
 
 	ListEntityEvents(ctx context.Context, eventType types.EntityEventType, entityType types.EntityType, since time.Time) (ids []uuid.UUID, err error)
+
+	AddSearchItem(ctx context.Context, si types.SearchItem) error
+	DeleteAllSearchItems(ctx context.Context) error
+	SearchFull(ctx context.Context, searchTerm string, limit int) (results []types.SearchItem, err error)
 
 	AuthFace
 }

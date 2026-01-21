@@ -13,6 +13,7 @@ import (
 	"github.com/bragemusic/core/pkg/filetx"
 	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/importer"
+	"github.com/bragemusic/core/pkg/jobs"
 	"github.com/bragemusic/core/pkg/metasyncer"
 	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/wiki"
@@ -82,4 +83,9 @@ func main() {
 	ctx := context.Background()
 	imp.Run(ctx)
 	ms.Sync(ctx)
+	err = jobs.UpdateSearchItems(ctx, db)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
 }
