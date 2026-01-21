@@ -9,6 +9,7 @@ import (
 	"github.com/bragemusic/core/pkg/audioplayer"
 	"github.com/bragemusic/core/pkg/authclient"
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/jobs"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/migrations"
 	"github.com/bragemusic/core/pkg/server"
@@ -37,6 +38,8 @@ type Client struct {
 	config  Config
 	log     *slog.Logger
 	dbClose func() error
+	// FIXME: This should not be here later. Just now for the search job. when the jobs is its own service it should hold the db
+	db database.DatabaseFace
 
 	// tracks []types.TrackEnhanced
 }
@@ -60,6 +63,10 @@ func (c Client) Sync(ctx context.Context) error {
 	}
 
 	if err := c.sy.SyncItems(ctx); err != nil {
+		return err
+	}
+
+	if err := jobs.UpdateSearchItems(ctx, c.db); err != nil {
 		return err
 	}
 
@@ -195,6 +202,10 @@ func (c Client) GetArtistTopTracks(ctx context.Context, artistID string) ([]type
 	return tracks, nil
 }
 
+func (c Client) SearchFull(ctx context.Context, searchTerm string) (si []types.SearchItem, err error) {
+	return c.mm.SearchFull(ctx, searchTerm)
+}
+
 func (c *Client) StartSyncDaemon(ctx context.Context, done func()) {
 	c.sy.StartSyncDaemon(ctx, done)
 }
@@ -264,6 +275,7 @@ func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c 
 		config:      config,
 		log:         slog.New(slogHandler).With("service", "client"),
 		dbClose:     dbSqlite.Close,
+		db:          db,
 	}
 
 	ap.RegisterPlayCountCallback(c.updatePlayCount)

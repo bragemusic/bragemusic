@@ -166,6 +166,21 @@ func (d Database) GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]
 	return albums, nil
 }
 
+func (d Database) ListAlbums(ctx context.Context) (albums []types.Album, err error) {
+	query := `
+        SELECT *
+        FROM albums
+        ;
+    `
+
+	err = sqlx.SelectContext(ctx, d.ext, &albums, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return albums, nil
+}
+
 func (d Database) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error) {
 	sortByStr := ""
 

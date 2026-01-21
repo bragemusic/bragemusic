@@ -12,6 +12,9 @@ type (
 )
 
 const (
+	EntityArtist      EntityType = "artist"
+	EntityAlbum       EntityType = "album"
+	EntityTrack       EntityType = "track"
 	EntityAlbumArtist EntityType = "album_artist"
 
 	EntityEventDelete EntityEventType = "delete"
