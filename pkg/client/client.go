@@ -110,7 +110,7 @@ func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID string, track
 	return nil
 }
 
-func (c Client) ListArtists(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Artist, error) {
+func (c Client) ListArtists(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.ArtistDetailed, error) {
 	artists, err := c.mm.ListArtists(ctx, sortBy, sortOrder)
 	if err != nil {
 		return nil, err

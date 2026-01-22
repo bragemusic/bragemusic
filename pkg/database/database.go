@@ -44,6 +44,7 @@ type DatabaseFace interface {
 	ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
 	ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error)
 	CountAlbums(ctx context.Context) (int, error)
+	CountAlbumsByArtist(ctx context.Context, artistID uuid.UUID) (int, error)
 
 	AddArtist(ctx context.Context, a types.Artist) (uuid.UUID, error)
 	ArtistExists(ctx context.Context, ID string) (bool, error)
@@ -51,7 +52,7 @@ type DatabaseFace interface {
 	GetArtistFromID(ctx context.Context, id string) (artist types.Artist, err error)
 	GetArtistFromMbID(ctx context.Context, mbID string) (artist types.Artist, err error)
 	GetArtistFromName(ctx context.Context, name string) (artist types.Artist, err error)
-	ListArtists(ctx context.Context, sortBy SortBy, sortOrder SortOrder) (artists []types.Artist, err error)
+	ListArtists(ctx context.Context, sortBy SortBy, sortOrder SortOrder) (artists []types.ArtistDetailed, err error)
 	ListUpdatedArtists(ctx context.Context, since time.Time) (artistIDs []string, err error)
 	ListArtistsWithoutMeta(ctx context.Context) (artists []types.Artist, err error)
 	CountArtists(ctx context.Context) (int, error)
@@ -88,6 +89,7 @@ type DatabaseFace interface {
 	GetAlbumTrackFromAlbumAndTrack(ctx context.Context, albumID, trackID uuid.UUID) (albumTrack types.AlbumTrack, err error)
 	ListAlbumTracksByTrackID(ctx context.Context, trackID uuid.UUID) (results []types.AlbumTrack, err error)
 	UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) error
+	CountTracksByArtist(ctx context.Context, artistID uuid.UUID) (int, error)
 
 	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) (uuid.UUID, error)
 	AlbumArtistExistsByID(ctx context.Context, id uuid.UUID) (bool, error)

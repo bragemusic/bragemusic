@@ -236,3 +236,19 @@ func (d Database) DeleteAlbumArtist(ctx context.Context, id uuid.UUID) error {
 
 	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityAlbumArtist)
 }
+
+func (d Database) CountAlbumsByArtist(ctx context.Context, artistID uuid.UUID) (int, error) {
+	const query = `
+        SELECT COUNT(1)
+        FROM album_artists
+        WHERE artist_id = ?;
+    `
+
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query, artistID).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
