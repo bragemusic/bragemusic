@@ -143,6 +143,10 @@ func (c Client) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy 
 	return albums, nil
 }
 
+func (c Client) CountArtists(ctx context.Context) (int, error) {
+	return c.mm.CountArtists(ctx)
+}
+
 func (c Client) GetAlbum(ctx context.Context, albumID string) (types.AlbumDetailed, error) {
 	uid, err := uuid.FromString(albumID)
 	if err != nil {
@@ -178,6 +182,10 @@ func (c Client) UpdateAlbum(ctx context.Context, id uuid.UUID, album types.Album
 	return nil
 }
 
+func (c Client) CountAlbums(ctx context.Context) (int, error) {
+	return c.mm.CountAlbums(ctx)
+}
+
 func (c Client) UploadAlbumImage(ctx context.Context, id string, img serverclient.ImageUpload) error {
 	return c.sc.UploadAlbumImage(ctx, id, img)
 }
@@ -188,6 +196,10 @@ func (c Client) UpdateTrack(ctx context.Context, id uuid.UUID, track types.Track
 		return err
 	}
 	return nil
+}
+
+func (c Client) CountTracks(ctx context.Context) (int, error) {
+	return c.mm.CountTracks(ctx)
 }
 
 func (c Client) UploadArtistImage(ctx context.Context, artistID string, img serverclient.ImageUpload) error {

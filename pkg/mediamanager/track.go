@@ -80,3 +80,7 @@ func (m MediaManager) UpdateTrack(ctx context.Context, trackID uuid.UUID, trackD
 
 	return tx.Commit()
 }
+
+func (m MediaManager) CountTracks(ctx context.Context) (int, error) {
+	return m.db.CountTracks(ctx)
+}
