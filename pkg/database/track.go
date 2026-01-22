@@ -350,3 +350,18 @@ func (d Database) ListAlbumTracksDetailed(ctx context.Context, albumID uuid.UUID
 
 	return tracks, nil
 }
+
+func (d Database) CountTracks(ctx context.Context) (int, error) {
+	const query = `
+        SELECT COUNT(1)
+        FROM tracks;
+    `
+
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

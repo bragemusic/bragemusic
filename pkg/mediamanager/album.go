@@ -140,3 +140,7 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 
 	return tx.Commit()
 }
+
+func (m MediaManager) CountAlbums(ctx context.Context) (int, error) {
+	return m.db.CountAlbums(ctx)
+}

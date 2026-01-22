@@ -306,3 +306,18 @@ func (d Database) GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (albu
 
 	return album, nil
 }
+
+func (d Database) CountAlbums(ctx context.Context) (int, error) {
+	const query = `
+        SELECT COUNT(1)
+        FROM albums;
+    `
+
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

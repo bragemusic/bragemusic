@@ -43,6 +43,7 @@ type DatabaseFace interface {
 	ListAlbums(ctx context.Context) (albums []types.Album, err error)
 	ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
 	ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error)
+	CountAlbums(ctx context.Context) (int, error)
 
 	AddArtist(ctx context.Context, a types.Artist) (uuid.UUID, error)
 	ArtistExists(ctx context.Context, ID string) (bool, error)
@@ -53,6 +54,7 @@ type DatabaseFace interface {
 	ListArtists(ctx context.Context, sortBy SortBy, sortOrder SortOrder) (artists []types.Artist, err error)
 	ListUpdatedArtists(ctx context.Context, since time.Time) (artistIDs []string, err error)
 	ListArtistsWithoutMeta(ctx context.Context) (artists []types.Artist, err error)
+	CountArtists(ctx context.Context) (int, error)
 
 	AddTrack(ctx context.Context, t types.Track) (uuid.UUID, error)
 	TrackExists(ctx context.Context, ID string) (bool, error)
@@ -67,6 +69,7 @@ type DatabaseFace interface {
 	ListAlbumTracksDetailed(ctx context.Context, albumID uuid.UUID) (tracks []types.TrackDetailed, err error)
 	GetTrackFromName(ctx context.Context, albumID uuid.UUID, trackName string) (track types.Track, err error)
 	ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error)
+	CountTracks(ctx context.Context) (int, error)
 
 	AddMediaFile(ctx context.Context, mf types.MediaFile) (uuid.UUID, error)
 	GetMediaFile(ctx context.Context, id uuid.UUID) (mf types.MediaFile, err error)

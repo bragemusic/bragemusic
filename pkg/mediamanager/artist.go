@@ -35,3 +35,7 @@ func (m MediaManager) UpdateArtist(ctx context.Context, artistID uuid.UUID, arti
 
 	return nil
 }
+
+func (m MediaManager) CountArtists(ctx context.Context) (int, error) {
+	return m.db.CountArtists(ctx)
+}
