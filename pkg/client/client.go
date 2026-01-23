@@ -143,6 +143,15 @@ func (c Client) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy 
 	return albums, nil
 }
 
+func (c Client) ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error) {
+	albums, err := c.mm.ListAlbums(ctx, sortBy, sortOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	return albums, nil
+}
+
 func (c Client) CountArtists(ctx context.Context) (int, error) {
 	return c.mm.CountArtists(ctx)
 }
