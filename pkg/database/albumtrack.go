@@ -206,3 +206,20 @@ func (d Database) UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) err
 	_, err := sqlx.NamedExecContext(ctx, d.ext, query, at)
 	return err
 }
+
+func (d Database) CountTracksByArtist(ctx context.Context, artistID uuid.UUID) (int, error) {
+	const query = `
+		SELECT COUNT(DISTINCT at.track_id)
+		FROM album_artists aa
+		JOIN album_tracks at ON at.album_id = aa.album_id
+		WHERE aa.artist_id = ?;
+	`
+
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query, artistID).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}

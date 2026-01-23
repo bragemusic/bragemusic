@@ -139,7 +139,7 @@ func (d Database) GetArtistFromName(ctx context.Context, name string) (artist ty
 	return
 }
 
-func (d Database) ListArtists(ctx context.Context, sortBy SortBy, sortOrder SortOrder) (artists []types.Artist, err error) {
+func (d Database) ListArtists(ctx context.Context, sortBy SortBy, sortOrder SortOrder) (artists []types.ArtistDetailed, err error) {
 	sortByStr := ""
 
 	switch sortBy {
@@ -160,6 +160,20 @@ func (d Database) ListArtists(ctx context.Context, sortBy SortBy, sortOrder Sort
 	err = sqlx.SelectContext(ctx, d.ext, &artists, query)
 	if err != nil {
 		return nil, err
+	}
+
+	for idx := range artists {
+		albumCnt, err := d.CountAlbumsByArtist(ctx, artists[idx].ID)
+		if err != nil {
+			return nil, err
+		}
+		artists[idx].AlbumCount = albumCnt
+
+		trackCnt, err := d.CountTracksByArtist(ctx, artists[idx].ID)
+		if err != nil {
+			return nil, err
+		}
+		artists[idx].TrackCount = trackCnt
 	}
 
 	return

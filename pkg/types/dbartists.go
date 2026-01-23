@@ -18,3 +18,9 @@ type Artist struct {
 	CreatedAt     time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt     time.Time `db:"updated_at" json:"updated_at"`
 }
+
+type ArtistDetailed struct {
+	Artist
+	AlbumCount int `json:"album_count"`
+	TrackCount int `json:"track_count"`
+}
