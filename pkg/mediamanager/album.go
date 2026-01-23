@@ -36,6 +36,40 @@ func (m MediaManager) ListAlbumsByArtist(ctx context.Context, artistID string, s
 	return albums, nil
 }
 
+func (m MediaManager) ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) (albums []types.AlbumDetailed, err error) {
+	artists, err := m.db.ListArtists(ctx, sortBy, sortOrder)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, artist := range artists {
+		alb, err := m.db.ListAlbumsByArtist(ctx, artist.ID.String(), sortBy, sortOrder)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, album := range alb {
+			_, idx, exists := lo.FindIndexOf(albums, func(item types.AlbumDetailed) bool {
+				return item.ID == album.ID
+			})
+
+			if !exists {
+				album.ArtistNames = append(album.ArtistNames, artist.Name)
+				album.ArtistIDs = append(album.ArtistIDs, artist.ID.String())
+				albums = append(albums, album)
+				continue
+			}
+
+			albums[idx].ArtistNames = append(albums[idx].ArtistNames, artist.Name)
+			albums[idx].ArtistIDs = append(albums[idx].ArtistIDs, artist.ID.String())
+
+		}
+
+	}
+
+	return albums, nil
+}
+
 func (m MediaManager) GetAlbumArtist(ctx context.Context, albumID, artistID, role string) (types.AlbumArtist, error) {
 	albumUID, err := uuid.FromString(albumID)
 	if err != nil {
