@@ -5,10 +5,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/types"
 )
 
 func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st types.SyncState, err error) {
+	user, err := auth.UserFromContext(ctx)
+	if err != nil {
+		return types.SyncState{}, err
+	}
+
 	st.Time = time.Now()
 
 	st.CreatedOrUpdated.Artists, err = m.db.ListUpdatedArtists(ctx, since)
@@ -36,12 +42,22 @@ func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st typ
 		return types.SyncState{}, err
 	}
 
+	st.CreatedOrUpdated.Playlists, err = m.db.ListUpdatedPlaylists(ctx, since, user.ID)
+	if err != nil {
+		return types.SyncState{}, err
+	}
+
 	st.CreatedOrUpdated.MediaFiles, err = m.db.ListUpdatedMediaFiles(ctx, since)
 	if err != nil {
 		return types.SyncState{}, err
 	}
 
 	st.Deleted.AlbumArtists, err = m.db.ListEntityEvents(ctx, types.EntityEventDelete, types.EntityAlbumArtist, since)
+	if err != nil {
+		return types.SyncState{}, err
+	}
+
+	st.Deleted.Playlists, err = m.db.ListEntityEvents(ctx, types.EntityEventDelete, types.EntityPlaylist, since)
 	if err != nil {
 		return types.SyncState{}, err
 	}

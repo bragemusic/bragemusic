@@ -26,7 +26,10 @@ const (
 	SortDesc SortOrder = "DESC"
 )
 
-var ErrNoRowDeleted = errors.New("no row was deleted")
+var (
+	ErrNoRowDeleted = errors.New("no row was deleted")
+	ErrNoUser       = errors.New("no user id provided")
+)
 
 type DatabaseFace interface {
 	Begin(ctx context.Context) (DatabaseFace, error)
@@ -117,6 +120,14 @@ type DatabaseFace interface {
 	AddSearchItem(ctx context.Context, si types.SearchItem) error
 	DeleteAllSearchItems(ctx context.Context) error
 	SearchFull(ctx context.Context, searchTerm string, limit int) (results []types.SearchItem, err error)
+
+	AddPlaylist(ctx context.Context, p types.Playlist) (uuid.UUID, error)
+	DeletePlaylist(ctx context.Context, id, userID uuid.UUID) error
+	GetPlaylist(ctx context.Context, ID, userID uuid.UUID) (plist types.Playlist, err error)
+	ListPlaylists(ctx context.Context, userID uuid.UUID, includePublic bool, sortBy SortBy, sortOrder SortOrder) (playlists []types.Playlist, err error)
+	ListUpdatedPlaylists(ctx context.Context, since time.Time, userID uuid.UUID) (plists []uuid.UUID, err error)
+	PlaylistExistsByID(ctx context.Context, id uuid.UUID) (bool, error)
+	UpdatePlaylist(ctx context.Context, plist types.Playlist) error
 
 	AuthFace
 }

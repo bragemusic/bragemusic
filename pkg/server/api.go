@@ -39,6 +39,9 @@ func (s Server) api() http.Handler {
 	r.Get("/mediafiles/{mediafileID}", s.getMediaFile())
 	r.Get("/mediafiles/{mediafileID}/file", s.getMediaFileFile())
 
+	r.Post("/playlists", s.addPlaylist())
+	r.Get("/playlists/{playlistID}", s.getPlaylist())
+
 	r.Post("/sync", s.sync())
 	r.Post("/sync/play-history", s.syncPlayHistory())
 

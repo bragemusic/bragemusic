@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/server"
@@ -208,6 +209,11 @@ func (s *Syncer) Sync(ctx context.Context) error {
 	}
 
 	_, _, err = s.syncAlbumTracks(ctx, tx, syncState.CreatedOrUpdated.AlbumTracks)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = s.syncPlaylists(ctx, tx, syncState.CreatedOrUpdated.Playlists, syncState.Deleted.Playlists)
 	if err != nil {
 		return err
 	}
@@ -525,6 +531,47 @@ func (s Syncer) syncAlbumTracks(ctx context.Context, tx database.DatabaseFace, a
 			updated += 1
 		} else {
 			if _, err = tx.AddAlbumTrack(ctx, albumTrack); err != nil {
+				return 0, 0, err
+			}
+			created += 1
+		}
+	}
+
+	return created, updated, nil
+}
+
+func (s Syncer) syncPlaylists(ctx context.Context, tx database.DatabaseFace, added []uuid.UUID, deleted []uuid.UUID) (created, updated int, err error) {
+	user, err := auth.UserFromContext(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	for _, d := range deleted {
+		s.log.DebugContext(ctx, fmt.Sprintf("deleting playlist '%s'", d.String()))
+		if err := tx.DeletePlaylist(ctx, d, user.ID); err != nil {
+			return 0, 0, err
+		}
+	}
+
+	for _, a := range added {
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing playlist '%s'", a.String()))
+		exists, err := tx.PlaylistExistsByID(ctx, a)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		playlist, err := s.sc.GetPlaylist(ctx, a)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		if exists {
+			if err = tx.UpdatePlaylist(ctx, playlist); err != nil {
+				return 0, 0, err
+			}
+			updated += 1
+		} else {
+			if _, err = tx.AddPlaylist(ctx, playlist); err != nil {
 				return 0, 0, err
 			}
 			created += 1

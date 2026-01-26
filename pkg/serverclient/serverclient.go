@@ -113,8 +113,10 @@ func (s ServerClient) doPostJson(ctx context.Context, u string, payload any, tar
 	}
 	defer resp.Body.Close()
 
-	if err := json.NewDecoder(resp.Body).Decode(&target); err != nil {
-		return err
+	if target != nil {
+		if err := json.NewDecoder(resp.Body).Decode(&target); err != nil {
+			return err
+		}
 	}
 
 	return nil

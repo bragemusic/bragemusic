@@ -223,6 +223,28 @@ func (c Client) GetArtistTopTracks(ctx context.Context, artistID string) ([]type
 	return tracks, nil
 }
 
+func (c Client) AddPlaylist(ctx context.Context, playlist types.Playlist) error {
+	err := c.sc.AddPlaylist(ctx, playlist)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c Client) GetPlaylist(ctx context.Context, id string) (types.Playlist, error) {
+	uID, err := uuid.FromString(id)
+	if err != nil {
+		return types.Playlist{}, err
+	}
+
+	return c.mm.GetPlaylist(ctx, uID)
+}
+
+func (c Client) ListPlaylists(ctx context.Context, includePublic bool, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Playlist, error) {
+	return c.mm.ListPlaylists(ctx, includePublic, sortBy, sortOrder)
+}
+
 func (c Client) SearchFull(ctx context.Context, searchTerm string) (si []types.SearchItem, err error) {
 	return c.mm.SearchFull(ctx, searchTerm)
 }

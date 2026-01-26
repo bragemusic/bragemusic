@@ -31,6 +31,7 @@ type SyncData struct {
 	Tracks       []string    `json:"tracks"`
 	AlbumTracks  []uuid.UUID `json:"album_tracks"`
 	AlbumArtists []uuid.UUID `json:"album_artists"`
+	Playlists    []uuid.UUID `json:"playlists"`
 	MediaFiles   []uuid.UUID `json:"media_files"`
 }
 

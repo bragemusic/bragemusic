@@ -16,6 +16,7 @@ const (
 	EntityAlbum       EntityType = "album"
 	EntityTrack       EntityType = "track"
 	EntityAlbumArtist EntityType = "album_artist"
+	EntityPlaylist    EntityType = "playlist"
 
 	EntityEventDelete EntityEventType = "delete"
 )
