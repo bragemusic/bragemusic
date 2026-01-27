@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
 	"github.com/gofrs/uuid/v5"
@@ -52,4 +53,31 @@ func (s Server) getPlaylist() http.HandlerFunc {
 		return http.StatusOK, plist, nil
 	},
 	)
+}
+
+func (s Server) updatePlaylist() http.HandlerFunc {
+	return s.handleVoid(func(w http.ResponseWriter, r *http.Request) (*int, error) {
+		ctx := r.Context()
+
+		id, err := getParameter[uuid.UUID](ctx, "playlistID")
+		if err != nil {
+			return utils.Ptr(http.StatusBadRequest), err
+		}
+
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			return utils.Ptr(http.StatusForbidden), err
+		}
+
+		plist := types.Playlist{}
+		if err := json.NewDecoder(r.Body).Decode(&plist); err != nil {
+			return utils.Ptr(http.StatusBadRequest), err
+		}
+
+		if err := s.mediamgr.UpdatePlaylist(ctx, id, plist, user.ID); err != nil {
+			return utils.Ptr(http.StatusInternalServerError), err
+		}
+
+		return utils.Ptr(http.StatusNoContent), nil
+	})
 }

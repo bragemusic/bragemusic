@@ -56,3 +56,26 @@ func (m MediaManager) ListPlaylists(ctx context.Context, includePublic bool, sor
 
 	return playlists, nil
 }
+
+func (m MediaManager) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist, userID uuid.UUID) error {
+	tx, err := m.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	existingPlist, err := tx.GetPlaylist(ctx, id, userID)
+	if err != nil {
+		return err
+	}
+
+	data.ID = id
+	data.Owner = existingPlist.Owner
+
+	err = tx.UpdatePlaylist(ctx, data)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}

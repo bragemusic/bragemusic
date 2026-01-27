@@ -17,6 +17,7 @@ func (s Server) api() http.Handler {
 	r.Get("/img/*", s.getImage())
 	r.Post("/img/artists/{artistID}", s.addImage(ArtistImage))
 	r.Post("/img/albums/{albumID}", s.addImage(AlbumImage))
+	r.Post("/img/playlists/{playlistID}", s.addImage(PlaylistImage))
 
 	r.Get("/artists", s.listArtists())
 	r.Get("/artists/{artistID}", s.getArtist())
@@ -41,6 +42,7 @@ func (s Server) api() http.Handler {
 
 	r.Post("/playlists", s.addPlaylist())
 	r.Get("/playlists/{playlistID}", s.getPlaylist())
+	r.Put("/playlists/{playlistID}", s.updatePlaylist())
 
 	r.Post("/sync", s.sync())
 	r.Post("/sync/play-history", s.syncPlayHistory())

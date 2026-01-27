@@ -245,6 +245,18 @@ func (c Client) ListPlaylists(ctx context.Context, includePublic bool, sortBy da
 	return c.mm.ListPlaylists(ctx, includePublic, sortBy, sortOrder)
 }
 
+func (c Client) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist) error {
+	err := c.sc.UpdatePlaylist(ctx, id, data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c Client) UploadPlaylistImage(ctx context.Context, id string, img serverclient.ImageUpload) error {
+	return c.sc.UploadPlaylistImage(ctx, id, img)
+}
+
 func (c Client) SearchFull(ctx context.Context, searchTerm string) (si []types.SearchItem, err error) {
 	return c.mm.SearchFull(ctx, searchTerm)
 }
