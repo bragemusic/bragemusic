@@ -81,13 +81,8 @@ func (c *Client) Close() error {
 	return c.dbClose()
 }
 
-func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID string, trackNumber int) error {
-	albumUID, err := uuid.FromString(albumID)
-	if err != nil {
-		return err
-	}
-
-	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumUID)
+func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error {
+	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumID)
 	if err != nil {
 		return err
 	}
@@ -105,7 +100,31 @@ func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID string, track
 		return err
 	}
 
-	c.log.InfoContext(ctx, "started player", "albumID", albumID, "trackNumber", trackNumber)
+	c.log.InfoContext(ctx, "started player", "albumID", albumID.String(), "trackNumber", trackNumber)
+
+	return nil
+}
+
+func (c *Client) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) error {
+	tracks, err := c.mm.ListPlaylistTracks(ctx, playlistID, userID, sortBy, sortOrder)
+	if err != nil {
+		return err
+	}
+
+	pCtx := audioplayer.PlayContext{
+		Type:            audioplayer.PlayContextPlaylist,
+		RefID:           playlistID,
+		Tracks:          tracks,
+		Queue:           []types.TrackDetailed{},
+		CurrentTrackIdx: trackNumber,
+	}
+
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
+	if err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "started player", "playlistID", playlistID.String(), "trackNumber", trackNumber)
 
 	return nil
 }
