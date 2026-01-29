@@ -41,6 +41,28 @@ func (m MediaManager) AddPlaylistTrack(ctx context.Context, playlistID, albumID,
 	return tx.Commit()
 }
 
+func (m MediaManager) DeletePlaylistTrack(ctx context.Context, id, userID uuid.UUID) error {
+	pt, err := m.db.GetPlaylistTrack(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	plist, err := m.db.GetPlaylist(ctx, pt.PlaylistID, userID)
+	if err != nil {
+		return err
+	}
+
+	if plist.Owner != userID {
+		return errors.New("user is not the owner of the selected playlist")
+	}
+
+	if err = m.db.DeletePlaylistTrack(ctx, pt.ID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m MediaManager) GetPlaylistTrack(ctx context.Context, id, userID uuid.UUID) (types.PlaylistTrack, error) {
 	pt, err := m.db.GetPlaylistTrack(ctx, id)
 	if err != nil {

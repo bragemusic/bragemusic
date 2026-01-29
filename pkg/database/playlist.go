@@ -88,6 +88,22 @@ func (d Database) AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack) (
 	return p.ID, nil
 }
 
+func (d Database) CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error) {
+	const query = `
+        SELECT COUNT(1)
+        FROM playlists
+        WHERE owner = ?;
+    `
+
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query, userID).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
 func (d Database) DeletePlaylist(ctx context.Context, id, userID uuid.UUID) error {
 	query := `
 		DELETE FROM playlists
