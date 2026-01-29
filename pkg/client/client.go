@@ -232,6 +232,10 @@ func (c Client) AddPlaylist(ctx context.Context, playlist types.Playlist) error 
 	return nil
 }
 
+func (c Client) AddPlaylistTrack(ctx context.Context, playlistID, albumID, trackID uuid.UUID) error {
+	return c.sc.AddPlaylistTrack(ctx, playlistID, albumID, trackID)
+}
+
 func (c Client) GetPlaylist(ctx context.Context, id string) (types.Playlist, error) {
 	uID, err := uuid.FromString(id)
 	if err != nil {
@@ -243,6 +247,10 @@ func (c Client) GetPlaylist(ctx context.Context, id string) (types.Playlist, err
 
 func (c Client) ListPlaylists(ctx context.Context, includePublic bool, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Playlist, error) {
 	return c.mm.ListPlaylists(ctx, includePublic, sortBy, sortOrder)
+}
+
+func (c Client) ListPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.TrackDetailed, error) {
+	return c.mm.ListPlaylistTracks(ctx, playlistID, userID, sortBy, sortOrder)
 }
 
 func (c Client) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist) error {

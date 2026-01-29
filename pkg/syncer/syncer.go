@@ -218,6 +218,11 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 
+	_, _, err = s.syncPlaylistTracks(ctx, tx, syncState.CreatedOrUpdated.PlaylistTracks, syncState.Deleted.PlaylistTracks)
+	if err != nil {
+		return err
+	}
+
 	if err = s.syncMediaFiles(ctx, tx, syncState.CreatedOrUpdated.MediaFiles); err != nil {
 		return err
 	}
@@ -535,6 +540,49 @@ func (s Syncer) syncAlbumTracks(ctx context.Context, tx database.DatabaseFace, a
 			}
 			created += 1
 		}
+	}
+
+	return created, updated, nil
+}
+
+func (s Syncer) syncPlaylistTracks(ctx context.Context, tx database.DatabaseFace, added []uuid.UUID, deleted []uuid.UUID) (created, updated int, err error) {
+	// user, err := auth.UserFromContext(ctx)
+	// if err != nil {
+	// 	return 0, 0, err
+	// }
+
+	for _, d := range deleted {
+		s.log.DebugContext(ctx, fmt.Sprintf("TODO: deleting playlist_track '%s'", d.String()))
+		// if err := tx.DeletePlaylist(ctx, d, user.ID); err != nil {
+		// 	return 0, 0, err
+		// }
+	}
+
+	for _, a := range added {
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing playlist '%s'", a.String()))
+		exists, err := tx.PlaylistTrackExists(ctx, a)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		pt, err := s.sc.GetPlaylistTrack(ctx, a)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		if exists {
+			// FIXME
+			// if err = tx.UpdatePlaylistTrack(ctx, playlist); err != nil {
+			// 	return 0, 0, err
+			// }
+			// updated += 1
+		} else {
+			if _, err = tx.AddPlaylistTrack(ctx, pt); err != nil {
+				return 0, 0, err
+			}
+			created += 1
+		}
+
 	}
 
 	return created, updated, nil

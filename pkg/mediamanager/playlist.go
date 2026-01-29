@@ -57,6 +57,24 @@ func (m MediaManager) ListPlaylists(ctx context.Context, includePublic bool, sor
 	return playlists, nil
 }
 
+func (m MediaManager) ListPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.TrackDetailed, error) {
+	plist, err := m.db.GetPlaylist(ctx, playlistID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	if plist.Owner != userID {
+		return nil, errors.New("user is not the owner of the selected playlist")
+	}
+
+	tracks, err := m.db.ListPlaylistTracks(ctx, playlistID)
+	if err != nil {
+		return nil, err
+	}
+
+	return tracks, nil
+}
+
 func (m MediaManager) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist, userID uuid.UUID) error {
 	tx, err := m.db.Begin(ctx)
 	if err != nil {

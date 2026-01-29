@@ -122,11 +122,17 @@ type DatabaseFace interface {
 	SearchFull(ctx context.Context, searchTerm string, limit int) (results []types.SearchItem, err error)
 
 	AddPlaylist(ctx context.Context, p types.Playlist) (uuid.UUID, error)
+	AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack) (uuid.UUID, error)
 	DeletePlaylist(ctx context.Context, id, userID uuid.UUID) error
+	DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error
 	GetPlaylist(ctx context.Context, ID, userID uuid.UUID) (plist types.Playlist, err error)
+	GetPlaylistTrack(ctx context.Context, id uuid.UUID) (plistTrack types.PlaylistTrack, err error)
 	ListPlaylists(ctx context.Context, userID uuid.UUID, includePublic bool, sortBy SortBy, sortOrder SortOrder) (playlists []types.Playlist, err error)
+	ListPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (tracks []types.TrackDetailed, err error)
 	ListUpdatedPlaylists(ctx context.Context, since time.Time, userID uuid.UUID) (plists []uuid.UUID, err error)
+	ListUpdatedPlaylistTracks(ctx context.Context, since time.Time, userID uuid.UUID) (plists []uuid.UUID, err error)
 	PlaylistExistsByID(ctx context.Context, id uuid.UUID) (bool, error)
+	PlaylistTrackExists(ctx context.Context, id uuid.UUID) (bool, error)
 	UpdatePlaylist(ctx context.Context, plist types.Playlist) error
 
 	AuthFace

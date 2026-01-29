@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 )
 
 type HealthzStatus string
@@ -43,4 +44,9 @@ type LoginResp struct {
 	Token     string `json:"token"`
 	TokenType string `json:"token_type"`
 	ExpiresIn int    `json:"expires_in"`
+}
+
+type PlaylistTrackReq struct {
+	AlbumID uuid.UUID `json:"album_id"`
+	TrackID uuid.UUID `json:"track_id"`
 }

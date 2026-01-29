@@ -29,6 +29,33 @@ func (s Server) addPlaylist() http.HandlerFunc {
 	})
 }
 
+func (s Server) addPlaylistTrack() http.HandlerFunc {
+	return s.handleVoid(func(w http.ResponseWriter, r *http.Request) (*int, error) {
+		ctx := r.Context()
+
+		plistID, err := getParameter[uuid.UUID](ctx, "playlistID")
+		if err != nil {
+			return utils.Ptr(http.StatusBadRequest), err
+		}
+
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			return utils.Ptr(http.StatusForbidden), err
+		}
+
+		pt := PlaylistTrackReq{}
+		if err := json.NewDecoder(r.Body).Decode(&pt); err != nil {
+			return utils.Ptr(http.StatusBadRequest), err
+		}
+
+		if err := s.mediamgr.AddPlaylistTrack(ctx, plistID, pt.AlbumID, pt.TrackID, user.ID); err != nil {
+			return utils.Ptr(http.StatusInternalServerError), err
+		}
+
+		return utils.Ptr(http.StatusCreated), nil
+	})
+}
+
 func (s Server) getPlaylist() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		ctx := r.Context()
