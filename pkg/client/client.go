@@ -236,6 +236,10 @@ func (c Client) AddPlaylistTrack(ctx context.Context, playlistID, albumID, track
 	return c.sc.AddPlaylistTrack(ctx, playlistID, albumID, trackID)
 }
 
+func (c Client) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error {
+	return c.sc.DeletePlaylistTrack(ctx, id)
+}
+
 func (c Client) GetPlaylist(ctx context.Context, id string) (types.Playlist, error) {
 	uID, err := uuid.FromString(id)
 	if err != nil {

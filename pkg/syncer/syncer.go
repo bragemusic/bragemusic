@@ -552,10 +552,10 @@ func (s Syncer) syncPlaylistTracks(ctx context.Context, tx database.DatabaseFace
 	// }
 
 	for _, d := range deleted {
-		s.log.DebugContext(ctx, fmt.Sprintf("TODO: deleting playlist_track '%s'", d.String()))
-		// if err := tx.DeletePlaylist(ctx, d, user.ID); err != nil {
-		// 	return 0, 0, err
-		// }
+		s.log.DebugContext(ctx, fmt.Sprintf("deleting playlist_track '%s'", d.String()))
+		if err := tx.DeletePlaylistTrack(ctx, d); err != nil {
+			return 0, 0, err
+		}
 	}
 
 	for _, a := range added {

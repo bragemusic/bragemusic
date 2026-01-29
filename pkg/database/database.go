@@ -127,6 +127,7 @@ type DatabaseFace interface {
 	DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error
 	GetPlaylist(ctx context.Context, ID, userID uuid.UUID) (plist types.Playlist, err error)
 	GetPlaylistTrack(ctx context.Context, id uuid.UUID) (plistTrack types.PlaylistTrack, err error)
+	GetPlaylistTrackByPlaylistAndAlbumTrack(ctx context.Context, playlistID, albumTrackID uuid.UUID) (plistTrack types.PlaylistTrack, err error)
 	ListPlaylists(ctx context.Context, userID uuid.UUID, includePublic bool, sortBy SortBy, sortOrder SortOrder) (playlists []types.Playlist, err error)
 	ListPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (tracks []types.TrackDetailed, err error)
 	ListUpdatedPlaylists(ctx context.Context, since time.Time, userID uuid.UUID) (plists []uuid.UUID, err error)

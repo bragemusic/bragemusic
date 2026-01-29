@@ -152,6 +152,22 @@ func (d Database) GetPlaylistTrack(ctx context.Context, id uuid.UUID) (plistTrac
 	return
 }
 
+func (d Database) GetPlaylistTrackByPlaylistAndAlbumTrack(ctx context.Context, playlistID, albumTrackID uuid.UUID) (plistTrack types.PlaylistTrack, err error) {
+	query := `
+        SELECT *
+        FROM playlist_tracks
+        WHERE playlist_id = ?
+          AND album_track_id = ?
+        LIMIT 1;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &plistTrack, query, playlistID, albumTrackID)
+	if err != nil {
+		return types.PlaylistTrack{}, err
+	}
+
+	return
+}
+
 func (d Database) ListPlaylists(ctx context.Context, userID uuid.UUID, includePublic bool, sortBy SortBy, sortOrder SortOrder) (playlists []types.Playlist, err error) {
 	sortByStr := ""
 
@@ -200,7 +216,8 @@ func (d Database) ListPlaylistTracks(ctx context.Context, playlistID uuid.UUID) 
             t.comment,
             t.created_at,
             t.updated_at,
-            COALESCE(tp.play_count, 0) AS play_count
+            COALESCE(tp.play_count, 0) AS play_count,
+            pt.id as context_id
         FROM playlist_tracks pt
         JOIN album_tracks at ON at.id = pt.album_track_id
         JOIN tracks t ON t.id = at.track_id

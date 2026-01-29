@@ -51,6 +51,21 @@ func (s ServerClient) do(ctx context.Context, req *http.Request) (*http.Response
 	return resp, nil
 }
 
+func (s ServerClient) doDelete(ctx context.Context, u string) error {
+	req, err := http.NewRequest(http.MethodDelete, u, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := s.do(ctx, req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
+}
+
 func (s ServerClient) doGetJson(ctx context.Context, u string, target any) error {
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
