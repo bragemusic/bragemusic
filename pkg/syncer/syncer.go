@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/server"
@@ -208,6 +209,16 @@ func (s *Syncer) Sync(ctx context.Context) error {
 	}
 
 	_, _, err = s.syncAlbumTracks(ctx, tx, syncState.CreatedOrUpdated.AlbumTracks)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = s.syncPlaylists(ctx, tx, syncState.CreatedOrUpdated.Playlists, syncState.Deleted.Playlists)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = s.syncPlaylistTracks(ctx, tx, syncState.CreatedOrUpdated.PlaylistTracks, syncState.Deleted.PlaylistTracks)
 	if err != nil {
 		return err
 	}
@@ -528,6 +539,117 @@ func (s Syncer) syncAlbumTracks(ctx context.Context, tx database.DatabaseFace, a
 				return 0, 0, err
 			}
 			created += 1
+		}
+	}
+
+	return created, updated, nil
+}
+
+func (s Syncer) syncPlaylistTracks(ctx context.Context, tx database.DatabaseFace, added []uuid.UUID, deleted []uuid.UUID) (created, updated int, err error) {
+	// user, err := auth.UserFromContext(ctx)
+	// if err != nil {
+	// 	return 0, 0, err
+	// }
+
+	for _, d := range deleted {
+		s.log.DebugContext(ctx, fmt.Sprintf("deleting playlist_track '%s'", d.String()))
+		if err := tx.DeletePlaylistTrack(ctx, d); err != nil {
+			return 0, 0, err
+		}
+	}
+
+	for _, a := range added {
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing playlist '%s'", a.String()))
+		exists, err := tx.PlaylistTrackExists(ctx, a)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		pt, err := s.sc.GetPlaylistTrack(ctx, a)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		if exists {
+			// FIXME
+			// if err = tx.UpdatePlaylistTrack(ctx, playlist); err != nil {
+			// 	return 0, 0, err
+			// }
+			// updated += 1
+		} else {
+			if _, err = tx.AddPlaylistTrack(ctx, pt); err != nil {
+				return 0, 0, err
+			}
+			created += 1
+		}
+
+	}
+
+	return created, updated, nil
+}
+
+func (s Syncer) syncPlaylists(ctx context.Context, tx database.DatabaseFace, added []uuid.UUID, deleted []uuid.UUID) (created, updated int, err error) {
+	user, err := auth.UserFromContext(ctx)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	for _, d := range deleted {
+		s.log.DebugContext(ctx, fmt.Sprintf("deleting playlist '%s'", d.String()))
+		if err := tx.DeletePlaylist(ctx, d, user.ID); err != nil {
+			return 0, 0, err
+		}
+	}
+
+	for _, a := range added {
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing playlist '%s'", a.String()))
+		exists, err := tx.PlaylistExistsByID(ctx, a)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		playlist, err := s.sc.GetPlaylist(ctx, a)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		if exists {
+			if err = tx.UpdatePlaylist(ctx, playlist); err != nil {
+				return 0, 0, err
+			}
+			updated += 1
+		} else {
+			if _, err = tx.AddPlaylist(ctx, playlist); err != nil {
+				return 0, 0, err
+			}
+			created += 1
+		}
+
+		for _, size := range []imagemagick.ImageSize{imagemagick.Size320, imagemagick.Size640, imagemagick.Size1024, imagemagick.Size1600, imagemagick.Size2400} {
+			filename := filepath.Join(s.imgDir, "playlists", a.String(), fmt.Sprintf("%d.jpg", size))
+
+			if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
+				return 0, 0, err
+			}
+
+			dst, err := os.Create(filename)
+			if err != nil {
+				return 0, 0, err
+			}
+
+			s.log.DebugContext(ctx, fmt.Sprintf("downloading playlist image '%s' to '%s'", a.String(), filename))
+
+			if err = s.sc.DownloadPlaylistImage(ctx, a, size, dst); err != nil {
+				serr, ok := err.(serverclient.ErrStatus)
+				if !ok || serr.Status >= 500 {
+					dst.Close()
+					return 0, 0, err
+				}
+			}
+
+			if err = dst.Close(); err != nil {
+				return 0, 0, err
+			}
 		}
 	}
 

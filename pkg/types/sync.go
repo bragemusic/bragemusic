@@ -26,12 +26,14 @@ type SyncState struct {
 }
 
 type SyncData struct {
-	Artists      []string    `json:"artists"`
-	Albums       []string    `json:"albums"`
-	Tracks       []string    `json:"tracks"`
-	AlbumTracks  []uuid.UUID `json:"album_tracks"`
-	AlbumArtists []uuid.UUID `json:"album_artists"`
-	MediaFiles   []uuid.UUID `json:"media_files"`
+	Artists        []string    `json:"artists"`
+	Albums         []string    `json:"albums"`
+	Tracks         []string    `json:"tracks"`
+	AlbumTracks    []uuid.UUID `json:"album_tracks"`
+	AlbumArtists   []uuid.UUID `json:"album_artists"`
+	Playlists      []uuid.UUID `json:"playlists"`
+	PlaylistTracks []uuid.UUID `json:"playlist_tracks"`
+	MediaFiles     []uuid.UUID `json:"media_files"`
 }
 
 type DBSyncState struct {

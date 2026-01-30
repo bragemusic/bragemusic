@@ -12,10 +12,12 @@ type (
 )
 
 const (
-	EntityArtist      EntityType = "artist"
-	EntityAlbum       EntityType = "album"
-	EntityTrack       EntityType = "track"
-	EntityAlbumArtist EntityType = "album_artist"
+	EntityArtist        EntityType = "artist"
+	EntityAlbum         EntityType = "album"
+	EntityTrack         EntityType = "track"
+	EntityAlbumArtist   EntityType = "album_artist"
+	EntityPlaylist      EntityType = "playlist"
+	EntityPlaylistTrack EntityType = "playlist_track"
 
 	EntityEventDelete EntityEventType = "delete"
 )

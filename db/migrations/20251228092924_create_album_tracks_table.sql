@@ -1,7 +1,7 @@
 -- migrate:up
 
 CREATE TABLE IF NOT EXISTS album_tracks (
-    id              TEXT NOT NULL,
+    id              TEXT PRIMARY KEY,
     album_id        TEXT NOT NULL,
     track_id        TEXT NOT NULL,
     disc_number     INTEGER NOT NULL DEFAULT 1,

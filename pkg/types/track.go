@@ -32,6 +32,7 @@ type TrackDetailed struct {
 	Comment       *string    `db:"comment" json:"comment,omitempty"`
 	MediaFile     *MediaFile `db:"media_file" json:"media_file"`
 	PlayCount     int        `db:"play_count" json:"play_count"`
+	ContextID     *uuid.UUID `db:"context_id" json:"context_id" ts_type:"string"`
 	CreatedAt     time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt     time.Time  `db:"updated_at" json:"updated_at"`
 }

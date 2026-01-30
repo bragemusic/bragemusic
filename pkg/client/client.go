@@ -81,13 +81,8 @@ func (c *Client) Close() error {
 	return c.dbClose()
 }
 
-func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID string, trackNumber int) error {
-	albumUID, err := uuid.FromString(albumID)
-	if err != nil {
-		return err
-	}
-
-	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumUID)
+func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error {
+	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumID)
 	if err != nil {
 		return err
 	}
@@ -105,7 +100,31 @@ func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID string, track
 		return err
 	}
 
-	c.log.InfoContext(ctx, "started player", "albumID", albumID, "trackNumber", trackNumber)
+	c.log.InfoContext(ctx, "started player", "albumID", albumID.String(), "trackNumber", trackNumber)
+
+	return nil
+}
+
+func (c *Client) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) error {
+	tracks, err := c.mm.ListPlaylistTracks(ctx, playlistID, userID, sortBy, sortOrder)
+	if err != nil {
+		return err
+	}
+
+	pCtx := audioplayer.PlayContext{
+		Type:            audioplayer.PlayContextPlaylist,
+		RefID:           playlistID,
+		Tracks:          tracks,
+		Queue:           []types.TrackDetailed{},
+		CurrentTrackIdx: trackNumber,
+	}
+
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
+	if err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "started player", "playlistID", playlistID.String(), "trackNumber", trackNumber)
 
 	return nil
 }
@@ -221,6 +240,64 @@ func (c Client) GetArtistTopTracks(ctx context.Context, artistID string) ([]type
 		return nil, err
 	}
 	return tracks, nil
+}
+
+func (c Client) AddPlaylist(ctx context.Context, playlist types.Playlist) error {
+	err := c.sc.AddPlaylist(ctx, playlist)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c Client) AddPlaylistTrack(ctx context.Context, playlistID, albumID, trackID uuid.UUID) error {
+	return c.sc.AddPlaylistTrack(ctx, playlistID, albumID, trackID)
+}
+
+func (c Client) CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error) {
+	return c.mm.CountPlaylists(ctx, userID)
+}
+
+func (c Client) CountPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID) (int, error) {
+	return c.mm.CountPlaylistTracks(ctx, playlistID, userID)
+}
+
+func (c Client) DeletePlaylist(ctx context.Context, id uuid.UUID) error {
+	return c.sc.DeletePlaylist(ctx, id)
+}
+
+func (c Client) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error {
+	return c.sc.DeletePlaylistTrack(ctx, id)
+}
+
+func (c Client) GetPlaylist(ctx context.Context, id string) (types.Playlist, error) {
+	uID, err := uuid.FromString(id)
+	if err != nil {
+		return types.Playlist{}, err
+	}
+
+	return c.mm.GetPlaylist(ctx, uID)
+}
+
+func (c Client) ListPlaylists(ctx context.Context, includePublic bool, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Playlist, error) {
+	return c.mm.ListPlaylists(ctx, includePublic, sortBy, sortOrder)
+}
+
+func (c Client) ListPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.TrackDetailed, error) {
+	return c.mm.ListPlaylistTracks(ctx, playlistID, userID, sortBy, sortOrder)
+}
+
+func (c Client) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist) error {
+	err := c.sc.UpdatePlaylist(ctx, id, data)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c Client) UploadPlaylistImage(ctx context.Context, id string, img serverclient.ImageUpload) error {
+	return c.sc.UploadPlaylistImage(ctx, id, img)
 }
 
 func (c Client) SearchFull(ctx context.Context, searchTerm string) (si []types.SearchItem, err error) {

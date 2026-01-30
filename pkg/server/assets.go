@@ -16,8 +16,9 @@ import (
 type ImageType string
 
 const (
-	ArtistImage ImageType = "artist"
-	AlbumImage  ImageType = "album"
+	ArtistImage   ImageType = "artist"
+	AlbumImage    ImageType = "album"
+	PlaylistImage ImageType = "playlist"
 )
 
 func (s Server) getImage() http.HandlerFunc {
@@ -49,6 +50,11 @@ func (s Server) addImage(imageType ImageType) http.HandlerFunc {
 			}
 		case AlbumImage:
 			assetID, err = getParameter[uuid.UUID](ctx, "albumID")
+			if err != nil {
+				return utils.Ptr(http.StatusBadRequest), err
+			}
+		case PlaylistImage:
+			assetID, err = getParameter[uuid.UUID](ctx, "playlistID")
 			if err != nil {
 				return utils.Ptr(http.StatusBadRequest), err
 			}
@@ -93,6 +99,10 @@ func (s Server) addImage(imageType ImageType) http.HandlerFunc {
 			}
 		case AlbumImage:
 			if err = s.mediamgr.AddAlbumImage(ctx, orgImgPath, assetID); err != nil {
+				return utils.Ptr(http.StatusInternalServerError), err
+			}
+		case PlaylistImage:
+			if err = s.mediamgr.AddPlaylistImage(ctx, orgImgPath, assetID); err != nil {
 				return utils.Ptr(http.StatusInternalServerError), err
 			}
 		}

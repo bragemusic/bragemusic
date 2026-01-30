@@ -26,7 +26,10 @@ const (
 	SortDesc SortOrder = "DESC"
 )
 
-var ErrNoRowDeleted = errors.New("no row was deleted")
+var (
+	ErrNoRowDeleted = errors.New("no row was deleted")
+	ErrNoUser       = errors.New("no user id provided")
+)
 
 type DatabaseFace interface {
 	Begin(ctx context.Context) (DatabaseFace, error)
@@ -118,6 +121,23 @@ type DatabaseFace interface {
 	DeleteAllSearchItems(ctx context.Context) error
 	SearchFull(ctx context.Context, searchTerm string, limit int) (results []types.SearchItem, err error)
 
+	AddPlaylist(ctx context.Context, p types.Playlist) (uuid.UUID, error)
+	AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack) (uuid.UUID, error)
+	CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error)
+	CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error)
+	DeletePlaylist(ctx context.Context, id, userID uuid.UUID) error
+	DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error
+	GetPlaylist(ctx context.Context, ID, userID uuid.UUID) (plist types.Playlist, err error)
+	GetPlaylistTrack(ctx context.Context, id uuid.UUID) (plistTrack types.PlaylistTrack, err error)
+	GetPlaylistTrackByPlaylistAndAlbumTrack(ctx context.Context, playlistID, albumTrackID uuid.UUID) (plistTrack types.PlaylistTrack, err error)
+	ListPlaylists(ctx context.Context, userID uuid.UUID, includePublic bool, sortBy SortBy, sortOrder SortOrder) (playlists []types.Playlist, err error)
+	ListPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (tracks []types.TrackDetailed, err error)
+	ListUpdatedPlaylists(ctx context.Context, since time.Time, userID uuid.UUID) (plists []uuid.UUID, err error)
+	ListUpdatedPlaylistTracks(ctx context.Context, since time.Time, userID uuid.UUID) (plists []uuid.UUID, err error)
+	PlaylistExistsByID(ctx context.Context, id uuid.UUID) (bool, error)
+	PlaylistTrackExists(ctx context.Context, id uuid.UUID) (bool, error)
+	UpdatePlaylist(ctx context.Context, plist types.Playlist) error
+
 	AuthFace
 }
 
@@ -164,14 +184,18 @@ func (d Database) Rollback() error {
 func New(db *sqlx.DB) (Database, error) {
 	sqlite3conn := db.Driver().(*sqlite3.SQLiteDriver)
 	sqlite3conn.ConnectHook = func(conn *sqlite3.SQLiteConn) error {
-		return conn.RegisterFunc("normalize", normalizeForCompare, true)
+		if err := conn.RegisterFunc("normalize", normalizeForCompare, true); err != nil {
+			return err
+		}
+
+		// Enable foreign key enforcement on every connection
+		if _, err := conn.Exec("PRAGMA foreign_keys = ON;", nil); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
-	// Allows for cascade deleting of foreign rows (user related at the moment)
-	_, err := db.Exec("PRAGMA foreign_keys = ON;")
-	if err != nil {
-		return Database{}, err
-	}
 	// db.Exec("PRAGMA journal_mode = WAL;")
 	// db.Exec("PRAGMA synchronous = NORMAL;") // optional, faster writes
 	// db.SetMaxOpenConns(1)
