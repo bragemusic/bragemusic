@@ -17,6 +17,10 @@ CREATE TABLE IF NOT EXISTS playlist_tracks (
     created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
 
+    FOREIGN KEY (playlist_id)
+      REFERENCES playlists(id)
+      ON DELETE CASCADE,
+
     FOREIGN KEY (album_track_id)
       REFERENCES album_tracks(id)
       ON DELETE CASCADE

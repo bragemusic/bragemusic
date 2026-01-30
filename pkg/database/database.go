@@ -184,14 +184,18 @@ func (d Database) Rollback() error {
 func New(db *sqlx.DB) (Database, error) {
 	sqlite3conn := db.Driver().(*sqlite3.SQLiteDriver)
 	sqlite3conn.ConnectHook = func(conn *sqlite3.SQLiteConn) error {
-		return conn.RegisterFunc("normalize", normalizeForCompare, true)
+		if err := conn.RegisterFunc("normalize", normalizeForCompare, true); err != nil {
+			return err
+		}
+
+		// Enable foreign key enforcement on every connection
+		if _, err := conn.Exec("PRAGMA foreign_keys = ON;", nil); err != nil {
+			return err
+		}
+
+		return nil
 	}
 
-	// Allows for cascade deleting of foreign rows (user related at the moment)
-	_, err := db.Exec("PRAGMA foreign_keys = ON;")
-	if err != nil {
-		return Database{}, err
-	}
 	// db.Exec("PRAGMA journal_mode = WAL;")
 	// db.Exec("PRAGMA synchronous = NORMAL;") // optional, faster writes
 	// db.SetMaxOpenConns(1)

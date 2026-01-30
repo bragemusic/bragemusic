@@ -56,6 +56,37 @@ func (s Server) addPlaylistTrack() http.HandlerFunc {
 	})
 }
 
+func (s Server) deletePlaylist() http.HandlerFunc {
+	return s.handleVoid(func(w http.ResponseWriter, r *http.Request) (*int, error) {
+		ctx := r.Context()
+
+		pID, err := getParameter[uuid.UUID](ctx, "playlistID")
+		if err != nil {
+			return utils.Ptr(http.StatusBadRequest), err
+		}
+
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			return utils.Ptr(int(http.StatusForbidden)), err
+		}
+
+		err = s.mediamgr.DeletePlaylist(ctx, pID, user.ID)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return utils.Ptr(http.StatusBadRequest), ErrIDNotFound{
+					idKey: "playlistID",
+					err:   err,
+				}
+			} else {
+				return utils.Ptr(http.StatusInternalServerError), err
+			}
+		}
+
+		return utils.Ptr(http.StatusNoContent), nil
+	},
+	)
+}
+
 func (s Server) getPlaylist() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		ctx := r.Context()

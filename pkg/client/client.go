@@ -263,6 +263,10 @@ func (c Client) CountPlaylistTracks(ctx context.Context, playlistID, userID uuid
 	return c.mm.CountPlaylistTracks(ctx, playlistID, userID)
 }
 
+func (c Client) DeletePlaylist(ctx context.Context, id uuid.UUID) error {
+	return c.sc.DeletePlaylist(ctx, id)
+}
+
 func (c Client) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error {
 	return c.sc.DeletePlaylistTrack(ctx, id)
 }

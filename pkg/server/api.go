@@ -43,6 +43,7 @@ func (s Server) api() http.Handler {
 	r.Post("/playlists", s.addPlaylist())
 	r.Get("/playlists/{playlistID}", s.getPlaylist())
 	r.Put("/playlists/{playlistID}", s.updatePlaylist())
+	r.Delete("/playlists/{playlistID}", s.deletePlaylist())
 	r.Post("/playlists/{playlistID}/track", s.addPlaylistTrack())
 
 	r.Get("/playlist-tracks/{playlistTrackID}", s.getPlaylistTrack())

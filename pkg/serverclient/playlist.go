@@ -43,6 +43,19 @@ func (s ServerClient) AddPlaylistTrack(ctx context.Context, playlistID, albumID,
 	return nil
 }
 
+func (s ServerClient) DeletePlaylist(ctx context.Context, id uuid.UUID) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "playlists", id.String())
+	if err != nil {
+		return err
+	}
+
+	if err := s.doDelete(ctx, u); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s ServerClient) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error {
 	u, err := url.JoinPath(s.baseUrl, "api", "playlist-tracks", id.String())
 	if err != nil {
