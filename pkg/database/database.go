@@ -124,6 +124,7 @@ type DatabaseFace interface {
 	AddPlaylist(ctx context.Context, p types.Playlist) (uuid.UUID, error)
 	AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack) (uuid.UUID, error)
 	CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error)
+	CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error)
 	DeletePlaylist(ctx context.Context, id, userID uuid.UUID) error
 	DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error
 	GetPlaylist(ctx context.Context, ID, userID uuid.UUID) (plist types.Playlist, err error)

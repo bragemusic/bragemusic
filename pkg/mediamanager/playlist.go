@@ -33,6 +33,19 @@ func (m MediaManager) CountPlaylists(ctx context.Context, userID uuid.UUID) (int
 	return m.db.CountPlaylists(ctx, userID)
 }
 
+func (m MediaManager) CountPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID) (int, error) {
+	plist, err := m.db.GetPlaylist(ctx, playlistID, userID)
+	if err != nil {
+		return 0, err
+	}
+
+	if plist.Owner != userID {
+		return 0, errors.New("user is not the owner of the selected playlist")
+	}
+
+	return m.db.CountPlaylistTracks(ctx, playlistID)
+}
+
 func (m MediaManager) GetPlaylist(ctx context.Context, id uuid.UUID) (types.Playlist, error) {
 	user, err := auth.UserFromContext(ctx)
 	if err != nil {

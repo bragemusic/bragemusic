@@ -104,6 +104,22 @@ func (d Database) CountPlaylists(ctx context.Context, userID uuid.UUID) (int, er
 	return count, nil
 }
 
+func (d Database) CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error) {
+	const query = `
+        SELECT COUNT(1)
+        FROM playlist_tracks
+        WHERE playlist_id = ?;
+    `
+
+	var count int
+	err := d.ext.QueryRowxContext(ctx, query, playlistID).Scan(&count)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
 func (d Database) DeletePlaylist(ctx context.Context, id, userID uuid.UUID) error {
 	query := `
 		DELETE FROM playlists
