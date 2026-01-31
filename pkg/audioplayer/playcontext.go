@@ -5,12 +5,19 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-type PlayContextType string
+type (
+	PlayContextType string
+	RepeatType      string
+)
 
 const (
 	PlayContextAlbum     PlayContextType = "album"
 	PlayContextTopTracks PlayContextType = "top_tracks"
 	PlayContextPlaylist  PlayContextType = "playlist"
+
+	RepeatOne RepeatType = "one"
+	RepeatAll RepeatType = "all"
+	RepeatOff RepeatType = "off"
 )
 
 type PlayContext struct {
@@ -20,4 +27,6 @@ type PlayContext struct {
 	Queue           []types.TrackDetailed `json:"queue"`
 	CurrentTrackIdx int                   `json:"current_track_idx"`
 	CurrentTrack    *types.TrackDetailed  `json:"current_track"`
+	Shuffle         bool                  `json:"shuffle"`
+	Repeat          RepeatType            `json:"repeat"`
 }

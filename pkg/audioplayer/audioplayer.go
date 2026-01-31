@@ -63,6 +63,7 @@ func (a *AudioPlayer) RegisterPlayCountCallback(f func(trackID string)) {
 }
 
 func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, playCtx PlayContext) (err error) {
+	fmt.Println(playCtx.Shuffle, playCtx.Repeat)
 	if playCtx.CurrentTrackIdx < 0 || playCtx.CurrentTrackIdx >= len(playCtx.Tracks) {
 		return errors.New("startTrackIndex must be between 0 and len of tracks")
 	}
@@ -77,11 +78,38 @@ func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, playCtx PlayContex
 	return a.startTrack(ctx)
 }
 
+func (a *AudioPlayer) SetRepeat(ctx context.Context, r RepeatType) {
+	a.playCtx.Repeat = r
+
+	for _, f := range a.currentPlayCtxChangeCallbacks {
+		f(a.playCtx)
+	}
+}
+
+func (a *AudioPlayer) SetShuffle(ctx context.Context, s bool) {
+	a.playCtx.Shuffle = s
+
+	for _, f := range a.currentPlayCtxChangeCallbacks {
+		f(a.playCtx)
+	}
+}
+
 func (a *AudioPlayer) NextTrack(ctx context.Context) (err error) {
 	a.log.DebugContext(ctx, "next track")
-	cidx := a.playCtx.CurrentTrackIdx + 1
+
+	var cidx int
+	if a.playCtx.Repeat == RepeatOne {
+		cidx = a.playCtx.CurrentTrackIdx
+	} else {
+		cidx = a.playCtx.CurrentTrackIdx + 1
+	}
+
 	if cidx >= len(a.playCtx.Tracks) {
-		cidx = 0
+		if a.playCtx.Repeat == RepeatAll {
+			cidx = 0
+		} else {
+			return a.Stop(ctx)
+		}
 	}
 
 	a.playCtx.CurrentTrackIdx = cidx
@@ -164,12 +192,41 @@ func (a *AudioPlayer) startProgressPrinter() {
 	}()
 }
 
-func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
+func (a *AudioPlayer) Stop(ctx context.Context) error {
+	if err := a.stopPlayback(ctx); err != nil {
+		return err
+	}
+
+	a.playCtx = PlayContext{
+		Shuffle: a.playCtx.Shuffle,
+		Repeat:  a.playCtx.Repeat,
+	}
+
+	for _, f := range a.currentPlayCtxChangeCallbacks {
+		f(a.playCtx)
+	}
+
+	for _, f := range a.pausePlayCallbacks {
+		f(a.ai.IsPlaying())
+	}
+
+	return nil
+}
+
+func (a *AudioPlayer) stopPlayback(ctx context.Context) error {
 	a.ai.Stop()
 
 	a.playCountReported = false
 
-	if err = a.closeCurrentFile(ctx); err != nil {
+	if err := a.closeCurrentFile(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
+	if err = a.stopPlayback(ctx); err != nil {
 		return err
 	}
 
@@ -231,6 +288,10 @@ func New(cfg Config, ai audiointerface.AudioInterface, slogHandler slog.Handler)
 		currentFile:  nil,
 		musicDirPath: cfg.MusicDirPath,
 		log:          slog.New(slogHandler).With("service", "audioplayer"),
+		playCtx: PlayContext{
+			Shuffle: false,
+			Repeat:  RepeatOff,
+		},
 	}
 
 	ai.RegisterErrorCallback(ap.handleError)

@@ -93,6 +93,8 @@ func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, tr
 		Tracks:          tracks,
 		Queue:           []types.TrackDetailed{},
 		CurrentTrackIdx: trackNumber,
+		Shuffle:         c.PlayContext().Shuffle,
+		Repeat:          c.PlayContext().Repeat,
 	}
 
 	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
@@ -117,6 +119,8 @@ func (c *Client) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UU
 		Tracks:          tracks,
 		Queue:           []types.TrackDetailed{},
 		CurrentTrackIdx: trackNumber,
+		Shuffle:         c.PlayContext().Shuffle,
+		Repeat:          c.PlayContext().Repeat,
 	}
 
 	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
