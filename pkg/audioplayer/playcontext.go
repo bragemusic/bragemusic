@@ -29,4 +29,5 @@ type PlayContext struct {
 	CurrentTrack    *types.TrackDetailed  `json:"current_track"`
 	Shuffle         bool                  `json:"shuffle"`
 	Repeat          RepeatType            `json:"repeat"`
+	trackOrder      []int                 `json:"-"`
 }
