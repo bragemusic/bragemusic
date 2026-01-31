@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -62,9 +63,19 @@ func (a *AudioPlayer) RegisterPlayCountCallback(f func(trackID string)) {
 	a.playCountCallbacks = append(a.playCountCallbacks, f)
 }
 
+func (a *AudioPlayer) setCurrentTrack(ctx context.Context) {
+	idx := a.playCtx.trackOrder[a.playCtx.CurrentTrackIdx]
+	a.playCtx.CurrentTrack = &a.playCtx.Tracks[idx]
+}
+
 func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, playCtx PlayContext) (err error) {
 	if playCtx.CurrentTrackIdx < 0 || playCtx.CurrentTrackIdx >= len(playCtx.Tracks) {
 		return errors.New("startTrackIndex must be between 0 and len of tracks")
+	}
+
+	playCtx.trackOrder = a.makeTrackOrder(playCtx.CurrentTrackIdx, len(playCtx.Tracks), playCtx.Shuffle)
+	if playCtx.Shuffle {
+		playCtx.CurrentTrackIdx = 0
 	}
 
 	if err = a.closeCurrentFile(ctx); err != nil {
@@ -72,20 +83,96 @@ func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, playCtx PlayContex
 	}
 
 	a.playCtx = playCtx
-	a.playCtx.CurrentTrack = &playCtx.Tracks[playCtx.CurrentTrackIdx]
+	a.setCurrentTrack(ctx)
 
 	return a.startTrack(ctx)
 }
 
+func (a *AudioPlayer) makeTrackOrder(currentTrackIdx, numberOfTracks int, shuffle bool) []int {
+	trackOrder := []int{}
+	if !shuffle {
+		for i := range numberOfTracks {
+			trackOrder = append(trackOrder, i)
+		}
+	} else {
+		nums := make([]int, numberOfTracks)
+		for i := range numberOfTracks {
+			nums[i] = i
+		}
+
+		rand.Shuffle(numberOfTracks-1, func(i, j int) {
+			nums[i+1], nums[j+1] = nums[j+1], nums[i+1]
+		})
+
+		for i := range numberOfTracks {
+			if nums[i] == currentTrackIdx {
+				nums[0], nums[i] = nums[i], nums[0]
+				break
+			}
+		}
+
+		trackOrder = nums
+
+	}
+
+	return trackOrder
+}
+
+func (a *AudioPlayer) SetRepeat(ctx context.Context, r RepeatType) {
+	a.playCtx.Repeat = r
+
+	for _, f := range a.currentPlayCtxChangeCallbacks {
+		f(a.playCtx)
+	}
+}
+
+func (a *AudioPlayer) SetShuffle(ctx context.Context, s bool) {
+	a.playCtx.Shuffle = s
+
+	if len(a.playCtx.trackOrder) == 0 || len(a.playCtx.Tracks) == 0 {
+		for _, f := range a.currentPlayCtxChangeCallbacks {
+			f(a.playCtx)
+		}
+		return
+	}
+
+	trackIdx := a.playCtx.trackOrder[a.playCtx.CurrentTrackIdx]
+
+	a.playCtx.trackOrder = a.makeTrackOrder(a.playCtx.CurrentTrackIdx, len(a.playCtx.Tracks), s)
+
+	if s {
+		a.playCtx.CurrentTrackIdx = 0
+	} else {
+		a.playCtx.CurrentTrackIdx = trackIdx
+	}
+
+	a.setCurrentTrack(ctx)
+
+	for _, f := range a.currentPlayCtxChangeCallbacks {
+		f(a.playCtx)
+	}
+}
+
 func (a *AudioPlayer) NextTrack(ctx context.Context) (err error) {
 	a.log.DebugContext(ctx, "next track")
-	cidx := a.playCtx.CurrentTrackIdx + 1
+
+	var cidx int
+	if a.playCtx.Repeat == RepeatOne {
+		cidx = a.playCtx.CurrentTrackIdx
+	} else {
+		cidx = a.playCtx.CurrentTrackIdx + 1
+	}
+
 	if cidx >= len(a.playCtx.Tracks) {
-		cidx = 0
+		if a.playCtx.Repeat == RepeatAll {
+			cidx = 0
+		} else {
+			return a.Stop(ctx)
+		}
 	}
 
 	a.playCtx.CurrentTrackIdx = cidx
-	a.playCtx.CurrentTrack = &a.playCtx.Tracks[a.playCtx.CurrentTrackIdx]
+	a.setCurrentTrack(ctx)
 
 	for _, f := range a.currentPlayCtxChangeCallbacks {
 		f(a.playCtx)
@@ -164,12 +251,41 @@ func (a *AudioPlayer) startProgressPrinter() {
 	}()
 }
 
-func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
+func (a *AudioPlayer) Stop(ctx context.Context) error {
+	if err := a.stopPlayback(ctx); err != nil {
+		return err
+	}
+
+	a.playCtx = PlayContext{
+		Shuffle: a.playCtx.Shuffle,
+		Repeat:  a.playCtx.Repeat,
+	}
+
+	for _, f := range a.currentPlayCtxChangeCallbacks {
+		f(a.playCtx)
+	}
+
+	for _, f := range a.pausePlayCallbacks {
+		f(a.ai.IsPlaying())
+	}
+
+	return nil
+}
+
+func (a *AudioPlayer) stopPlayback(ctx context.Context) error {
 	a.ai.Stop()
 
 	a.playCountReported = false
 
-	if err = a.closeCurrentFile(ctx); err != nil {
+	if err := a.closeCurrentFile(ctx); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
+	if err = a.stopPlayback(ctx); err != nil {
 		return err
 	}
 
@@ -231,6 +347,10 @@ func New(cfg Config, ai audiointerface.AudioInterface, slogHandler slog.Handler)
 		currentFile:  nil,
 		musicDirPath: cfg.MusicDirPath,
 		log:          slog.New(slogHandler).With("service", "audioplayer"),
+		playCtx: PlayContext{
+			Shuffle: false,
+			Repeat:  RepeatOff,
+		},
 	}
 
 	ai.RegisterErrorCallback(ap.handleError)
