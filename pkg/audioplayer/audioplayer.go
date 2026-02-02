@@ -181,6 +181,34 @@ func (a *AudioPlayer) NextTrack(ctx context.Context) (err error) {
 	return a.startTrack(ctx)
 }
 
+func (a *AudioPlayer) PreviousTrack(ctx context.Context) (err error) {
+	a.log.DebugContext(ctx, "previous track")
+
+	var cidx int
+	if a.playCtx.Repeat == RepeatOne || a.ai.PlayedMS() > 10000 {
+		cidx = a.playCtx.CurrentTrackIdx
+	} else {
+		cidx = a.playCtx.CurrentTrackIdx - 1
+	}
+
+	if cidx < 0 {
+		if a.playCtx.Repeat == RepeatAll {
+			cidx = len(a.playCtx.Tracks) - 1
+		} else {
+			return a.Stop(ctx)
+		}
+	}
+
+	a.playCtx.CurrentTrackIdx = cidx
+	a.setCurrentTrack(ctx)
+
+	for _, f := range a.currentPlayCtxChangeCallbacks {
+		f(a.playCtx)
+	}
+
+	return a.startTrack(ctx)
+}
+
 func (a *AudioPlayer) PlayContext() PlayContext {
 	return a.playCtx
 }
@@ -355,7 +383,7 @@ func New(cfg Config, ai audiointerface.AudioInterface, slogHandler slog.Handler)
 
 	ai.RegisterErrorCallback(ap.handleError)
 
-	ap.mp, err = mpris.New(cfg.PlayerName, ap.Play, ap.Pause, ap.PlayPause, ap.NextTrack, ap.NextTrack)
+	ap.mp, err = mpris.New(cfg.PlayerName, ap.Play, ap.Pause, ap.PlayPause, ap.PreviousTrack, ap.NextTrack)
 	if err != nil {
 		return nil, err
 	}
