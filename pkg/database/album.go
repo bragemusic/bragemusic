@@ -130,7 +130,7 @@ func (d Database) GetAlbumFromMbID(ctx context.Context, mbID string) (album type
 	return
 }
 
-func (d Database) GetAlbumFromID(ctx context.Context, id string) (album types.Album, err error) {
+func (d Database) GetAlbumFromID(ctx context.Context, id uuid.UUID) (album types.Album, err error) {
 	query := `
         SELECT *
         FROM albums
@@ -181,7 +181,7 @@ func (d Database) ListAlbums(ctx context.Context) (albums []types.Album, err err
 	return albums, nil
 }
 
-func (d Database) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error) {
+func (d Database) ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error) {
 	sortByStr := ""
 
 	switch sortBy {

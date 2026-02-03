@@ -11,13 +11,21 @@ type (
 	EntityEventType string
 )
 
+func (e EntityType) P() *EntityType {
+	return &e
+}
+
 const (
-	EntityArtist        EntityType = "artist"
-	EntityAlbum         EntityType = "album"
-	EntityTrack         EntityType = "track"
-	EntityAlbumArtist   EntityType = "album_artist"
-	EntityPlaylist      EntityType = "playlist"
-	EntityPlaylistTrack EntityType = "playlist_track"
+	EntityArtist          EntityType = "artist"
+	EntityAlbum           EntityType = "album"
+	EntityTrack           EntityType = "track"
+	EntityAlbumArtist     EntityType = "album_artist"
+	EntityAlbumTrack      EntityType = "album_track"
+	EntityMediaFile       EntityType = "media_file"
+	EntityPlaylist        EntityType = "playlist"
+	EntityPlaylistTrack   EntityType = "playlist_track"
+	EntityPlayHistoryItem EntityType = "play_history_item"
+	EntitySearchItem      EntityType = "search_item"
 
 	EntityEventDelete EntityEventType = "delete"
 )

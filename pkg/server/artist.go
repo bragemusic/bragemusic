@@ -9,7 +9,6 @@ import (
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
-	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
 )
 
@@ -17,12 +16,9 @@ func (s Server) getArtist() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		ctx := r.Context()
 
-		artistID := chi.URLParamFromCtx(ctx, "artistID")
-		if artistID == "" {
-			return http.StatusBadRequest, nil, ErrIDNotFound{
-				idKey: "artistID",
-				err:   errors.New("could not parse artistID"),
-			}
+		artistID, err := getParameter[uuid.UUID](ctx, "artistID")
+		if err != nil {
+			return http.StatusBadRequest, nil, err
 		}
 
 		artist, err := s.mediamgr.GetArtist(ctx, artistID)

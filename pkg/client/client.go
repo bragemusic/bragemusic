@@ -142,7 +142,7 @@ func (c Client) ListArtists(ctx context.Context, sortBy database.SortBy, sortOrd
 	return artists, nil
 }
 
-func (c Client) GetArtist(ctx context.Context, artistID string) (types.Artist, error) {
+func (c Client) GetArtist(ctx context.Context, artistID uuid.UUID) (types.Artist, error) {
 	artist, err := c.mm.GetArtist(ctx, artistID)
 	if err != nil {
 		return types.Artist{}, err
@@ -158,7 +158,7 @@ func (c Client) UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData
 	return nil
 }
 
-func (c Client) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error) {
+func (c Client) ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error) {
 	albums, err := c.mm.ListAlbumsByArtist(ctx, artistID, sortBy, sortOrder)
 	if err != nil {
 		return nil, err
@@ -238,7 +238,7 @@ func (c Client) UploadArtistImage(ctx context.Context, artistID string, img serv
 	return c.sc.UploadArtistImage(ctx, artistID, img)
 }
 
-func (c Client) GetArtistTopTracks(ctx context.Context, artistID string) ([]types.TrackDetailed, error) {
+func (c Client) GetArtistTopTracks(ctx context.Context, artistID uuid.UUID) ([]types.TrackDetailed, error) {
 	tracks, err := c.mm.ListTracksDetailedByArtist(ctx, artistID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
 	if err != nil {
 		return nil, err

@@ -8,7 +8,6 @@ import (
 
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
-	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
 )
 
@@ -16,12 +15,9 @@ func (s Server) getTrack() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		ctx := r.Context()
 
-		trackID := chi.URLParamFromCtx(ctx, "trackID")
-		if trackID == "" {
-			return http.StatusBadRequest, nil, ErrIDNotFound{
-				idKey: "trackID",
-				err:   errors.New("could not parse trackID"),
-			}
+		trackID, err := getParameter[uuid.UUID](ctx, "trackID")
+		if err != nil {
+			return http.StatusBadRequest, nil, err
 		}
 
 		track, err := s.mediamgr.GetTrack(ctx, trackID)
@@ -45,12 +41,9 @@ func (s Server) listAlbumTracks() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		ctx := r.Context()
 
-		albumID := chi.URLParamFromCtx(ctx, "albumID")
-		if albumID == "" {
-			return http.StatusBadRequest, nil, ErrIDNotFound{
-				idKey: "albumID",
-				err:   errors.New("could not parse albumID"),
-			}
+		albumID, err := getParameter[uuid.UUID](ctx, "albumID")
+		if err != nil {
+			return http.StatusBadRequest, nil, err
 		}
 
 		tracks, err := s.mediamgr.ListTracksByAlbum(ctx, albumID)

@@ -17,12 +17,9 @@ func (s Server) getAlbum() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		ctx := r.Context()
 
-		albumID := chi.URLParamFromCtx(ctx, "albumID")
-		if albumID == "" {
-			return http.StatusBadRequest, nil, ErrIDNotFound{
-				idKey: "albumID",
-				err:   errors.New("could not parse albumID"),
-			}
+		albumID, err := getParameter[uuid.UUID](ctx, "albumID")
+		if err != nil {
+			return http.StatusBadRequest, nil, err
 		}
 
 		album, err := s.mediamgr.GetAlbum(ctx, albumID)
@@ -45,12 +42,9 @@ func (s Server) listAlbums() http.HandlerFunc {
 	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
 		ctx := r.Context()
 
-		artistID := chi.URLParamFromCtx(ctx, "artistID")
-		if artistID == "" {
-			return http.StatusBadRequest, nil, ErrIDNotFound{
-				idKey: "artistID",
-				err:   errors.New("could not parse artistID"),
-			}
+		artistID, err := getParameter[uuid.UUID](ctx, "artistID")
+		if err != nil {
+			return http.StatusBadRequest, nil, err
 		}
 
 		albums, err := s.mediamgr.ListAlbumsByArtist(ctx, artistID, database.SortByDate, database.SortAsc)

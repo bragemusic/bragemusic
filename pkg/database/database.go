@@ -40,11 +40,11 @@ type DatabaseFace interface {
 	UpdateAlbum(ctx context.Context, a types.Album) error
 	GetAlbumFromArtistAndName(ctx context.Context, artistName, albumName string) (album types.Album, err error)
 	GetAlbumFromMbID(ctx context.Context, mbID string) (album types.Album, err error)
-	GetAlbumFromID(ctx context.Context, id string) (album types.Album, err error)
+	GetAlbumFromID(ctx context.Context, id uuid.UUID) (album types.Album, err error)
 	GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (album types.AlbumDetailed, err error)
 	GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]types.Album, error)
 	ListAlbums(ctx context.Context) (albums []types.Album, err error)
-	ListAlbumsByArtist(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
+	ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
 	ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error)
 	CountAlbums(ctx context.Context) (int, error)
 	CountAlbumsByArtist(ctx context.Context, artistID uuid.UUID) (int, error)
@@ -52,7 +52,7 @@ type DatabaseFace interface {
 	AddArtist(ctx context.Context, a types.Artist) (uuid.UUID, error)
 	ArtistExists(ctx context.Context, ID string) (bool, error)
 	UpdateArtist(ctx context.Context, a types.Artist) error
-	GetArtistFromID(ctx context.Context, id string) (artist types.Artist, err error)
+	GetArtistFromID(ctx context.Context, id uuid.UUID) (artist types.Artist, err error)
 	GetArtistFromMbID(ctx context.Context, mbID string) (artist types.Artist, err error)
 	GetArtistFromName(ctx context.Context, name string) (artist types.Artist, err error)
 	ListArtists(ctx context.Context, sortBy SortBy, sortOrder SortOrder) (artists []types.ArtistDetailed, err error)
@@ -66,9 +66,9 @@ type DatabaseFace interface {
 	UpdateTrack(ctx context.Context, t types.Track) error
 	UpdateTrackFromMbID(ctx context.Context, t types.Track) error
 	GetTrackFromMbID(ctx context.Context, mbID string) (track types.Track, err error)
-	GetTrackFromID(ctx context.Context, ID string) (track types.Track, err error)
-	GetTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.Track, err error)
-	GetTracksDetailedFromArtistID(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackDetailed, err error)
+	GetTrackFromID(ctx context.Context, ID uuid.UUID) (track types.Track, err error)
+	GetTracksFromAlbumID(ctx context.Context, albumID uuid.UUID) (tracks []types.Track, err error)
+	GetTracksDetailedFromArtistID(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackDetailed, err error)
 	ListTracks(ctx context.Context) (tracks []types.Track, err error)
 	ListAlbumTracksDetailed(ctx context.Context, albumID uuid.UUID) (tracks []types.TrackDetailed, err error)
 	GetTrackFromName(ctx context.Context, albumID uuid.UUID, trackName string) (track types.Track, err error)

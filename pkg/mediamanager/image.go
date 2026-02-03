@@ -2,19 +2,18 @@ package mediamanager
 
 import (
 	"context"
-	"errors"
 	"path/filepath"
 
-	"github.com/bragemusic/core/pkg/auth"
+	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 
 func (m MediaManager) AddArtistImage(ctx context.Context, filename string, artistID uuid.UUID) error {
 	if m.im == nil {
-		return errors.New("imagemagick is not loaded")
+		return m.berr.DependencyMissing(nil, "imagemagick")
 	}
 
-	artist, err := m.db.GetArtistFromID(ctx, artistID.String())
+	artist, err := m.GetArtist(ctx, artistID)
 	if err != nil {
 		return err
 	}
@@ -26,7 +25,7 @@ func (m MediaManager) AddArtistImage(ctx context.Context, filename string, artis
 	}
 
 	if err = m.db.UpdateArtist(ctx, artist); err != nil {
-		return err
+		return m.berr.DatabaseError(err, types.EntityArtist, &artistID)
 	}
 
 	return nil
@@ -34,10 +33,10 @@ func (m MediaManager) AddArtistImage(ctx context.Context, filename string, artis
 
 func (m MediaManager) AddAlbumImage(ctx context.Context, filename string, albumID uuid.UUID) error {
 	if m.im == nil {
-		return errors.New("imagemagick is not loaded")
+		return m.berr.DependencyMissing(nil, "imagemagick")
 	}
 
-	album, err := m.db.GetAlbumFromID(ctx, albumID.String())
+	album, err := m.GetAlbum(ctx, albumID)
 	if err != nil {
 		return err
 	}
@@ -49,7 +48,7 @@ func (m MediaManager) AddAlbumImage(ctx context.Context, filename string, albumI
 	}
 
 	if err = m.db.UpdateAlbum(ctx, album); err != nil {
-		return err
+		return m.berr.DatabaseError(err, types.EntityAlbum, &albumID)
 	}
 
 	return nil
@@ -57,15 +56,10 @@ func (m MediaManager) AddAlbumImage(ctx context.Context, filename string, albumI
 
 func (m MediaManager) AddPlaylistImage(ctx context.Context, filename string, id uuid.UUID) error {
 	if m.im == nil {
-		return errors.New("imagemagick is not loaded")
+		return m.berr.DependencyMissing(nil, "imagemagick")
 	}
 
-	user, err := auth.UserFromContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	plist, err := m.db.GetPlaylist(ctx, id, user.ID)
+	plist, err := m.GetPlaylist(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -77,7 +71,7 @@ func (m MediaManager) AddPlaylistImage(ctx context.Context, filename string, id 
 	}
 
 	if err = m.db.UpdatePlaylist(ctx, plist); err != nil {
-		return err
+		return m.berr.DatabaseError(err, types.EntityPlaylist, &id)
 	}
 
 	return nil
