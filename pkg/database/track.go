@@ -141,7 +141,7 @@ func (d Database) UpdateTrackFromMbID(ctx context.Context, t types.Track) error 
 	return err
 }
 
-func (d Database) GetTrackFromID(ctx context.Context, ID string) (track types.Track, err error) {
+func (d Database) GetTrackFromID(ctx context.Context, ID uuid.UUID) (track types.Track, err error) {
 	query := `
         SELECT *
         FROM tracks
@@ -171,7 +171,7 @@ func (d Database) GetTrackFromMbID(ctx context.Context, mbID string) (track type
 	return
 }
 
-func (d Database) GetTracksFromAlbumID(ctx context.Context, albumID string) (tracks []types.Track, err error) {
+func (d Database) GetTracksFromAlbumID(ctx context.Context, albumID uuid.UUID) (tracks []types.Track, err error) {
 	query := `
         SELECT *
         FROM tracks
@@ -185,7 +185,7 @@ func (d Database) GetTracksFromAlbumID(ctx context.Context, albumID string) (tra
 	return
 }
 
-func (d Database) GetTracksDetailedFromArtistID(ctx context.Context, artistID string, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackDetailed, err error) {
+func (d Database) GetTracksDetailedFromArtistID(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackDetailed, err error) {
 	orderBy := "t.title"
 
 	switch sortBy {

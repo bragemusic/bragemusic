@@ -13,7 +13,7 @@ func (m MediaManager) SearchFull(ctx context.Context, searchTerm string) (si []t
 
 	res, err := m.db.SearchFull(ctx, searchTerm, 10)
 	if err != nil {
-		return nil, err
+		return nil, m.berr.DatabaseError(err, types.EntitySearchItem, nil)
 	}
 
 	return res, nil

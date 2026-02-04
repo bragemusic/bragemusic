@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
@@ -18,12 +19,16 @@ var (
 	adminUUID             = uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111"))
 	ErrTokenNotValid      = errors.New("token not valid")
 	ErrInvalidCredentials = errors.New("invalid user credentials")
+	ErrNoAuthHeader       = errors.New("no authorization header")
+	ErrInvalidScheme      = errors.New("invalid authorization scheme")
+	ErrInvalidToken       = errors.New("invalid token format")
 )
 
 type Auth struct {
-	hc  *HashCrypt
-	db  database.AuthFace
-	log *slog.Logger
+	hc   *HashCrypt
+	db   database.AuthFace
+	log  *slog.Logger
+	berr bragerr.BragErrFactory
 
 	frontendTokenLongDuration  time.Duration
 	frontendTokenShortDuration time.Duration
@@ -291,17 +296,17 @@ func (a Auth) validateToken(ctx context.Context, token types.Token) error {
 
 func (a Auth) tokenFromHeader(ctx context.Context, authHeader string) (string, error) {
 	if authHeader == "" {
-		return "", errors.New("no Authorization header found")
+		return "", ErrNoAuthHeader
 	}
 
 	if !strings.HasPrefix(authHeader, "Bearer ") {
-		return "", errors.New("authorization header has wrong format")
+		return "", ErrInvalidScheme
 	}
 
 	token := strings.TrimPrefix(authHeader, "Bearer ")
 
 	if !strings.HasPrefix(token, "brg_v1_") {
-		return "", errors.New("token has wrong format")
+		return "", ErrInvalidToken
 	}
 
 	return token, nil
@@ -313,15 +318,13 @@ func (a Auth) Middleware(next http.Handler) http.Handler {
 
 		token, err := a.tokenFromHeader(ctx, r.Header.Get("Authorization"))
 		if err != nil {
-			a.log.ErrorContext(ctx, err.Error())
-			w.WriteHeader(http.StatusForbidden)
+			bragerr.HandleHttpResponse(ctx, a.berr.Unauthenticated(err).With("apa", 123), w, a.log)
 			return
 		}
 
 		user, err := a.getUserFromTokenString(ctx, token)
 		if err != nil {
-			a.log.ErrorContext(ctx, err.Error())
-			w.WriteHeader(http.StatusForbidden)
+			bragerr.HandleHttpResponse(ctx, a.berr.Unauthenticated(err).With("bepa", "as"), w, a.log)
 			return
 		}
 
@@ -338,5 +341,6 @@ func New(db database.AuthFace, slogHandler slog.Handler) Auth {
 		db:                         db,
 		frontendTokenLongDuration:  7 * 24 * time.Hour,
 		frontendTokenShortDuration: 24 * time.Hour,
+		berr:                       bragerr.NewFactory("auth"),
 	}
 }

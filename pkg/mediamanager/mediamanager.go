@@ -3,6 +3,7 @@ package mediamanager
 import (
 	"log/slog"
 
+	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/imagemagick"
 )
@@ -13,6 +14,7 @@ type MediaManager struct {
 	im       *imagemagick.ImageMagick
 	musicDir string
 	imageDir string
+	berr     bragerr.BragErrFactory
 }
 
 func New(slogHandler slog.Handler, db database.DatabaseFace, im *imagemagick.ImageMagick, musicDir, imageDir string) MediaManager {
@@ -22,5 +24,6 @@ func New(slogHandler slog.Handler, db database.DatabaseFace, im *imagemagick.Ima
 		im:       im,
 		musicDir: musicDir,
 		imageDir: imageDir,
+		berr:     bragerr.NewFactory("media-manager"),
 	}
 }

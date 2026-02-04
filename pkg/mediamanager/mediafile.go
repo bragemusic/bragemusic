@@ -13,14 +13,14 @@ import (
 func (m MediaManager) GetMediaFile(ctx context.Context, mediafileID uuid.UUID) (types.MediaFile, error) {
 	mf, err := m.db.GetMediaFile(ctx, mediafileID)
 	if err != nil {
-		return types.MediaFile{}, err
+		return types.MediaFile{}, m.berr.DatabaseError(err, types.EntityMediaFile, &mediafileID)
 	}
 
 	return mf, nil
 }
 
 func (m MediaManager) GetMediaFileFile(ctx context.Context, mediafileID uuid.UUID, w io.Writer) error {
-	mf, err := m.db.GetMediaFile(ctx, mediafileID)
+	mf, err := m.GetMediaFile(ctx, mediafileID)
 	if err != nil {
 		return err
 	}

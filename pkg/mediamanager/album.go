@@ -9,10 +9,10 @@ import (
 	"github.com/samber/lo"
 )
 
-func (m MediaManager) GetAlbum(ctx context.Context, albumID string) (types.Album, error) {
+func (m MediaManager) GetAlbum(ctx context.Context, albumID uuid.UUID) (types.Album, error) {
 	album, err := m.db.GetAlbumFromID(ctx, albumID)
 	if err != nil {
-		return types.Album{}, err
+		return types.Album{}, m.berr.DatabaseError(err, types.EntityAlbum, &albumID)
 	}
 
 	return album, nil
@@ -21,16 +21,16 @@ func (m MediaManager) GetAlbum(ctx context.Context, albumID string) (types.Album
 func (m MediaManager) GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (types.AlbumDetailed, error) {
 	album, err := m.db.GetAlbumDetailed(ctx, albumID)
 	if err != nil {
-		return types.AlbumDetailed{}, err
+		return types.AlbumDetailed{}, m.berr.DatabaseError(err, types.EntityAlbum, &albumID)
 	}
 
 	return album, nil
 }
 
-func (m MediaManager) ListAlbumsByArtist(ctx context.Context, artistID string, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error) {
+func (m MediaManager) ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error) {
 	albums, err := m.db.ListAlbumsByArtist(ctx, artistID, sortBy, sortOrder)
 	if err != nil {
-		return nil, err
+		return nil, m.berr.DatabaseError(err, types.EntityAlbum, &artistID)
 	}
 
 	return albums, nil
@@ -39,11 +39,11 @@ func (m MediaManager) ListAlbumsByArtist(ctx context.Context, artistID string, s
 func (m MediaManager) ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) (albums []types.AlbumDetailed, err error) {
 	artists, err := m.db.ListArtists(ctx, sortBy, sortOrder)
 	if err != nil {
-		return nil, err
+		return nil, m.berr.DatabaseError(err, types.EntityArtist, nil)
 	}
 
 	for _, artist := range artists {
-		alb, err := m.db.ListAlbumsByArtist(ctx, artist.ID.String(), sortBy, sortOrder)
+		alb, err := m.ListAlbumsByArtist(ctx, artist.ID, sortBy, sortOrder)
 		if err != nil {
 			return nil, err
 		}
@@ -70,20 +70,10 @@ func (m MediaManager) ListAlbums(ctx context.Context, sortBy database.SortBy, so
 	return albums, nil
 }
 
-func (m MediaManager) GetAlbumArtist(ctx context.Context, albumID, artistID, role string) (types.AlbumArtist, error) {
-	albumUID, err := uuid.FromString(albumID)
+func (m MediaManager) GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role string) (types.AlbumArtist, error) {
+	albumArtist, err := m.db.GetAlbumArtist(ctx, albumID, artistID, types.ArtistRole(role))
 	if err != nil {
-		return types.AlbumArtist{}, err
-	}
-
-	artistUID, err := uuid.FromString(artistID)
-	if err != nil {
-		return types.AlbumArtist{}, err
-	}
-
-	albumArtist, err := m.db.GetAlbumArtist(ctx, albumUID, artistUID, types.ArtistRole(role))
-	if err != nil {
-		return types.AlbumArtist{}, err
+		return types.AlbumArtist{}, m.berr.DatabaseError(err, types.EntityAlbumArtist, &albumID)
 	}
 
 	return albumArtist, nil
@@ -92,7 +82,7 @@ func (m MediaManager) GetAlbumArtist(ctx context.Context, albumID, artistID, rol
 func (m MediaManager) GetAlbumArtistByID(ctx context.Context, id uuid.UUID) (types.AlbumArtist, error) {
 	albumArtist, err := m.db.GetAlbumArtistByID(ctx, id)
 	if err != nil {
-		return types.AlbumArtist{}, err
+		return types.AlbumArtist{}, m.berr.DatabaseError(err, types.EntityAlbumArtist, &id)
 	}
 
 	return albumArtist, nil
@@ -110,7 +100,7 @@ func (m MediaManager) GetAlbumTrack(ctx context.Context, albumID uuid.UUID, disc
 func (m MediaManager) GetAlbumTrackByID(ctx context.Context, id uuid.UUID) (types.AlbumTrack, error) {
 	albumArtist, err := m.db.GetAlbumTrackByID(ctx, id)
 	if err != nil {
-		return types.AlbumTrack{}, err
+		return types.AlbumTrack{}, m.berr.DatabaseError(err, types.EntityAlbumTrack, &id)
 	}
 
 	return albumArtist, nil
@@ -123,9 +113,9 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 	}
 	defer tx.Rollback()
 
-	existingAlbum, err := tx.GetAlbumFromID(ctx, albumID.String())
+	existingAlbum, err := tx.GetAlbumFromID(ctx, albumID)
 	if err != nil {
-		return err
+		return m.berr.DatabaseError(err, types.EntityAlbum, &albumID)
 	}
 
 	albumData.ID = albumID
@@ -133,12 +123,12 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 
 	err = tx.UpdateAlbum(ctx, albumData.Album)
 	if err != nil {
-		return err
+		return m.berr.DatabaseError(err, types.EntityAlbum, &albumID)
 	}
 
 	existingAlbumArtists, err := tx.ListAlbumArtistsByAlbumID(ctx, albumID)
 	if err != nil {
-		return err
+		return m.berr.DatabaseError(err, types.EntityAlbumArtist, nil)
 	}
 
 	for _, artistID := range albumData.Artists {
@@ -155,7 +145,7 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 				Position: 0,
 			}
 			if _, err := tx.AddAlbumArtist(ctx, aa); err != nil {
-				return err
+				return m.berr.DatabaseError(err, types.EntityAlbumArtist, nil)
 			}
 		}
 	}
@@ -167,7 +157,7 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 
 		if !exists {
 			if err := tx.DeleteAlbumArtist(ctx, existingAa.ID); err != nil {
-				return err
+				return m.berr.DatabaseError(err, types.EntityAlbumArtist, &existingAa.ID)
 			}
 		}
 	}
@@ -176,5 +166,10 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 }
 
 func (m MediaManager) CountAlbums(ctx context.Context) (int, error) {
-	return m.db.CountAlbums(ctx)
+	cnt, err := m.db.CountAlbums(ctx)
+	if err != nil {
+		return 0, m.berr.DatabaseError(err, types.EntityAlbum, nil)
+	}
+
+	return cnt, nil
 }

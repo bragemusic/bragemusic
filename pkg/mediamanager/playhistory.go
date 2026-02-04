@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 
@@ -19,7 +20,7 @@ func (m MediaManager) AddPlayCount(ctx context.Context, trackID, userID string) 
 	}
 
 	if _, err = m.db.AddPlayHistory(ctx, trackUUID, userUUID); err != nil {
-		return err
+		return m.berr.DatabaseError(err, types.EntityPlayHistoryItem, nil)
 	}
 
 	return nil

@@ -8,10 +8,10 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (m MediaManager) GetArtist(ctx context.Context, artistID string) (types.Artist, error) {
+func (m MediaManager) GetArtist(ctx context.Context, artistID uuid.UUID) (types.Artist, error) {
 	artist, err := m.db.GetArtistFromID(ctx, artistID)
 	if err != nil {
-		return types.Artist{}, err
+		return types.Artist{}, m.berr.DatabaseError(err, types.EntityArtist, &artistID)
 	}
 
 	return artist, nil
@@ -20,7 +20,7 @@ func (m MediaManager) GetArtist(ctx context.Context, artistID string) (types.Art
 func (m MediaManager) ListArtists(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.ArtistDetailed, error) {
 	artists, err := m.db.ListArtists(ctx, sortBy, sortOrder)
 	if err != nil {
-		return nil, err
+		return nil, m.berr.DatabaseError(err, types.EntityArtist, nil)
 	}
 
 	return artists, nil
@@ -30,12 +30,17 @@ func (m MediaManager) UpdateArtist(ctx context.Context, artistID uuid.UUID, arti
 	artistData.ID = artistID
 	err := m.db.UpdateArtist(ctx, artistData)
 	if err != nil {
-		return err
+		return m.berr.DatabaseError(err, types.EntityArtist, &artistID)
 	}
 
 	return nil
 }
 
 func (m MediaManager) CountArtists(ctx context.Context) (int, error) {
-	return m.db.CountArtists(ctx)
+	cnt, err := m.db.CountArtists(ctx)
+	if err != nil {
+		return 0, m.berr.DatabaseError(err, types.EntityArtist, nil)
+	}
+
+	return cnt, nil
 }

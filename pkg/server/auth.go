@@ -16,17 +16,17 @@ func (s Server) auth() http.Handler {
 }
 
 func (s Server) login() http.HandlerFunc {
-	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
 		req := LoginReq{}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			return http.StatusBadRequest, nil, err
+			return Response{}, err
 		}
 
 		token, expiresIn, err := s.authPkg.CreateLoginToken(ctx, req.Email, req.Password, req.LongLivedToken)
 		if err != nil {
-			return http.StatusUnauthorized, nil, ErrUnauthorized{}
+			return Response{}, err
 		}
 
 		resp := LoginResp{
@@ -35,7 +35,7 @@ func (s Server) login() http.HandlerFunc {
 			ExpiresIn: expiresIn,
 		}
 
-		return http.StatusOK, resp, nil
+		return Response{Status: http.StatusOK, Payload: resp}, nil
 	},
 	)
 }

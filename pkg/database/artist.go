@@ -92,7 +92,7 @@ func (d Database) UpdateArtist(ctx context.Context, a types.Artist) error {
 	return nil
 }
 
-func (d Database) GetArtistFromID(ctx context.Context, id string) (artist types.Artist, err error) {
+func (d Database) GetArtistFromID(ctx context.Context, id uuid.UUID) (artist types.Artist, err error) {
 	query := `
         SELECT *
         FROM artists
