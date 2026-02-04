@@ -133,6 +133,16 @@ func (c *Client) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UU
 	return nil
 }
 
+func (c *Client) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
+	track, err := c.mm.GetTrackDetailed(ctx, trackID, albumID)
+	if err != nil {
+		return err
+	}
+
+	c.AudioPlayer.AddTrackToQueue(ctx, track)
+	return nil
+}
+
 func (c Client) ListArtists(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.ArtistDetailed, error) {
 	artists, err := c.mm.ListArtists(ctx, sortBy, sortOrder)
 	if err != nil {

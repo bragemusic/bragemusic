@@ -156,23 +156,29 @@ func (a *AudioPlayer) SetShuffle(ctx context.Context, s bool) {
 func (a *AudioPlayer) NextTrack(ctx context.Context) (err error) {
 	a.log.DebugContext(ctx, "next track")
 
-	var cidx int
-	if a.playCtx.Repeat == RepeatOne {
-		cidx = a.playCtx.CurrentTrackIdx
-	} else {
-		cidx = a.playCtx.CurrentTrackIdx + 1
-	}
+	queuedTrack := a.playCtx.PullFromQueue()
 
-	if cidx >= len(a.playCtx.Tracks) {
-		if a.playCtx.Repeat == RepeatAll {
-			cidx = 0
+	if queuedTrack == nil {
+		var cidx int
+		if a.playCtx.Repeat == RepeatOne {
+			cidx = a.playCtx.CurrentTrackIdx
 		} else {
-			return a.Stop(ctx)
+			cidx = a.playCtx.CurrentTrackIdx + 1
 		}
-	}
 
-	a.playCtx.CurrentTrackIdx = cidx
-	a.setCurrentTrack(ctx)
+		if cidx >= len(a.playCtx.Tracks) {
+			if a.playCtx.Repeat == RepeatAll {
+				cidx = 0
+			} else {
+				return a.Stop(ctx)
+			}
+		}
+
+		a.playCtx.CurrentTrackIdx = cidx
+		a.setCurrentTrack(ctx)
+	} else {
+		a.playCtx.CurrentTrack = queuedTrack
+	}
 
 	for _, f := range a.currentPlayCtxChangeCallbacks {
 		f(a.playCtx)
@@ -298,6 +304,16 @@ func (a *AudioPlayer) Stop(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (a *AudioPlayer) AddTrackToQueue(ctx context.Context, track types.TrackDetailed) {
+	a.playCtx.Queue = append(a.playCtx.Queue, track)
+
+	for _, f := range a.currentPlayCtxChangeCallbacks {
+		f(a.playCtx)
+	}
+
+	a.log.InfoContext(ctx, "added track to queue", "name", track.Title, "album", track.AlbumName, "artist", track.ArtistNames)
 }
 
 func (a *AudioPlayer) stopPlayback(ctx context.Context) error {

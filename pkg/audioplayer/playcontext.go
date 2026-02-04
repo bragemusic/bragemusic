@@ -31,3 +31,14 @@ type PlayContext struct {
 	Repeat          RepeatType            `json:"repeat"`
 	trackOrder      []int                 `json:"-"`
 }
+
+func (pc *PlayContext) PullFromQueue() *types.TrackDetailed {
+	if len(pc.Queue) == 0 {
+		return nil
+	}
+
+	qt := pc.Queue[0]
+	pc.Queue = pc.Queue[1:]
+
+	return &qt
+}

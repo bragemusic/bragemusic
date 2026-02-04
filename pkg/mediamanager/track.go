@@ -17,6 +17,15 @@ func (m MediaManager) GetTrack(ctx context.Context, trackID uuid.UUID) (types.Tr
 	return track, nil
 }
 
+func (m MediaManager) GetTrackDetailed(ctx context.Context, trackID, albumID uuid.UUID) (types.TrackDetailed, error) {
+	track, err := m.db.GetTrackDetailed(ctx, trackID, albumID)
+	if err != nil {
+		return track, m.berr.DatabaseError(err, types.EntityTrack, &trackID)
+	}
+
+	return track, nil
+}
+
 func (m MediaManager) ListTracksByAlbum(ctx context.Context, albumID uuid.UUID) ([]types.Track, error) {
 	tracks, err := m.db.GetTracksFromAlbumID(ctx, albumID)
 	if err != nil {
