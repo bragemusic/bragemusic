@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/bragemusic/core/pkg/types"
-	"github.com/bragemusic/core/pkg/utils"
 	"github.com/gofrs/uuid/v5"
 )
 
@@ -63,23 +62,23 @@ func (s Server) listAlbumTracks() http.HandlerFunc {
 }
 
 func (s Server) updateTrack() http.HandlerFunc {
-	return s.handleVoid(func(w http.ResponseWriter, r *http.Request) (*int, error) {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
 		id, err := getParameter[uuid.UUID](ctx, "trackID")
 		if err != nil {
-			return utils.Ptr(http.StatusBadRequest), err
+			return Response{}, err
 		}
 
 		track := types.TrackUpdate{}
 		if err := json.NewDecoder(r.Body).Decode(&track); err != nil {
-			return utils.Ptr(http.StatusBadRequest), err
+			return Response{}, err
 		}
 
 		if err := s.mediamgr.UpdateTrack(ctx, id, track); err != nil {
-			return utils.Ptr(http.StatusInternalServerError), err
+			return Response{}, err
 		}
 
-		return utils.Ptr(http.StatusNoContent), nil
+		return Response{Status: http.StatusNoContent}, nil
 	})
 }

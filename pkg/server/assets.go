@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bragemusic/core/pkg/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
 )
@@ -36,7 +35,7 @@ func (s Server) getImage() http.HandlerFunc {
 }
 
 func (s Server) addImage(imageType ImageType) http.HandlerFunc {
-	return s.handleVoid(func(w http.ResponseWriter, r *http.Request) (*int, error) {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
 		var assetID uuid.UUID
@@ -46,35 +45,35 @@ func (s Server) addImage(imageType ImageType) http.HandlerFunc {
 		case ArtistImage:
 			assetID, err = getParameter[uuid.UUID](ctx, "artistID")
 			if err != nil {
-				return utils.Ptr(http.StatusBadRequest), err
+				return Response{}, err
 			}
 		case AlbumImage:
 			assetID, err = getParameter[uuid.UUID](ctx, "albumID")
 			if err != nil {
-				return utils.Ptr(http.StatusBadRequest), err
+				return Response{}, err
 			}
 		case PlaylistImage:
 			assetID, err = getParameter[uuid.UUID](ctx, "playlistID")
 			if err != nil {
-				return utils.Ptr(http.StatusBadRequest), err
+				return Response{}, err
 			}
 		}
 
 		err = r.ParseMultipartForm(10 << 20) // Limit upload size to 10MB
 		if err != nil {
-			return utils.Ptr(http.StatusBadRequest), err
+			return Response{}, err
 		}
 
 		// Get the file from the form input "file"
 		file, _, err := r.FormFile("file")
 		if err != nil {
-			return utils.Ptr(http.StatusBadRequest), err
+			return Response{}, err
 		}
 		defer file.Close()
 
 		tempFolder, err := os.MkdirTemp(os.TempDir(), "brage-img")
 		if err != nil {
-			return utils.Ptr(http.StatusInternalServerError), err
+			return Response{}, err
 		}
 		defer os.RemoveAll(tempFolder)
 
@@ -83,31 +82,31 @@ func (s Server) addImage(imageType ImageType) http.HandlerFunc {
 		// Create the file on the server
 		dst, err := os.Create(orgImgPath)
 		if err != nil {
-			return utils.Ptr(http.StatusInternalServerError), err
+			return Response{}, err
 		}
 		defer dst.Close()
 
 		// Copy the uploaded file's content to the destination file
 		if _, err = io.Copy(dst, file); err != nil {
-			return utils.Ptr(http.StatusInternalServerError), err
+			return Response{}, err
 		}
 
 		switch imageType {
 		case ArtistImage:
 			if err = s.mediamgr.AddArtistImage(ctx, orgImgPath, assetID); err != nil {
-				return utils.Ptr(http.StatusInternalServerError), err
+				return Response{}, err
 			}
 		case AlbumImage:
 			if err = s.mediamgr.AddAlbumImage(ctx, orgImgPath, assetID); err != nil {
-				return utils.Ptr(http.StatusInternalServerError), err
+				return Response{}, err
 			}
 		case PlaylistImage:
 			if err = s.mediamgr.AddPlaylistImage(ctx, orgImgPath, assetID); err != nil {
-				return utils.Ptr(http.StatusInternalServerError), err
+				return Response{}, err
 			}
 		}
 
-		return utils.Ptr(http.StatusCreated), nil
+		return Response{Status: http.StatusCreated}, nil
 	},
 	)
 }

@@ -8,7 +8,6 @@ import (
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
-	"github.com/bragemusic/core/pkg/utils"
 	"github.com/gofrs/uuid/v5"
 )
 
@@ -51,23 +50,23 @@ func (s Server) listArtists() http.HandlerFunc {
 }
 
 func (s Server) updateArtist() http.HandlerFunc {
-	return s.handleVoid(func(w http.ResponseWriter, r *http.Request) (*int, error) {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
 		artistID, err := getParameter[uuid.UUID](ctx, "artistID")
 		if err != nil {
-			return utils.Ptr(http.StatusBadRequest), err
+			return Response{}, err
 		}
 
 		artist := types.Artist{}
 		if err := json.NewDecoder(r.Body).Decode(&artist); err != nil {
-			return utils.Ptr(http.StatusBadRequest), err
+			return Response{}, err
 		}
 
 		if err := s.mediamgr.UpdateArtist(ctx, artistID, artist); err != nil {
-			return utils.Ptr(http.StatusInternalServerError), err
+			return Response{}, err
 		}
 
-		return utils.Ptr(http.StatusNoContent), nil
+		return Response{Status: http.StatusNoContent}, nil
 	})
 }

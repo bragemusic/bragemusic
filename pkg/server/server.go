@@ -46,33 +46,33 @@ func (s Server) healthz() http.HandlerFunc {
 	})
 }
 
-func (s Server) handleVoid(f handlerFuncErrVoid) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		status, err := f(w, r)
+// func (s Server) handleVoid(f handlerFuncErrVoid) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		status, err := f(w, r)
 
-		ctx := r.Context()
-		if status != nil {
-			w.WriteHeader(*status)
-		}
+// 		ctx := r.Context()
+// 		if status != nil {
+// 			w.WriteHeader(*status)
+// 		}
 
-		if err != nil {
-			sErr, ok := err.(ServerError)
-			if ok {
-				jErr := json.NewEncoder(w).Encode(map[string]string{"error": sErr.UserError()})
-				if jErr != nil {
-					s.log.ErrorContext(ctx, err.Error())
-				}
-			} else {
-				jErr := json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
-				if jErr != nil {
-					s.log.ErrorContext(ctx, err.Error())
-				}
-			}
-			s.log.ErrorContext(ctx, err.Error())
-			return
-		}
-	}
-}
+// 		if err != nil {
+// 			sErr, ok := err.(ServerError)
+// 			if ok {
+// 				jErr := json.NewEncoder(w).Encode(map[string]string{"error": sErr.UserError()})
+// 				if jErr != nil {
+// 					s.log.ErrorContext(ctx, err.Error())
+// 				}
+// 			} else {
+// 				jErr := json.NewEncoder(w).Encode(map[string]string{"error": "internal server error"})
+// 				if jErr != nil {
+// 					s.log.ErrorContext(ctx, err.Error())
+// 				}
+// 			}
+// 			s.log.ErrorContext(ctx, err.Error())
+// 			return
+// 		}
+// 	}
+// }
 
 func (s Server) handle(f handlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
