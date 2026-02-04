@@ -1,9 +1,7 @@
 package server
 
 import (
-	"database/sql"
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/bragemusic/core/pkg/types"
@@ -11,53 +9,39 @@ import (
 )
 
 func (s Server) getTrack() http.HandlerFunc {
-	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
 		trackID, err := getParameter[uuid.UUID](ctx, "trackID")
 		if err != nil {
-			return http.StatusBadRequest, nil, err
+			return Response{}, err
 		}
 
 		track, err := s.mediamgr.GetTrack(ctx, trackID)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return http.StatusBadRequest, nil, ErrIDNotFound{
-					idKey: "trackID",
-					err:   err,
-				}
-			} else {
-				return http.StatusInternalServerError, nil, err
-			}
+			return Response{}, err
 		}
 
-		return http.StatusOK, track, nil
+		return Response{Status: http.StatusOK, Payload: track}, nil
 	},
 	)
 }
 
 func (s Server) listAlbumTracks() http.HandlerFunc {
-	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
 		albumID, err := getParameter[uuid.UUID](ctx, "albumID")
 		if err != nil {
-			return http.StatusBadRequest, nil, err
+			return Response{}, err
 		}
 
 		tracks, err := s.mediamgr.ListTracksByAlbum(ctx, albumID)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return http.StatusBadRequest, nil, ErrIDNotFound{
-					idKey: "albumID",
-					err:   err,
-				}
-			} else {
-				return http.StatusInternalServerError, nil, err
-			}
+			return Response{}, err
 		}
 
-		return http.StatusOK, tracks, nil
+		return Response{Status: http.StatusOK, Payload: tracks}, nil
 	})
 }
 

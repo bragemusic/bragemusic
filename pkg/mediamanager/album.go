@@ -70,20 +70,10 @@ func (m MediaManager) ListAlbums(ctx context.Context, sortBy database.SortBy, so
 	return albums, nil
 }
 
-func (m MediaManager) GetAlbumArtist(ctx context.Context, albumID, artistID, role string) (types.AlbumArtist, error) {
-	albumUID, err := uuid.FromString(albumID)
+func (m MediaManager) GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role string) (types.AlbumArtist, error) {
+	albumArtist, err := m.db.GetAlbumArtist(ctx, albumID, artistID, types.ArtistRole(role))
 	if err != nil {
-		return types.AlbumArtist{}, err
-	}
-
-	artistUID, err := uuid.FromString(artistID)
-	if err != nil {
-		return types.AlbumArtist{}, err
-	}
-
-	albumArtist, err := m.db.GetAlbumArtist(ctx, albumUID, artistUID, types.ArtistRole(role))
-	if err != nil {
-		return types.AlbumArtist{}, m.berr.DatabaseError(err, types.EntityAlbumArtist, &albumUID)
+		return types.AlbumArtist{}, m.berr.DatabaseError(err, types.EntityAlbumArtist, &albumID)
 	}
 
 	return albumArtist, nil
