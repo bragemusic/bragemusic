@@ -10,9 +10,9 @@ import (
 
 var ErrUnauthenticated = BragErr{
 	Code:    "UNAUTHENTICATED",
-	Title:   "Unauthenticated",
-	Status:  http.StatusForbidden,
-	Message: "The user is not logged in",
+	Title:   "Authentication required",
+	Status:  http.StatusUnauthorized,
+	Message: "Valid authentication credentials were not provided.",
 }
 
 var ErrItemAccessDenied = BragErr{

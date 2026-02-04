@@ -18,6 +18,11 @@ type Healthz struct {
 	Status HealthzStatus `json:"status"`
 }
 
+type Response struct {
+	Payload any `json:"payload,omitempty"`
+	Status  int `json:"-"`
+}
+
 type Status struct {
 	Application string        `json:"application"`
 	Name        string        `json:"name"`

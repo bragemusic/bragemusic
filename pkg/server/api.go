@@ -56,24 +56,30 @@ func (s Server) api() http.Handler {
 }
 
 func (s Server) status() http.HandlerFunc {
-	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
-		return http.StatusOK, Status{
-			Application: "brage-server", // hardcoded
-			Name:        "Brage Server", // from config
-			Version:     "v0.0.1",
-			Status:      HealthzRunning,
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
+		return Response{
+			Payload: Status{
+				Application: "brage-server", // hardcoded
+				Name:        "Brage Server", // from config
+				Version:     "v0.0.1",
+				Status:      HealthzRunning,
+			},
+			Status: http.StatusOK,
 		}, nil
 	})
 }
 
 func (s Server) user() http.HandlerFunc {
-	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 		user, err := s.authPkg.GetUserFromContext(ctx)
 		if err != nil {
-			return http.StatusForbidden, nil, err
+			return Response{}, err
 		}
 
-		return http.StatusOK, user, nil
+		return Response{
+			Payload: user,
+			Status:  http.StatusOK,
+		}, err
 	})
 }

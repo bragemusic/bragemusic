@@ -88,27 +88,23 @@ func (s Server) deletePlaylist() http.HandlerFunc {
 }
 
 func (s Server) getPlaylist() http.HandlerFunc {
-	return s.handleJSON(func(w http.ResponseWriter, r *http.Request) (int, any, error) {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
 		plistID, err := getParameter[uuid.UUID](ctx, "playlistID")
 		if err != nil {
-			return http.StatusBadRequest, nil, err
+			return Response{}, err
 		}
 
 		plist, err := s.mediamgr.GetPlaylist(ctx, plistID)
 		if err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return http.StatusBadRequest, nil, ErrIDNotFound{
-					idKey: "playlistID",
-					err:   err,
-				}
-			} else {
-				return http.StatusInternalServerError, nil, err
-			}
+			return Response{}, err
 		}
 
-		return http.StatusOK, plist, nil
+		return Response{
+			Payload: plist,
+			Status:  http.StatusOK,
+		}, nil
 	},
 	)
 }
