@@ -67,6 +67,7 @@ type DatabaseFace interface {
 	UpdateTrackFromMbID(ctx context.Context, t types.Track) error
 	GetTrackFromMbID(ctx context.Context, mbID string) (track types.Track, err error)
 	GetTrackFromID(ctx context.Context, ID uuid.UUID) (track types.Track, err error)
+	GetTrackDetailed(ctx context.Context, trackID, albumID uuid.UUID) (track types.TrackDetailed, err error)
 	GetTracksFromAlbumID(ctx context.Context, albumID uuid.UUID) (tracks []types.Track, err error)
 	GetTracksDetailedFromArtistID(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackDetailed, err error)
 	ListTracks(ctx context.Context) (tracks []types.Track, err error)

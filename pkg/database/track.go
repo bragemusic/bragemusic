@@ -141,6 +141,51 @@ func (d Database) UpdateTrackFromMbID(ctx context.Context, t types.Track) error 
 	return err
 }
 
+func (d Database) GetTrackDetailed(ctx context.Context, trackID, albumID uuid.UUID) (track types.TrackDetailed, err error) {
+	tracksQuery := `
+		SELECT
+			t.id,
+			t.title,
+			at.album_id,
+			al.name AS album_name,
+			t.musicbrainz_id,
+			at.track_number,
+			at.disc_number,
+			t.genre,
+			t.comment,
+			t.created_at,
+			t.updated_at,
+			COALESCE(tp.play_count, 0) AS play_count
+		FROM album_tracks at
+		JOIN tracks t ON t.id = at.track_id
+		JOIN albums al ON al.id = at.album_id
+		LEFT JOIN (
+			SELECT track_id, COUNT(*) AS play_count
+			FROM play_history
+			GROUP BY track_id
+		) tp ON tp.track_id = t.id
+		WHERE at.album_id = ?
+        AND t.id = ?
+		;
+	`
+
+	if err := sqlx.GetContext(ctx, d.ext, &track, tracksQuery, albumID, trackID); err != nil {
+		return types.TrackDetailed{}, err
+	}
+
+	dummySlice := []types.TrackDetailed{track}
+
+	if err := d.attachTrackArtists(ctx, dummySlice); err != nil {
+		return types.TrackDetailed{}, err
+	}
+
+	if err := d.attachMediaFiles(ctx, dummySlice); err != nil {
+		return types.TrackDetailed{}, err
+	}
+
+	return dummySlice[0], nil
+}
+
 func (d Database) GetTrackFromID(ctx context.Context, ID uuid.UUID) (track types.Track, err error) {
 	query := `
         SELECT *

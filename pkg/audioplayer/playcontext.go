@@ -29,5 +29,16 @@ type PlayContext struct {
 	CurrentTrack    *types.TrackDetailed  `json:"current_track"`
 	Shuffle         bool                  `json:"shuffle"`
 	Repeat          RepeatType            `json:"repeat"`
-	trackOrder      []int                 `json:"-"`
+	TrackOrder      []int                 `json:"track_order"`
+}
+
+func (pc *PlayContext) PullFromQueue() *types.TrackDetailed {
+	if len(pc.Queue) == 0 {
+		return nil
+	}
+
+	qt := pc.Queue[0]
+	pc.Queue = pc.Queue[1:]
+
+	return &qt
 }
