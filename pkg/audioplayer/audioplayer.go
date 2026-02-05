@@ -64,7 +64,7 @@ func (a *AudioPlayer) RegisterPlayCountCallback(f func(trackID string)) {
 }
 
 func (a *AudioPlayer) setCurrentTrack(ctx context.Context) {
-	idx := a.playCtx.trackOrder[a.playCtx.CurrentTrackIdx]
+	idx := a.playCtx.TrackOrder[a.playCtx.CurrentTrackIdx]
 	a.playCtx.CurrentTrack = &a.playCtx.Tracks[idx]
 }
 
@@ -73,7 +73,7 @@ func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, playCtx PlayContex
 		return errors.New("startTrackIndex must be between 0 and len of tracks")
 	}
 
-	playCtx.trackOrder = a.makeTrackOrder(playCtx.CurrentTrackIdx, len(playCtx.Tracks), playCtx.Shuffle)
+	playCtx.TrackOrder = a.makeTrackOrder(playCtx.CurrentTrackIdx, len(playCtx.Tracks), playCtx.Shuffle)
 	if playCtx.Shuffle {
 		playCtx.CurrentTrackIdx = 0
 	}
@@ -129,16 +129,16 @@ func (a *AudioPlayer) SetRepeat(ctx context.Context, r RepeatType) {
 func (a *AudioPlayer) SetShuffle(ctx context.Context, s bool) {
 	a.playCtx.Shuffle = s
 
-	if len(a.playCtx.trackOrder) == 0 || len(a.playCtx.Tracks) == 0 {
+	if len(a.playCtx.TrackOrder) == 0 || len(a.playCtx.Tracks) == 0 {
 		for _, f := range a.currentPlayCtxChangeCallbacks {
 			f(a.playCtx)
 		}
 		return
 	}
 
-	trackIdx := a.playCtx.trackOrder[a.playCtx.CurrentTrackIdx]
+	trackIdx := a.playCtx.TrackOrder[a.playCtx.CurrentTrackIdx]
 
-	a.playCtx.trackOrder = a.makeTrackOrder(a.playCtx.CurrentTrackIdx, len(a.playCtx.Tracks), s)
+	a.playCtx.TrackOrder = a.makeTrackOrder(a.playCtx.CurrentTrackIdx, len(a.playCtx.Tracks), s)
 
 	if s {
 		a.playCtx.CurrentTrackIdx = 0
