@@ -26,7 +26,7 @@ const (
 )
 
 type UserDetails struct {
-	ID        uuid.UUID    `db:"id" json:"id"`
+	ID        uuid.UUID    `db:"id" json:"id" ts_type:"string"`
 	Email     string       `db:"email" json:"email"`
 	Username  string       `db:"username" json:"username"`
 	Provider  AuthProvider `db:"provider" json:"provider"`
