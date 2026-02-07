@@ -26,6 +26,12 @@ func (s *AuthClient) RegisterUserCallback(f func(*types.UserDetails)) {
 	s.userCallbacks = append(s.userCallbacks, f)
 }
 
+func (ac *AuthClient) UserCallback(user *types.UserDetails) {
+	for _, f := range ac.userCallbacks {
+		f(user)
+	}
+}
+
 func (ac *AuthClient) Login(ctx context.Context, username, password string, longLivedToken bool) error {
 	loginResp, err := ac.sc.Login(ctx, username, password, longLivedToken)
 	if err != nil {
@@ -47,9 +53,7 @@ func (ac *AuthClient) Login(ctx context.Context, username, password string, long
 		return err
 	}
 
-	for _, f := range ac.userCallbacks {
-		f(&user)
-	}
+	ac.UserCallback(&user)
 
 	return nil
 }
@@ -62,16 +66,16 @@ func (ac *AuthClient) LogoutServerUser(ctx context.Context, userID uuid.UUID) er
 	return nil
 }
 
-func (ac *AuthClient) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
+func (ac *AuthClient) LoginLocalUser(ctx context.Context, userID uuid.UUID, runCallback bool) (types.UserDetails, error) {
 	path, err := ac.tokenPath(userID)
 	if err != nil {
-		return err
+		return types.UserDetails{}, err
 	}
 
 	b, err := os.ReadFile(path)
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
-			return err
+			return types.UserDetails{}, err
 		}
 	}
 
@@ -79,7 +83,7 @@ func (ac *AuthClient) LoginLocalUser(ctx context.Context, userID uuid.UUID) erro
 
 	userPath, err := ac.userDetailsPath(userID)
 	if err != nil {
-		return err
+		return types.UserDetails{}, err
 	}
 
 	var user types.UserDetails
@@ -89,22 +93,22 @@ func (ac *AuthClient) LoginLocalUser(ctx context.Context, userID uuid.UUID) erro
 		if errors.Is(err, os.ErrNotExist) {
 			user, err = ac.sc.GetUser(ctx)
 			if err != nil {
-				return err
+				return types.UserDetails{}, err
 			}
 		} else {
-			return err
+			return types.UserDetails{}, err
 		}
 	} else {
 		if err = json.Unmarshal(bUser, &user); err != nil {
-			return err
+			return types.UserDetails{}, err
 		}
 	}
 
-	for _, f := range ac.userCallbacks {
-		f(&user)
+	if runCallback {
+		ac.UserCallback(&user)
 	}
 
-	return nil
+	return user, nil
 }
 
 func (ac *AuthClient) GetCachedUsers(ctx context.Context) (users []types.UserDetails, err error) {

@@ -695,6 +695,10 @@ func (s Syncer) syncPlayHistory(ctx context.Context, tx database.DatabaseFace, l
 	return nil
 }
 
+func (s *Syncer) SetDatabase(db database.DatabaseFace) {
+	s.db = db
+}
+
 func New(sc *serverclient.ServerClient, db database.DatabaseFace, musicDir, imgDir string, slogHandler slog.Handler) Syncer {
 	return Syncer{
 		sc:           sc,
