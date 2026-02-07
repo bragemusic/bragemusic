@@ -54,19 +54,15 @@ func (ac *AuthClient) Login(ctx context.Context, username, password string, long
 	return nil
 }
 
-func (ac *AuthClient) Logout(ctx context.Context, userID uuid.UUID) error {
+func (ac *AuthClient) LogoutServerUser(ctx context.Context, userID uuid.UUID) error {
 	if err := ac.removeToken(ctx, userID); err != nil {
 		return err
-	}
-
-	for _, f := range ac.userCallbacks {
-		f(nil)
 	}
 
 	return nil
 }
 
-func (ac *AuthClient) LoadCachedUserAndToken(ctx context.Context, userID uuid.UUID) error {
+func (ac *AuthClient) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
 	path, err := ac.tokenPath(userID)
 	if err != nil {
 		return err

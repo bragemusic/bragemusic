@@ -158,16 +158,28 @@ func (s ServerClient) downloadFile(ctx context.Context, u string, w io.Writer) e
 }
 
 func (s ServerClient) CheckStatus(ctx context.Context) (h server.Status, err error) {
-	u, err := url.JoinPath(s.baseUrl, "api", "status")
+	u, err := url.JoinPath(s.baseUrl, "healthz")
 	if err != nil {
 		return server.Status{}, err
 	}
 
-	if err := s.doGetJson(ctx, u, &h); err != nil {
+	if err = s.doGetJson(ctx, u, &h); err != nil {
 		return server.Status{}, err
 	}
 
-	return h, nil
+	u, err = url.JoinPath(s.baseUrl, "api", "status")
+	if err != nil {
+		return server.Status{}, err
+	}
+
+	hAuthed := server.Status{}
+
+	if err := s.doGetJson(ctx, u, &hAuthed); err != nil {
+		h.Status = server.HealthzNoAuth
+		return h, nil
+	}
+
+	return hAuthed, nil
 }
 
 func (s ServerClient) GetUser(ctx context.Context) (user types.UserDetails, err error) {

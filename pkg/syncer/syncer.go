@@ -138,7 +138,7 @@ func (s *Syncer) updateServerAvailability(ctx context.Context) error {
 		return fmt.Errorf("expected server application name differs. '%s' != expected '%s'", h.Application, expectedServerApplication)
 	}
 
-	if h.Status != server.HealthzRunning {
+	if h.Status == server.HealthzUnavailable {
 		return fmt.Errorf("server status is not running. '%s'", h.Status)
 	}
 
