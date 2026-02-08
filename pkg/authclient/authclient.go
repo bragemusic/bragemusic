@@ -32,6 +32,21 @@ func (ac *AuthClient) UserCallback(user *types.UserDetails) {
 	}
 }
 
+func (ac *AuthClient) LoginCachedServerUser(ctx context.Context, user types.UserDetails, password string, longLivedToken bool) error {
+	loginResp, err := ac.sc.Login(ctx, user.Email, password, longLivedToken)
+	if err != nil {
+		return err
+	}
+
+	ac.sc.SetAuthToken(loginResp.Token)
+
+	if err = ac.saveToken(ctx, loginResp.Token, user.ID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (ac *AuthClient) Login(ctx context.Context, username, password string, longLivedToken bool) error {
 	loginResp, err := ac.sc.Login(ctx, username, password, longLivedToken)
 	if err != nil {
