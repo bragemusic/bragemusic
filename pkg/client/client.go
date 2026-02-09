@@ -373,6 +373,8 @@ func (c *Client) setDatabase(ctx context.Context, dbPath string) error {
 }
 
 func (c *Client) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
+	c.log.InfoContext(ctx, "logging in local user", "id", userID.String())
+
 	user, err := c.AuthClient.LoginLocalUser(ctx, userID, false)
 	if err != nil {
 		return err
