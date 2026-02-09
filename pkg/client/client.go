@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"path/filepath"
 
@@ -339,29 +340,65 @@ func (c *Client) updatePlayCount(trackID string) {
 	c.log.DebugContext(ctx, "added play count", "track_id", trackID)
 }
 
+func (c *Client) setDatabase(ctx context.Context, dbPath string) error {
+	if c.dbClose != nil {
+		c.log.InfoContext(ctx, "closing database")
+		if err := c.dbClose(); err != nil {
+			return err
+		}
+	}
+
+	if err := migrations.Migrate(ctx, dbPath, c.log.Handler()); err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "opening database", "path", dbPath)
+	dbSqlite, err := sqlx.Open("sqlite3", dbPath)
+	if err != nil {
+		return err
+	}
+
+	db, err := database.New(dbSqlite)
+	if err != nil {
+		return err
+	}
+
+	c.mm.SetDatabase(&db)
+	c.sy.SetDatabase(&db)
+
+	c.db = db
+	c.dbClose = dbSqlite.Close
+
+	return nil
+}
+
+func (c *Client) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
+	c.log.InfoContext(ctx, "logging in local user", "id", userID.String())
+
+	user, err := c.AuthClient.LoginLocalUser(ctx, userID, false)
+	if err != nil {
+		return err
+	}
+
+	dbPath := filepath.Join(c.config.ConfigPath, fmt.Sprintf("%s.db", userID.String()))
+
+	if err := c.setDatabase(ctx, dbPath); err != nil {
+		return err
+	}
+
+	c.AuthClient.UserCallback(&user)
+
+	return nil
+}
+
 // func (c Client) PlayPause(ctx context.Context) {
 // 	c.ap.PlayPause(ctx)
 // }
 
 func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c *Client, err error) {
-	dbPath := filepath.Join(config.ConfigPath, "data.db")
-	if err = migrations.Migrate(ctx, dbPath, slogHandler); err != nil {
-		return nil, err
-	}
-
-	dbSqlite, err := sqlx.Open("sqlite3", dbPath)
-	if err != nil {
-		return nil, err
-	}
-
-	db, err := database.New(dbSqlite)
-	if err != nil {
-		return nil, err
-	}
-
 	sc := serverclient.New(config.ServerBaseURL, slogHandler)
-	mm := mediamanager.New(slogHandler, &db, nil, config.MusicDirPath, config.ImagePath)
-	sy := syncer.New(&sc, &db, config.MusicDirPath, config.ImagePath, slogHandler)
+	mm := mediamanager.New(slogHandler, nil, nil, config.MusicDirPath, config.ImagePath)
+	sy := syncer.New(&sc, nil, config.MusicDirPath, config.ImagePath, slogHandler)
 
 	pa, err := audiointerface.NewPortAudio(slogHandler)
 	if err != nil {
@@ -386,8 +423,6 @@ func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c 
 		AudioPlayer: ap,
 		config:      config,
 		log:         slog.New(slogHandler).With("service", "client"),
-		dbClose:     dbSqlite.Close,
-		db:          db,
 	}
 
 	ap.RegisterPlayCountCallback(c.updatePlayCount)

@@ -17,6 +17,10 @@ type MediaManager struct {
 	berr     bragerr.BragErrFactory
 }
 
+func (m *MediaManager) SetDatabase(db database.DatabaseFace) {
+	m.db = db
+}
+
 func New(slogHandler slog.Handler, db database.DatabaseFace, im *imagemagick.ImageMagick, musicDir, imageDir string) MediaManager {
 	return MediaManager{
 		log:      slog.New(slogHandler).With("service", "media-manager"),

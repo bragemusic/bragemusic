@@ -12,6 +12,7 @@ type HealthzStatus string
 const (
 	HealthzRunning     HealthzStatus = "running"
 	HealthzUnavailable HealthzStatus = "unavailable"
+	HealthzNoAuth      HealthzStatus = "no_auth"
 )
 
 type Healthz struct {

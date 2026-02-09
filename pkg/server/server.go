@@ -37,8 +37,11 @@ func (s Server) Handler() http.Handler {
 
 func (s Server) healthz() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		return Response{Status: http.StatusOK, Payload: Healthz{
-			Status: HealthzRunning,
+		return Response{Status: http.StatusOK, Payload: Status{
+			Application: "brage-server", // hardcoded
+			Name:        "Brage Server", // from config
+			Version:     "v0.0.1",
+			Status:      HealthzRunning,
 		}}, nil
 	})
 }

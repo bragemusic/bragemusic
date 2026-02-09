@@ -138,7 +138,7 @@ func (s *Syncer) updateServerAvailability(ctx context.Context) error {
 		return fmt.Errorf("expected server application name differs. '%s' != expected '%s'", h.Application, expectedServerApplication)
 	}
 
-	if h.Status != server.HealthzRunning {
+	if h.Status == server.HealthzUnavailable {
 		return fmt.Errorf("server status is not running. '%s'", h.Status)
 	}
 
@@ -693,6 +693,10 @@ func (s Syncer) syncPlayHistory(ctx context.Context, tx database.DatabaseFace, l
 	}
 
 	return nil
+}
+
+func (s *Syncer) SetDatabase(db database.DatabaseFace) {
+	s.db = db
 }
 
 func New(sc *serverclient.ServerClient, db database.DatabaseFace, musicDir, imgDir string, slogHandler slog.Handler) Syncer {
