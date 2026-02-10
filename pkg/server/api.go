@@ -52,6 +52,8 @@ func (s Server) api() http.Handler {
 	r.Post("/sync", s.sync())
 	r.Post("/sync/play-history", s.syncPlayHistory())
 
+	r.Post("/import/album", s.importAlbum())
+
 	return r
 }
 

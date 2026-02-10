@@ -11,6 +11,7 @@ type Paths struct {
 	ConfigDir string `toml:"config_dir" desc:"Dir where server files are stored."`
 	ImageDir  string `toml:"image_dir" desc:"Dir where image assets are stored."`
 	MusicDir  string `toml:"music_dir" desc:"Dir where music files are stored."`
+	ImportDir string `toml:"import_dir" desc:"Dir where imported albums and tracks will be saved before processing."`
 }
 
 type Admin struct {
@@ -48,6 +49,10 @@ func verify(cfg Config) error {
 
 	if cfg.Paths.ConfigDir == "" {
 		errs = append(errs, errors.New("Paths.ConfigDir not set"))
+	}
+
+	if cfg.Paths.ImportDir == "" {
+		errs = append(errs, errors.New("Paths.ImportDir not set"))
 	}
 
 	if cfg.Port < 1024 || cfg.Port > 49151 {

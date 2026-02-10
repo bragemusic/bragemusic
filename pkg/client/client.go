@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 
 	"github.com/bragemusic/core/pkg/audiointerface"
@@ -229,7 +230,7 @@ func (c Client) CountAlbums(ctx context.Context) (int, error) {
 	return c.mm.CountAlbums(ctx)
 }
 
-func (c Client) UploadAlbumImage(ctx context.Context, id string, img serverclient.ImageUpload) error {
+func (c Client) UploadAlbumImage(ctx context.Context, id string, img serverclient.FileUpload) error {
 	return c.sc.UploadAlbumImage(ctx, id, img)
 }
 
@@ -245,7 +246,7 @@ func (c Client) CountTracks(ctx context.Context) (int, error) {
 	return c.mm.CountTracks(ctx)
 }
 
-func (c Client) UploadArtistImage(ctx context.Context, artistID string, img serverclient.ImageUpload) error {
+func (c Client) UploadArtistImage(ctx context.Context, artistID string, img serverclient.FileUpload) error {
 	return c.sc.UploadArtistImage(ctx, artistID, img)
 }
 
@@ -311,12 +312,22 @@ func (c Client) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Pla
 	return nil
 }
 
-func (c Client) UploadPlaylistImage(ctx context.Context, id string, img serverclient.ImageUpload) error {
+func (c Client) UploadPlaylistImage(ctx context.Context, id string, img serverclient.FileUpload) error {
 	return c.sc.UploadPlaylistImage(ctx, id, img)
 }
 
 func (c Client) SearchFull(ctx context.Context, searchTerm string) (si []types.SearchItem, err error) {
 	return c.mm.SearchFull(ctx, searchTerm)
+}
+
+func (c Client) ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error {
+	r, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	return c.sc.ImportAlbum(ctx, r, filename, musicbrainzID)
 }
 
 func (c *Client) StartSyncDaemon(ctx context.Context, done func()) {
