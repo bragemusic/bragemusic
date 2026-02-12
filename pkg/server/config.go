@@ -25,11 +25,16 @@ type AcoustID struct {
 	ApiKey string `toml:"api_key" desc:"API key to Acoust ID. Used to identify the files to not rely solely on ID3."`
 }
 
+type Wikipedia struct {
+	Email string `toml:"email" desc:"Used against the wikipedia API. They require a valid email to make sure you behave."`
+}
+
 type Config struct {
-	AcoustID AcoustID `toml:"acoust_id"`
-	Admin    Admin    `toml:"admin"`
-	Paths    Paths    `toml:"paths"`
-	Port     int      `toml:"port" desc:"Port of the server. Defaults to 3000."`
+	AcoustID  AcoustID  `toml:"acoust_id"`
+	Admin     Admin     `toml:"admin"`
+	Paths     Paths     `toml:"paths"`
+	Wikipedia Wikipedia `toml:"wikipedia"`
+	Port      int       `toml:"port" desc:"Port of the server. Defaults to 3000."`
 }
 
 var defaultConfig = Config{
@@ -67,6 +72,10 @@ func verify(cfg Config) error {
 
 	if cfg.AcoustID.ApiKey == "" {
 		errs = append(errs, errors.New("AcoustID.ApiKey not set"))
+	}
+
+	if cfg.Wikipedia.Email == "" {
+		errs = append(errs, errors.New("Wikipedia.Email not set"))
 	}
 
 	if cfg.Port < 1024 || cfg.Port > 49151 {

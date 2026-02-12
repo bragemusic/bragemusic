@@ -67,6 +67,60 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 		return err
 	}
 
+	ie, found, err := i.db.GetUnclaimedImport(ctx)
+	if err != nil {
+		return i.berr.DatabaseError(err, types.EntityImport, nil)
+	}
+
+	if !found {
+		i.log.DebugContext(ctx, "no items found for processing")
+		return nil
+	}
+
+	path := filepath.Join(i.importDir, ie.Filename)
+
+	if err = i.db.SetImportState(ctx, ie.ID, types.ImportStateRunning); err != nil {
+		return i.berr.DatabaseError(err, types.EntityImport, &ie.ID)
+	}
+
+	switch ie.Type {
+	case types.ImportTypeAlbum:
+		err = i.importAlbum(ctx, path)
+	case types.ImportTypeTrack:
+		err = i.importTrack(ctx, path)
+	}
+
+	if err != nil {
+		if dberr := i.db.SetImportState(ctx, ie.ID, types.ImportStateError); dberr != nil {
+			return i.berr.DatabaseError(dberr, types.EntityImport, &ie.ID)
+		}
+		return err
+	}
+
+	if err = i.db.SetImportState(ctx, ie.ID, types.ImportStateFinished); err != nil {
+		return i.berr.DatabaseError(err, types.EntityImport, &ie.ID)
+	}
+
+	if !i.deleteOnSuccess {
+		err = i.copyFile(ctx, path, filepath.Join(i.postImportDir, ie.Filename))
+		if err != nil {
+			return err
+		}
+	}
+
+	err = os.Remove(path)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *Importer) runImportCheck2(ctx context.Context) error {
+	if err := os.MkdirAll(i.postImportDir, 0o755); err != nil {
+		return err
+	}
+
 	return filepath.Walk(i.importDir,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
@@ -132,7 +186,7 @@ func (i Importer) unzipMusicFiles(ctx context.Context, filename, targetDir strin
 
 	archive, err := zip.OpenReader(filename)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer archive.Close()
 
@@ -344,15 +398,16 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 	return nil
 }
 
-func (i *Importer) Run(ctx context.Context) {
+func (i *Importer) Run(ctx context.Context) error {
 	i.log.InfoContext(ctx, "starting import check")
 
 	err := i.runImportCheck(ctx)
 	if err != nil {
-		i.log.ErrorContext(ctx, "import check finished with errors", "error", err.Error())
+		return err
 	}
 
 	i.log.InfoContext(ctx, "import check done")
+	return nil
 }
 
 func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, im imagemagick.ImageMagick, slogHandler slog.Handler) Importer {

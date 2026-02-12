@@ -18,6 +18,7 @@ const (
 	ImportStateError      ImportState = "error"
 
 	ImportTypeAlbum ImportType = "album"
+	ImportTypeTrack ImportType = "track"
 )
 
 type ImportAlbum struct {

@@ -1,13 +1,16 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
 
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/importer"
+	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/go-chi/chi/v5"
 )
@@ -22,6 +25,7 @@ type Server struct {
 	mediamgr *mediamanager.MediaManager
 	authPkg  *auth.Auth
 	importer *importer.Importer
+	jobmgr   *jobmanager.JobManager
 	config   Config
 }
 
@@ -71,7 +75,18 @@ func (s Server) handle(f handlerFunc) http.HandlerFunc {
 	}
 }
 
-func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, c Config) Server {
+func (s Server) Start(ctx context.Context) error {
+	go s.jobmgr.StartScheduler(ctx)
+
+	s.log.InfoContext(ctx, fmt.Sprintf("serving on port %d", s.config.Port))
+	if err := http.ListenAndServe(fmt.Sprintf(":%d", s.config.Port), s.Handler()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, c Config) Server {
 	return Server{
 		log:      slog.New(slogHandler).With("service", "server"),
 		errLog:   slog.New(slogHandler),
@@ -79,5 +94,6 @@ func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i
 		config:   c,
 		authPkg:  a,
 		importer: i,
+		jobmgr:   j,
 	}
 }
