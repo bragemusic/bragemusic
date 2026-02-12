@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/bragemusic/core/pkg/acoustid"
+	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/filetx"
 	"github.com/bragemusic/core/pkg/imagemagick"
@@ -19,6 +20,7 @@ import (
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
 	"github.com/dhowden/tag"
+	"github.com/gofrs/uuid/v5"
 )
 
 type Config struct {
@@ -40,6 +42,24 @@ type Importer struct {
 	aid             acoustid.AcoustID
 	im              imagemagick.ImageMagick
 	log             *slog.Logger
+	berr            bragerr.BragErrFactory
+}
+
+func (i Importer) AddImportEntry(ctx context.Context, filename string, itype types.ImportType, userID uuid.UUID, musicbrainzID *string) error {
+	ie := types.Import{
+		MusicBrainzID: musicbrainzID,
+		Owner:         userID,
+		Filename:      filename,
+		Type:          itype,
+		State:         types.ImportStateNotStarted,
+	}
+
+	_, err := i.db.AddImport(ctx, ie)
+	if err != nil {
+		return i.berr.DatabaseError(err, types.EntityImport, nil)
+	}
+
+	return nil
 }
 
 func (i *Importer) runImportCheck(ctx context.Context) error {
@@ -347,5 +367,6 @@ func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid a
 		log:             slog.New(slogHandler).With("service", "importer"),
 		postImportDir:   cfg.FinishedImportsDirPath,
 		deleteOnSuccess: cfg.DeleteImportsOnSuccess,
+		berr:            bragerr.NewFactory("importer"),
 	}
 }

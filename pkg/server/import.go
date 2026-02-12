@@ -2,20 +2,25 @@ package server
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 
+	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/types"
 )
 
 func (s Server) importAlbum() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		// ctx := r.Context()
+		ctx := r.Context()
 
-		err := r.ParseMultipartForm(10 << 20) // Limit upload size to 10MB
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+
+		err = r.ParseMultipartForm(10 << 20) // Limit upload size to 10MB
 		if err != nil {
 			return Response{}, err
 		}
@@ -50,8 +55,8 @@ func (s Server) importAlbum() http.HandlerFunc {
 			return Response{}, err
 		}
 
-		if meta.MusicbrainzID != nil {
-			fmt.Println(*meta.MusicbrainzID)
+		if err = s.importer.AddImportEntry(ctx, header.Filename, types.ImportTypeAlbum, user.ID, meta.MusicbrainzID); err != nil {
+			return Response{}, err
 		}
 
 		// switch imageType {

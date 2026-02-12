@@ -140,6 +140,7 @@ type DatabaseFace interface {
 	UpdatePlaylist(ctx context.Context, plist types.Playlist) error
 
 	AuthFace
+	ImportFace
 }
 
 type executor interface {

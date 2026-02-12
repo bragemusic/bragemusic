@@ -9,10 +9,13 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/imagemagick"
+	"github.com/bragemusic/core/pkg/importer"
 	"github.com/bragemusic/core/pkg/mediamanager"
+	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/server"
 
 	"github.com/jmoiron/sqlx"
@@ -65,7 +68,33 @@ func main() {
 
 	m := mediamanager.New(slogHandler, db, &im, scfg.Paths.MusicDir, scfg.Paths.ImageDir)
 
-	s := server.New(slogHandler, &m, &a, scfg)
+	impCfg := importer.Config{
+		ImportDirPath:          scfg.Paths.ImportDir,
+		MusicDirPath:           scfg.Paths.MusicDir,
+		ImageDirPath:           scfg.Paths.ImageDir,
+		DeleteImportsOnSuccess: false,
+		FinishedImportsDirPath: scfg.Paths.BackupImportDir,
+	}
+
+	im, err = imagemagick.New(slogHandler)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+
+	aid, err := acoustid.New(scfg.AcoustID.ApiKey, slogHandler)
+	if err != nil {
+		logger.Error(err.Error())
+		return
+	}
+
+	// w := wiki.New(scfg.WikiEmail)
+
+	mb := musicbrainz.New(slogHandler)
+
+	imp := importer.New(impCfg, &db, mb, aid, im, slogHandler)
+
+	s := server.New(slogHandler, &m, &a, &imp, scfg)
 
 	logger.Info(fmt.Sprintf("serving on port %d", scfg.Port))
 	if err = http.ListenAndServe(fmt.Sprintf(":%d", scfg.Port), s.Handler()); err != nil {

@@ -26,6 +26,7 @@ const (
 	EntityPlaylistTrack   EntityType = "playlist_track"
 	EntityPlayHistoryItem EntityType = "play_history_item"
 	EntitySearchItem      EntityType = "search_item"
+	EntityImport          EntityType = "import"
 
 	EntityEventDelete EntityEventType = "delete"
 )

@@ -7,6 +7,7 @@ import (
 
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/bragerr"
+	"github.com/bragemusic/core/pkg/importer"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/go-chi/chi/v5"
 )
@@ -20,6 +21,7 @@ type Server struct {
 	errLog   *slog.Logger
 	mediamgr *mediamanager.MediaManager
 	authPkg  *auth.Auth
+	importer *importer.Importer
 	config   Config
 }
 
@@ -69,12 +71,13 @@ func (s Server) handle(f handlerFunc) http.HandlerFunc {
 	}
 }
 
-func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, c Config) Server {
+func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, c Config) Server {
 	return Server{
 		log:      slog.New(slogHandler).With("service", "server"),
 		errLog:   slog.New(slogHandler),
 		mediamgr: m,
 		config:   c,
 		authPkg:  a,
+		importer: i,
 	}
 }

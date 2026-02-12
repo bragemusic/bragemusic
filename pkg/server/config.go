@@ -8,10 +8,11 @@ import (
 )
 
 type Paths struct {
-	ConfigDir string `toml:"config_dir" desc:"Dir where server files are stored."`
-	ImageDir  string `toml:"image_dir" desc:"Dir where image assets are stored."`
-	MusicDir  string `toml:"music_dir" desc:"Dir where music files are stored."`
-	ImportDir string `toml:"import_dir" desc:"Dir where imported albums and tracks will be saved before processing."`
+	ConfigDir       string `toml:"config_dir" desc:"Dir where server files are stored."`
+	ImageDir        string `toml:"image_dir" desc:"Dir where image assets are stored."`
+	MusicDir        string `toml:"music_dir" desc:"Dir where music files are stored."`
+	ImportDir       string `toml:"import_dir" desc:"Dir where imported albums and tracks will be saved before processing."`
+	BackupImportDir string `toml:"backup_import_dir" desc:"Dir where imported albums and tracks will be saved after processing."`
 }
 
 type Admin struct {
@@ -20,10 +21,15 @@ type Admin struct {
 	Password string `toml:"password" desc:"Default user, with admin rights, password. Defaults to 'password'"`
 }
 
+type AcoustID struct {
+	ApiKey string `toml:"api_key" desc:"API key to Acoust ID. Used to identify the files to not rely solely on ID3."`
+}
+
 type Config struct {
-	Admin Admin `toml:"admin"`
-	Paths Paths `toml:"paths"`
-	Port  int   `toml:"port" desc:"Port of the server. Defaults to 3000."`
+	AcoustID AcoustID `toml:"acoust_id"`
+	Admin    Admin    `toml:"admin"`
+	Paths    Paths    `toml:"paths"`
+	Port     int      `toml:"port" desc:"Port of the server. Defaults to 3000."`
 }
 
 var defaultConfig = Config{
@@ -53,6 +59,14 @@ func verify(cfg Config) error {
 
 	if cfg.Paths.ImportDir == "" {
 		errs = append(errs, errors.New("Paths.ImportDir not set"))
+	}
+
+	if cfg.Paths.BackupImportDir == "" {
+		errs = append(errs, errors.New("Paths.BackupImportDir not set"))
+	}
+
+	if cfg.AcoustID.ApiKey == "" {
+		errs = append(errs, errors.New("AcoustID.ApiKey not set"))
 	}
 
 	if cfg.Port < 1024 || cfg.Port > 49151 {
