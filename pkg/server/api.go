@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 
+	"github.com/bragemusic/core/pkg/types"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -52,7 +53,7 @@ func (s Server) api() http.Handler {
 	r.Post("/sync", s.sync())
 	r.Post("/sync/play-history", s.syncPlayHistory())
 
-	r.Post("/import/album", s.importAlbum())
+	r.With(s.authPkg.RoleCheckMiddleware(types.UserRoleAdmin, types.UserRoleImporterWrite)).Post("/import/album", s.importAlbum())
 
 	return r
 }
