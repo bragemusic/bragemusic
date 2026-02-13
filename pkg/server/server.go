@@ -3,9 +3,12 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync/atomic"
+	"time"
 
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/bragerr"
@@ -13,6 +16,7 @@ import (
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/sync/errgroup"
 )
 
 type (
@@ -27,13 +31,16 @@ type Server struct {
 	importer *importer.Importer
 	jobmgr   *jobmanager.JobManager
 	config   Config
+	httpSrv  *http.Server
+	ready    atomic.Bool
 }
 
-func (s Server) Handler() http.Handler {
+func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Use(LoggerMiddleware(*s.log, []string{"/healthz"}))
 
 	r.Get("/healthz", s.healthz())
+	r.Get("/readyz", s.readyz())
 
 	r.Mount("/api", s.api())
 	r.Mount("/auth", s.auth())
@@ -41,7 +48,7 @@ func (s Server) Handler() http.Handler {
 	return r
 }
 
-func (s Server) healthz() http.HandlerFunc {
+func (s *Server) healthz() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		return Response{Status: http.StatusOK, Payload: Status{
 			Application: "brage-server", // hardcoded
@@ -52,7 +59,16 @@ func (s Server) healthz() http.HandlerFunc {
 	})
 }
 
-func (s Server) handle(f handlerFunc) http.HandlerFunc {
+func (s *Server) readyz() http.HandlerFunc {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
+		if !s.ready.Load() {
+			return Response{Status: http.StatusServiceUnavailable, Payload: nil}, nil
+		}
+		return Response{Status: http.StatusServiceUnavailable, Payload: nil}, nil
+	})
+}
+
+func (s *Server) handle(f handlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		resp, err := f(w, r)
 		ctx := r.Context()
@@ -75,16 +91,69 @@ func (s Server) handle(f handlerFunc) http.HandlerFunc {
 	}
 }
 
-func (s Server) Start(ctx context.Context) error {
-	go s.jobmgr.StartScheduler(ctx)
+func (s *Server) Start(ctx context.Context) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
-	s.log.InfoContext(ctx, fmt.Sprintf("serving on port %d", s.config.Port))
-	if err := http.ListenAndServe(fmt.Sprintf(":%d", s.config.Port), s.Handler()); err != nil {
-		return err
+	g, ctx := errgroup.WithContext(ctx)
+
+	s.httpSrv = &http.Server{
+		Addr:    fmt.Sprintf(":%d", s.config.Port),
+		Handler: s.Handler(),
 	}
 
-	return nil
+	// Mark as ready
+	s.ready.Store(true)
+
+	g.Go(func() error {
+		s.log.InfoContext(ctx, "HTTP server starting", "port", s.config.Port)
+
+		if err := s.httpSrv.ListenAndServe(); err != nil &&
+			!errors.Is(err, http.ErrServerClosed) {
+			return err
+		}
+
+		return nil
+	})
+
+	g.Go(func() error {
+		s.jobmgr.StartScheduler(ctx)
+		return nil
+	})
+
+	g.Go(func() error {
+		<-ctx.Done()
+
+		s.log.InfoContext(ctx, "shutdown initiated")
+
+		// Fail readiness immediately
+		s.ready.Store(false)
+
+		// Give Kubernetes time to stop routing traffic
+		time.Sleep(2 * time.Second)
+
+		shutdownCtx, shutdownCancel := context.WithTimeout(
+			context.Background(),
+			25*time.Second, // must be < k8s terminationGracePeriodSeconds
+		)
+		defer shutdownCancel()
+
+		return s.httpSrv.Shutdown(shutdownCtx)
+	})
+
+	return g.Wait()
 }
+
+// func (s Server) Start(ctx context.Context) error {
+// 	go s.jobmgr.StartScheduler(ctx)
+
+// 	s.log.InfoContext(ctx, fmt.Sprintf("serving on port %d", s.config.Port))
+// 	if err := http.ListenAndServe(fmt.Sprintf(":%d", s.config.Port), s.Handler()); err != nil {
+// 		return err
+// 	}
+
+// 	return nil
+// }
 
 func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, c Config) Server {
 	return Server{

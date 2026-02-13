@@ -6,7 +6,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s Server) getMediaFile() http.HandlerFunc {
+func (s *Server) getMediaFile() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -25,7 +25,7 @@ func (s Server) getMediaFile() http.HandlerFunc {
 	)
 }
 
-func (s Server) getMediaFileFile() http.HandlerFunc {
+func (s *Server) getMediaFileFile() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 		mediafileID, err := getParameter[uuid.UUID](ctx, "mediafileID")

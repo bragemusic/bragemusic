@@ -11,7 +11,7 @@ import (
 	"github.com/bragemusic/core/pkg/types"
 )
 
-func (s Server) importAlbum() http.HandlerFunc {
+func (s *Server) importAlbum() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 

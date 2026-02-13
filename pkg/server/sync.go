@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func (s Server) sync() http.HandlerFunc {
+func (s *Server) sync() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -24,7 +24,7 @@ func (s Server) sync() http.HandlerFunc {
 	)
 }
 
-func (s Server) syncPlayHistory() http.HandlerFunc {
+func (s *Server) syncPlayHistory() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 

@@ -9,7 +9,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s Server) getAlbum() http.HandlerFunc {
+func (s *Server) getAlbum() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -27,7 +27,7 @@ func (s Server) getAlbum() http.HandlerFunc {
 	})
 }
 
-func (s Server) listAlbums() http.HandlerFunc {
+func (s *Server) listAlbums() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -45,7 +45,7 @@ func (s Server) listAlbums() http.HandlerFunc {
 	})
 }
 
-func (s Server) getAlbumArtist() http.HandlerFunc {
+func (s *Server) getAlbumArtist() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -73,7 +73,7 @@ func (s Server) getAlbumArtist() http.HandlerFunc {
 	})
 }
 
-func (s Server) getAlbumArtistByID() http.HandlerFunc {
+func (s *Server) getAlbumArtistByID() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -91,7 +91,7 @@ func (s Server) getAlbumArtistByID() http.HandlerFunc {
 	})
 }
 
-func (s Server) getAlbumTrack() http.HandlerFunc {
+func (s *Server) getAlbumTrack() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -119,7 +119,7 @@ func (s Server) getAlbumTrack() http.HandlerFunc {
 	})
 }
 
-func (s Server) getAlbumTrackByID() http.HandlerFunc {
+func (s *Server) getAlbumTrackByID() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -137,7 +137,7 @@ func (s Server) getAlbumTrackByID() http.HandlerFunc {
 	})
 }
 
-func (s Server) updateAlbum() http.HandlerFunc {
+func (s *Server) updateAlbum() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 

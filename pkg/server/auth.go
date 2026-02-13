@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (s Server) auth() http.Handler {
+func (s *Server) auth() http.Handler {
 	r := chi.NewRouter()
 
 	r.Post("/login", s.login())
@@ -15,7 +15,7 @@ func (s Server) auth() http.Handler {
 	return r
 }
 
-func (s Server) login() http.HandlerFunc {
+func (s *Server) login() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
