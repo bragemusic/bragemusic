@@ -8,7 +8,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s Server) getTrack() http.HandlerFunc {
+func (s *Server) getTrack() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -27,7 +27,7 @@ func (s Server) getTrack() http.HandlerFunc {
 	)
 }
 
-func (s Server) listAlbumTracks() http.HandlerFunc {
+func (s *Server) listAlbumTracks() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -45,7 +45,7 @@ func (s Server) listAlbumTracks() http.HandlerFunc {
 	})
 }
 
-func (s Server) updateTrack() http.HandlerFunc {
+func (s *Server) updateTrack() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 

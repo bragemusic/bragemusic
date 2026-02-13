@@ -9,7 +9,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s Server) addPlaylist() http.HandlerFunc {
+func (s *Server) addPlaylist() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -26,7 +26,7 @@ func (s Server) addPlaylist() http.HandlerFunc {
 	})
 }
 
-func (s Server) addPlaylistTrack() http.HandlerFunc {
+func (s *Server) addPlaylistTrack() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -53,7 +53,7 @@ func (s Server) addPlaylistTrack() http.HandlerFunc {
 	})
 }
 
-func (s Server) deletePlaylist() http.HandlerFunc {
+func (s *Server) deletePlaylist() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -77,7 +77,7 @@ func (s Server) deletePlaylist() http.HandlerFunc {
 	)
 }
 
-func (s Server) getPlaylist() http.HandlerFunc {
+func (s *Server) getPlaylist() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -99,7 +99,7 @@ func (s Server) getPlaylist() http.HandlerFunc {
 	)
 }
 
-func (s Server) updatePlaylist() http.HandlerFunc {
+func (s *Server) updatePlaylist() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 

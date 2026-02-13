@@ -1,0 +1,107 @@
+package jobmanager
+
+import (
+	"context"
+	"errors"
+	"log/slog"
+	"time"
+
+	"github.com/bragemusic/core/pkg/bragerr"
+	"github.com/bragemusic/core/pkg/importer"
+	"github.com/bragemusic/core/pkg/mediamanager"
+	"github.com/bragemusic/core/pkg/metasyncer"
+	"github.com/bragemusic/core/pkg/types"
+)
+
+type JobConfig struct {
+	ImporterRunTiming   int
+	MetaSyncerRunTiming int
+}
+
+type jobDefinition struct {
+	interval time.Duration
+	run      func(context.Context) error
+	C        chan struct{}
+}
+
+type JobManager struct {
+	log      *slog.Logger
+	mediamgr *mediamanager.MediaManager
+	importer *importer.Importer
+	metasync *metasyncer.MetaSyncer
+	jobs     map[types.JobType]jobDefinition
+	berr     bragerr.BragErrFactory
+}
+
+func (j *JobManager) RunJob(ctx context.Context, jobType types.JobType) error {
+	job, ok := j.jobs[jobType]
+	if !ok {
+		return j.berr.JobTypeMissing(errors.New("could not run job"), jobType)
+	}
+
+	job.C <- struct{}{}
+
+	return nil
+}
+
+func (j *JobManager) startJob(ctx context.Context, jobType types.JobType, job jobDefinition) {
+	ticker := time.NewTicker(job.interval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if err := job.run(ctx); err != nil {
+				j.log.ErrorContext(ctx, "job failed",
+					"job", jobType,
+					"error", err,
+				)
+			}
+		case <-job.C:
+			if err := job.run(ctx); err != nil {
+				j.log.ErrorContext(ctx, "job failed",
+					"job", jobType,
+					"error", err,
+				)
+			}
+
+		}
+	}
+}
+
+func (j *JobManager) StartScheduler(ctx context.Context) {
+	j.log.InfoContext(ctx, "starting scheduler")
+
+	for jobType, job := range j.jobs {
+		go j.startJob(ctx, jobType, job)
+	}
+
+	<-ctx.Done()
+	j.log.InfoContext(ctx, "jobs finished")
+}
+
+func New(slogHandler slog.Handler, cfg JobConfig, m *mediamanager.MediaManager, i *importer.Importer, ms *metasyncer.MetaSyncer) JobManager {
+	jobs := map[types.JobType]jobDefinition{
+		types.JobImporterRun: {
+			interval: time.Duration(cfg.ImporterRunTiming) * time.Second,
+			run:      i.Run,
+			C:        make(chan struct{}, 1),
+		},
+		types.JobMetaSyncRun: {
+			interval: time.Duration(cfg.ImporterRunTiming) * time.Second,
+			run:      ms.Sync,
+			C:        make(chan struct{}, 1),
+		},
+	}
+
+	return JobManager{
+		log:      slog.New(slogHandler).With("service", "job-manager"),
+		berr:     bragerr.NewFactory("job-manager"),
+		mediamgr: m,
+		importer: i,
+		metasync: ms,
+		jobs:     jobs,
+	}
+}

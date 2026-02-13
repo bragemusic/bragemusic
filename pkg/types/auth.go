@@ -13,9 +13,10 @@ type (
 )
 
 const (
-	UserRoleAdmin UserRole = "admin"
-	UserRoleRead  UserRole = "read"
-	UserRoleWrite UserRole = "write"
+	UserRoleAdmin         UserRole = "admin"
+	UserRoleRead          UserRole = "read"
+	UserRoleWrite         UserRole = "write"
+	UserRoleImporterWrite UserRole = "importer:write"
 
 	AuthLocal AuthProvider = "local"
 
@@ -32,6 +33,15 @@ type UserDetails struct {
 	Provider  AuthProvider `db:"provider" json:"provider"`
 	Roles     []UserRole   `db:"role" json:"role"`
 	CreatedAt time.Time    `db:"created_at" json:"created_at"`
+}
+
+func (u UserDetails) HasRole(r UserRole) bool {
+	for _, rr := range u.Roles {
+		if rr == r {
+			return true
+		}
+	}
+	return false
 }
 
 type User struct {

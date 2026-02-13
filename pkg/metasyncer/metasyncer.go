@@ -57,7 +57,7 @@ func (m MetaSyncer) getArtistMetaData(ctx context.Context, artistMbId string) (w
 	return wikiData, nil
 }
 
-func (m MetaSyncer) Sync(ctx context.Context) {
+func (m MetaSyncer) Sync(ctx context.Context) error {
 	m.log.InfoContext(ctx, "started metadata sync")
 	defer func() { m.log.InfoContext(ctx, "metadata sync finsished") }()
 
@@ -95,6 +95,7 @@ func (m MetaSyncer) Sync(ctx context.Context) {
 			m.log.InfoContext(ctx, "downloaded artist art", "artist", a.Name)
 		}
 	}
+	return nil
 }
 
 func (m MetaSyncer) downloadArtistImage(ctx context.Context, imageUrl string, artistID uuid.UUID) error {

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/bragemusic/core/pkg/acoustid"
+	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/filetx"
 	"github.com/bragemusic/core/pkg/imagemagick"
@@ -19,6 +20,7 @@ import (
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
 	"github.com/dhowden/tag"
+	"github.com/gofrs/uuid/v5"
 )
 
 type Config struct {
@@ -40,9 +42,81 @@ type Importer struct {
 	aid             acoustid.AcoustID
 	im              imagemagick.ImageMagick
 	log             *slog.Logger
+	berr            bragerr.BragErrFactory
+}
+
+func (i Importer) AddImportEntry(ctx context.Context, filename string, itype types.ImportType, userID uuid.UUID, musicbrainzID *string) error {
+	ie := types.Import{
+		MusicBrainzID: musicbrainzID,
+		Owner:         userID,
+		Filename:      filename,
+		Type:          itype,
+		State:         types.ImportStateNotStarted,
+	}
+
+	_, err := i.db.AddImport(ctx, ie)
+	if err != nil {
+		return i.berr.DatabaseError(err, types.EntityImport, nil)
+	}
+
+	return nil
 }
 
 func (i *Importer) runImportCheck(ctx context.Context) error {
+	if err := os.MkdirAll(i.postImportDir, 0o755); err != nil {
+		return err
+	}
+
+	ie, found, err := i.db.GetUnclaimedImport(ctx)
+	if err != nil {
+		return i.berr.DatabaseError(err, types.EntityImport, nil)
+	}
+
+	if !found {
+		i.log.DebugContext(ctx, "no items found for processing")
+		return nil
+	}
+
+	path := filepath.Join(i.importDir, ie.Filename)
+
+	if err = i.db.SetImportState(ctx, ie.ID, types.ImportStateRunning); err != nil {
+		return i.berr.DatabaseError(err, types.EntityImport, &ie.ID)
+	}
+
+	switch ie.Type {
+	case types.ImportTypeAlbum:
+		err = i.importAlbum(ctx, path, ie.MusicBrainzID)
+	case types.ImportTypeTrack:
+		err = i.importTrack(ctx, path)
+	}
+
+	if err != nil {
+		if dberr := i.db.SetImportState(ctx, ie.ID, types.ImportStateError); dberr != nil {
+			return i.berr.DatabaseError(dberr, types.EntityImport, &ie.ID)
+		}
+		return err
+	}
+
+	if err = i.db.SetImportState(ctx, ie.ID, types.ImportStateFinished); err != nil {
+		return i.berr.DatabaseError(err, types.EntityImport, &ie.ID)
+	}
+
+	if !i.deleteOnSuccess {
+		err = i.copyFile(ctx, path, filepath.Join(i.postImportDir, ie.Filename))
+		if err != nil {
+			return err
+		}
+	}
+
+	err = os.Remove(path)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (i *Importer) runImportCheck2(ctx context.Context) error {
 	if err := os.MkdirAll(i.postImportDir, 0o755); err != nil {
 		return err
 	}
@@ -58,8 +132,8 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 			switch strings.ToLower(filepath.Ext(path)) {
 			case ".flac":
 				f = i.importTrack
-			case ".zip":
-				f = i.importAlbum
+			// case ".zip":
+			// 	f = i.importAlbum
 			default:
 				return nil
 			}
@@ -87,7 +161,7 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 		})
 }
 
-func (i *Importer) importAlbum(ctx context.Context, filename string) error {
+func (i *Importer) importAlbum(ctx context.Context, filename string, mbID *string) error {
 	i.log.InfoContext(ctx, "parsing album", "filename", filename)
 
 	tempFolder, err := os.MkdirTemp(os.TempDir(), "brage-album")
@@ -100,7 +174,7 @@ func (i *Importer) importAlbum(ctx context.Context, filename string) error {
 		return err
 	}
 
-	if err = i.importAlbumFiles(ctx, tempFolder); err != nil {
+	if err = i.importAlbumFiles(ctx, tempFolder, mbID); err != nil {
 		return err
 	}
 
@@ -112,7 +186,7 @@ func (i Importer) unzipMusicFiles(ctx context.Context, filename, targetDir strin
 
 	archive, err := zip.OpenReader(filename)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer archive.Close()
 
@@ -249,7 +323,7 @@ func (i Importer) downloadAlbumCoverImage(ctx context.Context, album types.Album
 	return fmt.Errorf("could not get album cover for album '%s'", album.ID)
 }
 
-func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
+func (i Importer) importAlbumFiles(ctx context.Context, folder string, mbID *string) error {
 	tx, err := i.db.Begin(ctx)
 	if err != nil {
 		return err
@@ -267,7 +341,7 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 		return err
 	}
 
-	albumAnalysis, err := i.analyzeAlbum(ctx, mediaFiles)
+	albumAnalysis, err := i.analyzeAlbum(ctx, mediaFiles, mbID)
 	if err != nil {
 		if errors.Is(err, ErrAlbumMbIDNotFound) {
 			i.log.WarnContext(ctx, "no album musicbrainz ID found, using ID3")
@@ -324,15 +398,16 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string) error {
 	return nil
 }
 
-func (i *Importer) Run(ctx context.Context) {
+func (i *Importer) Run(ctx context.Context) error {
 	i.log.InfoContext(ctx, "starting import check")
 
 	err := i.runImportCheck(ctx)
 	if err != nil {
-		i.log.ErrorContext(ctx, "import check finished with errors", "error", err.Error())
+		return err
 	}
 
 	i.log.InfoContext(ctx, "import check done")
+	return nil
 }
 
 func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, im imagemagick.ImageMagick, slogHandler slog.Handler) Importer {
@@ -347,5 +422,6 @@ func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid a
 		log:             slog.New(slogHandler).With("service", "importer"),
 		postImportDir:   cfg.FinishedImportsDirPath,
 		deleteOnSuccess: cfg.DeleteImportsOnSuccess,
+		berr:            bragerr.NewFactory("importer"),
 	}
 }

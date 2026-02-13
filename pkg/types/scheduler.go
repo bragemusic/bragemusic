@@ -1,0 +1,8 @@
+package types
+
+type JobType string
+
+const (
+	JobImporterRun JobType = "importer:run"
+	JobMetaSyncRun JobType = "metasync:run"
+)

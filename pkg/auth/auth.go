@@ -318,13 +318,13 @@ func (a Auth) Middleware(next http.Handler) http.Handler {
 
 		token, err := a.tokenFromHeader(ctx, r.Header.Get("Authorization"))
 		if err != nil {
-			bragerr.HandleHttpResponse(ctx, a.berr.Unauthenticated(err).With("apa", 123), w, a.log)
+			bragerr.HandleHttpResponse(ctx, a.berr.Unauthenticated(err), w, a.log)
 			return
 		}
 
 		user, err := a.getUserFromTokenString(ctx, token)
 		if err != nil {
-			bragerr.HandleHttpResponse(ctx, a.berr.Unauthenticated(err).With("bepa", "as"), w, a.log)
+			bragerr.HandleHttpResponse(ctx, a.berr.Unauthenticated(err), w, a.log)
 			return
 		}
 
@@ -332,6 +332,33 @@ func (a Auth) Middleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func (a Auth) RoleCheckMiddleware(roles ...types.UserRole) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+
+			user, err := a.GetUserFromContext(ctx)
+			if err != nil {
+				bragerr.HandleHttpResponse(ctx, a.berr.Unauthenticated(err), w, a.log)
+			}
+
+			for _, role := range roles {
+				if user.HasRole(role) {
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+			}
+
+			bragerr.HandleHttpResponse(
+				ctx,
+				a.berr.Unauthenticated(errors.New("user does not have one of the required roles")).With("roles", roles),
+				w,
+				a.log,
+			)
+		})
+	}
 }
 
 func New(db database.AuthFace, slogHandler slog.Handler) Auth {

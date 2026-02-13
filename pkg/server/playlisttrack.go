@@ -7,7 +7,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s Server) getPlaylistTrack() http.HandlerFunc {
+func (s *Server) getPlaylistTrack() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -31,7 +31,7 @@ func (s Server) getPlaylistTrack() http.HandlerFunc {
 	)
 }
 
-func (s Server) deletePlaylistTrack() http.HandlerFunc {
+func (s *Server) deletePlaylistTrack() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 

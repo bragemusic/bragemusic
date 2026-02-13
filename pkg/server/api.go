@@ -3,10 +3,11 @@ package server
 import (
 	"net/http"
 
+	"github.com/bragemusic/core/pkg/types"
 	"github.com/go-chi/chi/v5"
 )
 
-func (s Server) api() http.Handler {
+func (s *Server) api() http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(s.authPkg.Middleware)
@@ -52,10 +53,12 @@ func (s Server) api() http.Handler {
 	r.Post("/sync", s.sync())
 	r.Post("/sync/play-history", s.syncPlayHistory())
 
+	r.With(s.authPkg.RoleCheckMiddleware(types.UserRoleAdmin, types.UserRoleImporterWrite)).Post("/import/album", s.importAlbum())
+
 	return r
 }
 
-func (s Server) status() http.HandlerFunc {
+func (s *Server) status() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		return Response{
 			Payload: Status{
@@ -69,7 +72,7 @@ func (s Server) status() http.HandlerFunc {
 	})
 }
 
-func (s Server) user() http.HandlerFunc {
+func (s *Server) user() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 		user, err := s.authPkg.GetUserFromContext(ctx)

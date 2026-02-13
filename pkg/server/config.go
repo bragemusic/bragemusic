@@ -8,9 +8,11 @@ import (
 )
 
 type Paths struct {
-	ConfigDir string `toml:"config_dir" desc:"Dir where server files are stored."`
-	ImageDir  string `toml:"image_dir" desc:"Dir where image assets are stored."`
-	MusicDir  string `toml:"music_dir" desc:"Dir where music files are stored."`
+	ConfigDir       string `toml:"config_dir" desc:"Dir where server files are stored."`
+	ImageDir        string `toml:"image_dir" desc:"Dir where image assets are stored."`
+	MusicDir        string `toml:"music_dir" desc:"Dir where music files are stored."`
+	ImportDir       string `toml:"import_dir" desc:"Dir where imported albums and tracks will be saved before processing."`
+	BackupImportDir string `toml:"backup_import_dir" desc:"Dir where imported albums and tracks will be saved after processing."`
 }
 
 type Admin struct {
@@ -19,10 +21,26 @@ type Admin struct {
 	Password string `toml:"password" desc:"Default user, with admin rights, password. Defaults to 'password'"`
 }
 
+type AcoustID struct {
+	ApiKey string `toml:"api_key" desc:"API key to Acoust ID. Used to identify the files to not rely solely on ID3."`
+}
+
+type Wikipedia struct {
+	Email string `toml:"email" desc:"Used against the wikipedia API. They require a valid email to make sure you behave."`
+}
+
+type Jobs struct {
+	Importer   int `toml:"importer" desc:"How often the importer will look for new media files. In seconds. Defaults to 180."`
+	MetaSyncer int `toml:"meta_syncer" desc:"How often the meta-syncer will sync the needed metadata. In seconds. Defaults to 180."`
+}
+
 type Config struct {
-	Admin Admin `toml:"admin"`
-	Paths Paths `toml:"paths"`
-	Port  int   `toml:"port" desc:"Port of the server. Defaults to 3000."`
+	AcoustID  AcoustID  `toml:"acoust_id"`
+	Admin     Admin     `toml:"admin"`
+	Jobs      Jobs      `toml:"jobs"`
+	Paths     Paths     `toml:"paths"`
+	Wikipedia Wikipedia `toml:"wikipedia"`
+	Port      int       `toml:"port" desc:"Port of the server. Defaults to 3000."`
 }
 
 var defaultConfig = Config{
@@ -32,7 +50,11 @@ var defaultConfig = Config{
 		Password: "password",
 	},
 	Paths: Paths{},
-	Port:  3000,
+	Jobs: Jobs{
+		Importer:   180,
+		MetaSyncer: 180,
+	},
+	Port: 3000,
 }
 
 func verify(cfg Config) error {
@@ -48,6 +70,30 @@ func verify(cfg Config) error {
 
 	if cfg.Paths.ConfigDir == "" {
 		errs = append(errs, errors.New("Paths.ConfigDir not set"))
+	}
+
+	if cfg.Paths.ImportDir == "" {
+		errs = append(errs, errors.New("Paths.ImportDir not set"))
+	}
+
+	if cfg.Paths.BackupImportDir == "" {
+		errs = append(errs, errors.New("Paths.BackupImportDir not set"))
+	}
+
+	if cfg.AcoustID.ApiKey == "" {
+		errs = append(errs, errors.New("AcoustID.ApiKey not set"))
+	}
+
+	if cfg.Wikipedia.Email == "" {
+		errs = append(errs, errors.New("Wikipedia.Email not set"))
+	}
+
+	if cfg.Jobs.Importer < 10 {
+		errs = append(errs, errors.New("Jobs.Importer must be atleast 10"))
+	}
+
+	if cfg.Jobs.MetaSyncer < 10 {
+		errs = append(errs, errors.New("Jobs.MetaSyncer must be atleast 10"))
 	}
 
 	if cfg.Port < 1024 || cfg.Port > 49151 {

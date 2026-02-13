@@ -9,7 +9,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s Server) getArtist() http.HandlerFunc {
+func (s *Server) getArtist() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -27,7 +27,7 @@ func (s Server) getArtist() http.HandlerFunc {
 	})
 }
 
-func (s Server) listArtists() http.HandlerFunc {
+func (s *Server) listArtists() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
@@ -40,7 +40,7 @@ func (s Server) listArtists() http.HandlerFunc {
 	})
 }
 
-func (s Server) updateArtist() http.HandlerFunc {
+func (s *Server) updateArtist() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 

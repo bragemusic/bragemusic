@@ -9,7 +9,7 @@ import (
 	"net/url"
 )
 
-func (s ServerClient) UploadArtistImage(ctx context.Context, artistID string, img ImageUpload) error {
+func (s ServerClient) UploadArtistImage(ctx context.Context, artistID string, img FileUpload) error {
 	u, err := url.JoinPath(s.baseUrl, "api", "img", "artists", artistID)
 	if err != nil {
 		return err
@@ -18,7 +18,7 @@ func (s ServerClient) UploadArtistImage(ctx context.Context, artistID string, im
 	return s.uploadImage(ctx, u, img)
 }
 
-func (s ServerClient) UploadAlbumImage(ctx context.Context, id string, img ImageUpload) error {
+func (s ServerClient) UploadAlbumImage(ctx context.Context, id string, img FileUpload) error {
 	u, err := url.JoinPath(s.baseUrl, "api", "img", "albums", id)
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func (s ServerClient) UploadAlbumImage(ctx context.Context, id string, img Image
 	return s.uploadImage(ctx, u, img)
 }
 
-func (s ServerClient) UploadPlaylistImage(ctx context.Context, id string, img ImageUpload) error {
+func (s ServerClient) UploadPlaylistImage(ctx context.Context, id string, img FileUpload) error {
 	u, err := url.JoinPath(s.baseUrl, "api", "img", "playlists", id)
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func (s ServerClient) UploadPlaylistImage(ctx context.Context, id string, img Im
 	return s.uploadImage(ctx, u, img)
 }
 
-func (s ServerClient) uploadImage(ctx context.Context, u string, img ImageUpload) error {
+func (s ServerClient) uploadImage(ctx context.Context, u string, img FileUpload) error {
 	if len(img.Data) == 0 {
 		return errors.New("empty file")
 	}

@@ -14,7 +14,7 @@ import (
 	"github.com/samber/lo"
 )
 
-func (i Importer) analyzeAlbum(ctx context.Context, files []types.MediaFile) (AlbumAnalysisResults, error) {
+func (i Importer) analyzeAlbum(ctx context.Context, files []types.MediaFile, mbID *string) (AlbumAnalysisResults, error) {
 	aids := [][]acoustid.AcoustMatch{}
 
 	for _, f := range files {
@@ -36,7 +36,7 @@ func (i Importer) analyzeAlbum(ctx context.Context, files []types.MediaFile) (Al
 		return AlbumAnalysisResults{}, err
 	}
 
-	matchedAlbum, err := i.getBestMatchedMbID(aids, id3Album)
+	matchedAlbum, err := i.getBestMatchedMbID(ctx, aids, id3Album, mbID)
 	if err != nil {
 		if errors.Is(err, ErrAlbumMbIDNotFound) {
 			i.log.WarnContext(ctx, "could not find MusicBrainzID, using ID3 instead", "album", id3Album)
@@ -205,7 +205,7 @@ func (i Importer) matchTrack(ctx context.Context, track Track, availableTracks [
 	return t, availableTracks, nil
 }
 
-func (i Importer) getBestMatchedMbID(aids [][]acoustid.AcoustMatch, id3Album string) (MbAlbum, error) {
+func (i Importer) getBestMatchedMbID(ctx context.Context, aids [][]acoustid.AcoustMatch, id3Album string, mbID *string) (MbAlbum, error) {
 	mbAlbums := []MbAlbum{}
 
 	for aIdx := range aids {
@@ -233,6 +233,16 @@ func (i Importer) getBestMatchedMbID(aids [][]acoustid.AcoustMatch, id3Album str
 				mbAlbums = append(mbAlbums, mbAlbum)
 			}
 		}
+	}
+
+	if mbID != nil {
+		for _, mbAlbum := range mbAlbums {
+			if mbAlbum.AlbumID == *mbID {
+				i.log.InfoContext(ctx, "found album with user requested musicbrainz id", "id", *mbID)
+				return mbAlbum, nil
+			}
+		}
+		i.log.WarnContext(ctx, "could not find album with user requested musicbrainz id", "id", *mbID)
 	}
 
 	slices.SortFunc(mbAlbums, func(a, b MbAlbum) int {

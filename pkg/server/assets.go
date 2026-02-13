@@ -20,7 +20,7 @@ const (
 	PlaylistImage ImageType = "playlist"
 )
 
-func (s Server) getImage() http.HandlerFunc {
+func (s *Server) getImage() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		rctx := chi.RouteContext(r.Context())
 
@@ -34,7 +34,7 @@ func (s Server) getImage() http.HandlerFunc {
 	}
 }
 
-func (s Server) addImage(imageType ImageType) http.HandlerFunc {
+func (s *Server) addImage(imageType ImageType) http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
