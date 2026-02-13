@@ -51,7 +51,7 @@ func (s Server) importAlbum() http.HandlerFunc {
 		}
 
 		var meta types.ImportAlbum
-		if err := json.Unmarshal([]byte(metaStr), &meta); err != nil {
+		if err = json.Unmarshal([]byte(metaStr), &meta); err != nil {
 			return Response{}, err
 		}
 
@@ -59,20 +59,13 @@ func (s Server) importAlbum() http.HandlerFunc {
 			return Response{}, err
 		}
 
-		// switch imageType {
-		// case ArtistImage:
-		// 	if err = s.mediamgr.AddArtistImage(ctx, orgImgPath, assetID); err != nil {
-		// 		return Response{}, err
-		// 	}
-		// case AlbumImage:
-		// 	if err = s.mediamgr.AddAlbumImage(ctx, orgImgPath, assetID); err != nil {
-		// 		return Response{}, err
-		// 	}
-		// case PlaylistImage:
-		// 	if err = s.mediamgr.AddPlaylistImage(ctx, orgImgPath, assetID); err != nil {
-		// 		return Response{}, err
-		// 	}
-		// }
+		if err = s.jobmgr.RunJob(ctx, types.JobImporterRun); err != nil {
+			return Response{}, err
+		}
+
+		if err = s.jobmgr.RunJob(ctx, types.JobMetaSyncRun); err != nil {
+			return Response{}, err
+		}
 
 		return Response{Status: http.StatusCreated}, nil
 	},

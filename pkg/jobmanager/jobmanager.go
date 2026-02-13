@@ -2,9 +2,11 @@ package jobmanager
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"time"
 
+	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/importer"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/metasyncer"
@@ -14,6 +16,7 @@ import (
 type jobDefinition struct {
 	interval time.Duration
 	run      func(context.Context) error
+	C        chan struct{}
 }
 
 type JobManager struct {
@@ -22,6 +25,18 @@ type JobManager struct {
 	importer *importer.Importer
 	metasync *metasyncer.MetaSyncer
 	jobs     map[types.JobType]jobDefinition
+	berr     bragerr.BragErrFactory
+}
+
+func (j *JobManager) RunJob(ctx context.Context, jobType types.JobType) error {
+	job, ok := j.jobs[jobType]
+	if !ok {
+		return j.berr.JobTypeMissing(errors.New("could not run job"), jobType)
+	}
+
+	job.C <- struct{}{}
+
+	return nil
 }
 
 func (j *JobManager) startJob(ctx context.Context, jobType types.JobType, job jobDefinition) {
@@ -39,6 +54,14 @@ func (j *JobManager) startJob(ctx context.Context, jobType types.JobType, job jo
 					"error", err,
 				)
 			}
+		case <-job.C:
+			if err := job.run(ctx); err != nil {
+				j.log.ErrorContext(ctx, "job failed",
+					"job", jobType,
+					"error", err,
+				)
+			}
+
 		}
 	}
 }
@@ -59,15 +82,18 @@ func New(slogHandler slog.Handler, m *mediamanager.MediaManager, i *importer.Imp
 		types.JobImporterRun: {
 			interval: 10 * time.Second,
 			run:      i.Run,
+			C:        make(chan struct{}, 1),
 		},
 		types.JobMetaSyncRun: {
 			interval: 15 * time.Second,
 			run:      ms.Sync,
+			C:        make(chan struct{}, 1),
 		},
 	}
 
 	return JobManager{
 		log:      slog.New(slogHandler).With("service", "job-manager"),
+		berr:     bragerr.NewFactory("job-manager"),
 		mediamgr: m,
 		importer: i,
 		metasync: ms,
