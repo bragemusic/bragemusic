@@ -37,6 +37,7 @@ func (s *Server) api() http.Handler {
 
 	r.Get("/tracks/{trackID}", s.getTrack())
 	r.Put("/tracks/{trackID}", s.updateTrack())
+	r.Post("/tracks/{trackID}/ratings", s.addTrackRating())
 
 	r.Get("/mediafiles/{mediafileID}", s.getMediaFile())
 	r.Get("/mediafiles/{mediafileID}/file", s.getMediaFileFile())

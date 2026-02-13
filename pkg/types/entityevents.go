@@ -27,6 +27,7 @@ const (
 	EntityPlayHistoryItem EntityType = "play_history_item"
 	EntitySearchItem      EntityType = "search_item"
 	EntityImport          EntityType = "import"
+	EntityRating          EntityType = "rating"
 
 	EntityEventDelete EntityEventType = "delete"
 )

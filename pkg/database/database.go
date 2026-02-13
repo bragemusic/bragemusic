@@ -139,6 +139,10 @@ type DatabaseFace interface {
 	PlaylistTrackExists(ctx context.Context, id uuid.UUID) (bool, error)
 	UpdatePlaylist(ctx context.Context, plist types.Playlist) error
 
+	AddRating(ctx context.Context, r types.Rating) (uuid.UUID, error)
+	GetRatingID(ctx context.Context, trackID, userID uuid.UUID) (id uuid.UUID, found bool, err error)
+	UpdateRating(ctx context.Context, id uuid.UUID, rating int) error
+
 	AuthFace
 	ImportFace
 }

@@ -242,6 +242,10 @@ func (c Client) UpdateTrack(ctx context.Context, id uuid.UUID, track types.Track
 	return nil
 }
 
+func (s Client) RateTrack(ctx context.Context, trackID uuid.UUID, value int) error {
+	return s.sc.RateTrack(ctx, trackID, value)
+}
+
 func (c Client) CountTracks(ctx context.Context) (int, error) {
 	return c.mm.CountTracks(ctx)
 }
