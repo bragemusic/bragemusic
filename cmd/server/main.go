@@ -100,7 +100,12 @@ func main() {
 
 	ms := metasyncer.New(impCfg.ImageDirPath, &db, mb, w, im, slogHandler)
 
-	jmgr := jobmanager.New(slogHandler, &m, &imp, &ms)
+	jobCfg := jobmanager.JobConfig{
+		ImporterRunTiming:   scfg.Jobs.Importer,
+		MetaSyncerRunTiming: scfg.Jobs.MetaSyncer,
+	}
+
+	jmgr := jobmanager.New(slogHandler, jobCfg, &m, &imp, &ms)
 
 	s := server.New(slogHandler, &m, &a, &imp, &jmgr, scfg)
 

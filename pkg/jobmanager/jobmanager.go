@@ -13,6 +13,11 @@ import (
 	"github.com/bragemusic/core/pkg/types"
 )
 
+type JobConfig struct {
+	ImporterRunTiming   int
+	MetaSyncerRunTiming int
+}
+
 type jobDefinition struct {
 	interval time.Duration
 	run      func(context.Context) error
@@ -77,15 +82,15 @@ func (j *JobManager) StartScheduler(ctx context.Context) {
 	j.log.InfoContext(ctx, "jobs finished")
 }
 
-func New(slogHandler slog.Handler, m *mediamanager.MediaManager, i *importer.Importer, ms *metasyncer.MetaSyncer) JobManager {
+func New(slogHandler slog.Handler, cfg JobConfig, m *mediamanager.MediaManager, i *importer.Importer, ms *metasyncer.MetaSyncer) JobManager {
 	jobs := map[types.JobType]jobDefinition{
 		types.JobImporterRun: {
-			interval: 10 * time.Second,
+			interval: time.Duration(cfg.ImporterRunTiming) * time.Second,
 			run:      i.Run,
 			C:        make(chan struct{}, 1),
 		},
 		types.JobMetaSyncRun: {
-			interval: 15 * time.Second,
+			interval: time.Duration(cfg.ImporterRunTiming) * time.Second,
 			run:      ms.Sync,
 			C:        make(chan struct{}, 1),
 		},

@@ -29,9 +29,15 @@ type Wikipedia struct {
 	Email string `toml:"email" desc:"Used against the wikipedia API. They require a valid email to make sure you behave."`
 }
 
+type Jobs struct {
+	Importer   int `toml:"importer" desc:"How often the importer will look for new media files. In seconds. Defaults to 180."`
+	MetaSyncer int `toml:"meta_syncer" desc:"How often the meta-syncer will sync the needed metadata. In seconds. Defaults to 180."`
+}
+
 type Config struct {
 	AcoustID  AcoustID  `toml:"acoust_id"`
 	Admin     Admin     `toml:"admin"`
+	Jobs      Jobs      `toml:"jobs"`
 	Paths     Paths     `toml:"paths"`
 	Wikipedia Wikipedia `toml:"wikipedia"`
 	Port      int       `toml:"port" desc:"Port of the server. Defaults to 3000."`
@@ -44,7 +50,11 @@ var defaultConfig = Config{
 		Password: "password",
 	},
 	Paths: Paths{},
-	Port:  3000,
+	Jobs: Jobs{
+		Importer:   180,
+		MetaSyncer: 180,
+	},
+	Port: 3000,
 }
 
 func verify(cfg Config) error {
@@ -76,6 +86,14 @@ func verify(cfg Config) error {
 
 	if cfg.Wikipedia.Email == "" {
 		errs = append(errs, errors.New("Wikipedia.Email not set"))
+	}
+
+	if cfg.Jobs.Importer < 10 {
+		errs = append(errs, errors.New("Jobs.Importer must be atleast 10"))
+	}
+
+	if cfg.Jobs.MetaSyncer < 10 {
+		errs = append(errs, errors.New("Jobs.MetaSyncer must be atleast 10"))
 	}
 
 	if cfg.Port < 1024 || cfg.Port > 49151 {
