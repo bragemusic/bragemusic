@@ -35,8 +35,8 @@ func (m MediaManager) ListTracksByAlbum(ctx context.Context, albumID uuid.UUID) 
 	return tracks, nil
 }
 
-func (m MediaManager) ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.UUID) ([]types.TrackDetailed, error) {
-	tracks, err := m.db.ListAlbumTracksDetailed(ctx, albumID)
+func (m MediaManager) ListTracksDetailedByAlbum(ctx context.Context, albumID, userID uuid.UUID) ([]types.TrackDetailed, error) {
+	tracks, err := m.db.ListAlbumTracksDetailed(ctx, albumID, userID)
 	if err != nil {
 		return nil, m.berr.DatabaseError(err, types.EntityTrack, nil)
 	}

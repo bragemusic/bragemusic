@@ -83,8 +83,8 @@ func (c *Client) Close() error {
 	return c.dbClose()
 }
 
-func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error {
-	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumID)
+func (c *Client) StartPlayerWithAlbum(ctx context.Context, userID, albumID uuid.UUID, trackNumber int) error {
+	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumID, userID)
 	if err != nil {
 		return err
 	}
@@ -205,13 +205,13 @@ func (c Client) GetAlbum(ctx context.Context, albumID string) (types.AlbumDetail
 	return album, nil
 }
 
-func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.TrackDetailed, error) {
+func (c Client) ListTracksByAlbum(ctx context.Context, albumID string, userID uuid.UUID) ([]types.TrackDetailed, error) {
 	albumUID, err := uuid.FromString(albumID)
 	if err != nil {
 		return nil, err
 	}
 
-	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumUID)
+	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumUID, userID)
 	if err != nil {
 		return nil, err
 	}

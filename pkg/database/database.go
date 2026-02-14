@@ -71,7 +71,7 @@ type DatabaseFace interface {
 	GetTracksFromAlbumID(ctx context.Context, albumID uuid.UUID) (tracks []types.Track, err error)
 	GetTracksDetailedFromArtistID(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackDetailed, err error)
 	ListTracks(ctx context.Context) (tracks []types.Track, err error)
-	ListAlbumTracksDetailed(ctx context.Context, albumID uuid.UUID) (tracks []types.TrackDetailed, err error)
+	ListAlbumTracksDetailed(ctx context.Context, albumID, userID uuid.UUID) (tracks []types.TrackDetailed, err error)
 	GetTrackFromName(ctx context.Context, albumID uuid.UUID, trackName string) (track types.Track, err error)
 	ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error)
 	CountTracks(ctx context.Context) (int, error)

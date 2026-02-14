@@ -354,7 +354,7 @@ func (d Database) ListUpdatedTracks(ctx context.Context, since time.Time) (track
 	return
 }
 
-func (d Database) ListAlbumTracksDetailed(ctx context.Context, albumID uuid.UUID) (tracks []types.TrackDetailed, err error) {
+func (d Database) ListAlbumTracksDetailed(ctx context.Context, albumID, userID uuid.UUID) (tracks []types.TrackDetailed, err error) {
 	tracksQuery := `
 		SELECT
 			t.id,
@@ -390,6 +390,10 @@ func (d Database) ListAlbumTracksDetailed(ctx context.Context, albumID uuid.UUID
 	}
 
 	if err := d.attachMediaFiles(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachTrackRatings(ctx, tracks, userID); err != nil {
 		return nil, err
 	}
 

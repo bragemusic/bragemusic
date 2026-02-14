@@ -135,3 +135,59 @@ func (d Database) UpdateRating(ctx context.Context, id uuid.UUID, rating int) er
 
 	return nil
 }
+
+func (d Database) attachTrackRatings(ctx context.Context, tracks []types.TrackDetailed, userID uuid.UUID) error {
+	if len(tracks) == 0 {
+		return nil
+	}
+
+	trackIDs := make([]string, 0, len(tracks))
+	trackIndex := make(map[string]*types.TrackDetailed)
+
+	for i := range tracks {
+		trackIDs = append(trackIDs, tracks[i].ID)
+		trackIndex[tracks[i].ID] = &tracks[i]
+	}
+
+	query := `
+        SELECT
+            r.track_id,
+            AVG(r.rating) AS mean_rating,
+            MAX(CASE WHEN r.owner = ? THEN r.rating END) AS user_rating
+        FROM ratings r
+        WHERE r.track_id IN (?)
+        GROUP BY r.track_id;
+    `
+
+	query, args, err := sqlx.In(query, userID, trackIDs)
+	if err != nil {
+		return err
+	}
+
+	query = d.ext.Rebind(query)
+
+	rows, err := d.ext.QueryxContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			trackID    string
+			meanRating *float64
+			userRating *int
+		)
+
+		if err := rows.Scan(&trackID, &meanRating, &userRating); err != nil {
+			return err
+		}
+
+		if t := trackIndex[trackID]; t != nil {
+			t.Rating = meanRating
+			t.UserRating = userRating
+		}
+	}
+
+	return rows.Err()
+}
