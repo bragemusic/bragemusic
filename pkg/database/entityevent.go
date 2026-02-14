@@ -10,15 +10,21 @@ import (
 )
 
 func (d Database) addEntityEvent(ctx context.Context, id uuid.UUID, eventType types.EntityEventType, entityType types.EntityType) error {
+	eid, err := uuid.NewV4()
+	if err != nil {
+		return err
+	}
+
 	const query = `
 		INSERT INTO entity_events (
-			id, event_type, entity_type, event_time
-		) VALUES (?, ?, ?, ?);
+			id, item_id, event_type, entity_type, event_time
+		) VALUES (?, ?, ?, ?, ?);
 	`
 
-	_, err := d.ext.ExecContext(
+	_, err = d.ext.ExecContext(
 		ctx,
 		query,
+		eid,
 		id,
 		eventType,
 		entityType,
@@ -30,7 +36,7 @@ func (d Database) addEntityEvent(ctx context.Context, id uuid.UUID, eventType ty
 
 func (d Database) ListEntityEvents(ctx context.Context, eventType types.EntityEventType, entityType types.EntityType, since time.Time) (ids []uuid.UUID, err error) {
 	query := `
-        SELECT id
+        SELECT item_id
         FROM entity_events
         WHERE
           event_type = ?
@@ -41,6 +47,25 @@ func (d Database) ListEntityEvents(ctx context.Context, eventType types.EntityEv
         ;
     `
 	err = sqlx.SelectContext(ctx, d.ext, &ids, query, eventType, entityType, since, since)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
+
+func (d Database) ListEntityEventsTemp(ctx context.Context, entityType types.EntityType, since time.Time) (ids []types.EntityEvent, err error) {
+	query := `
+        SELECT *
+        FROM entity_events
+        WHERE
+          entity_type = ?
+          AND
+          event_time > ?
+        ORDER BY event_time
+        ;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &ids, query, entityType, since, since)
 	if err != nil {
 		return nil, err
 	}

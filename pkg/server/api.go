@@ -38,6 +38,7 @@ func (s *Server) api() http.Handler {
 	r.Get("/tracks/{trackID}", s.getTrack())
 	r.Put("/tracks/{trackID}", s.updateTrack())
 	r.Post("/tracks/{trackID}/ratings", s.addTrackRating())
+	r.Get("/tracks/{trackID}/ratings", s.getTrackRatings())
 
 	r.Get("/mediafiles/{mediafileID}", s.getMediaFile())
 	r.Get("/mediafiles/{mediafileID}/file", s.getMediaFileFile())
@@ -53,6 +54,8 @@ func (s *Server) api() http.Handler {
 
 	r.Post("/sync", s.sync())
 	r.Post("/sync/play-history", s.syncPlayHistory())
+
+	r.Get("/ratings/{ratingID}", s.getRating())
 
 	r.With(s.authPkg.RoleCheckMiddleware(types.UserRoleAdmin, types.UserRoleImporterWrite)).Post("/import/album", s.importAlbum())
 

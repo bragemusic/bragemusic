@@ -55,6 +55,24 @@ func (s *Server) getTrack() http.HandlerFunc {
 	)
 }
 
+func (s *Server) getTrackRatings() http.HandlerFunc {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
+		ctx := r.Context()
+
+		trackID, err := getParameter[uuid.UUID](ctx, "trackID")
+		if err != nil {
+			return Response{}, err
+		}
+
+		ratings, err := s.mediamgr.GetTrackRatings(ctx, trackID)
+		if err != nil {
+			return Response{}, err
+		}
+
+		return Response{Status: http.StatusOK, Payload: ratings}, nil
+	})
+}
+
 func (s *Server) listAlbumTracks() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()

@@ -117,6 +117,7 @@ type DatabaseFace interface {
 	ListUpdatedPlayHistory(ctx context.Context, since time.Time) (updatedItems []types.PlayHistory, err error)
 
 	ListEntityEvents(ctx context.Context, eventType types.EntityEventType, entityType types.EntityType, since time.Time) (ids []uuid.UUID, err error)
+	ListEntityEventsTemp(ctx context.Context, entityType types.EntityType, since time.Time) (ids []types.EntityEvent, err error)
 
 	AddSearchItem(ctx context.Context, si types.SearchItem) error
 	DeleteAllSearchItems(ctx context.Context) error
@@ -140,7 +141,9 @@ type DatabaseFace interface {
 	UpdatePlaylist(ctx context.Context, plist types.Playlist) error
 
 	AddRating(ctx context.Context, r types.Rating) (uuid.UUID, error)
+	GetRating(ctx context.Context, id uuid.UUID) (rating types.Rating, err error)
 	GetRatingID(ctx context.Context, trackID, userID uuid.UUID) (id uuid.UUID, found bool, err error)
+	GetTrackRatings(ctx context.Context, trackID uuid.UUID) (ratings []types.Rating, err error)
 	UpdateRating(ctx context.Context, id uuid.UUID, rating int) error
 
 	AuthFace

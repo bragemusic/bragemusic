@@ -20,9 +20,11 @@ func (d Database) AddRating(ctx context.Context, r types.Rating) (uuid.UUID, err
 		r.ID = uid
 	}
 
-	now := time.Now()
-	r.CreatedAt = now
-	r.UpdatedAt = now
+	if r.CreatedAt.IsZero() {
+		now := time.Now()
+		r.CreatedAt = now
+		r.UpdatedAt = now
+	}
 
 	query := `
         INSERT INTO ratings (
@@ -46,10 +48,31 @@ func (d Database) AddRating(ctx context.Context, r types.Rating) (uuid.UUID, err
 		return uuid.Nil, err
 	}
 
+	err = d.addEntityEvent(ctx, r.ID, types.EntityEventCreate, types.EntityRating)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
 	return r.ID, nil
 }
 
-func (d Database) GetRatingID(ctx context.Context, trackID, userID uuid.UUID) (id uuid.UUID, found bool, err error) {
+func (d Database) GetRating(ctx context.Context, id uuid.UUID) (rating types.Rating, err error) {
+	query := `
+        SELECT *
+        FROM ratings
+        WHERE id = ?
+        LIMIT 1;
+    `
+
+	err = sqlx.GetContext(ctx, d.ext, &rating, query, id)
+	if err != nil {
+		return types.Rating{}, err
+	}
+
+	return rating, err
+}
+
+func (d Database) GetRatingID(ctx context.Context, trackID, userID uuid.UUID) (uuid.UUID, bool, error) {
 	query := `
         SELECT id
         FROM ratings
@@ -58,7 +81,8 @@ func (d Database) GetRatingID(ctx context.Context, trackID, userID uuid.UUID) (i
         LIMIT 1;
     `
 
-	err = sqlx.GetContext(ctx, d.ext, &id, query, trackID, userID)
+	var idStr string
+	err := sqlx.GetContext(ctx, d.ext, &idStr, query, trackID, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return uuid.Nil, false, nil
@@ -66,7 +90,28 @@ func (d Database) GetRatingID(ctx context.Context, trackID, userID uuid.UUID) (i
 		return uuid.Nil, false, err
 	}
 
+	id, err := uuid.FromString(idStr)
+	if err != nil {
+		return uuid.Nil, false, err
+	}
+
 	return id, true, nil
+}
+
+func (d Database) GetTrackRatings(ctx context.Context, trackID uuid.UUID) (ratings []types.Rating, err error) {
+	query := `
+        SELECT *
+        FROM ratings
+        WHERE track_id = ?
+        ORDER BY updated_at;
+    `
+
+	err = sqlx.SelectContext(ctx, d.ext, &ratings, query, trackID)
+	if err != nil {
+		return nil, err
+	}
+
+	return ratings, nil
 }
 
 func (d Database) UpdateRating(ctx context.Context, id uuid.UUID, rating int) error {
@@ -79,6 +124,11 @@ func (d Database) UpdateRating(ctx context.Context, id uuid.UUID, rating int) er
     `
 
 	_, err := d.ext.ExecContext(ctx, query, rating, time.Now(), id)
+	if err != nil {
+		return err
+	}
+
+	err = d.addEntityEvent(ctx, id, types.EntityEventUpdate, types.EntityRating)
 	if err != nil {
 		return err
 	}

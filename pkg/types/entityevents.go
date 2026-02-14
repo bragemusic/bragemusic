@@ -30,10 +30,13 @@ const (
 	EntityRating          EntityType = "rating"
 
 	EntityEventDelete EntityEventType = "delete"
+	EntityEventCreate EntityEventType = "create"
+	EntityEventUpdate EntityEventType = "update"
 )
 
 type EntityEvent struct {
 	ID         uuid.UUID       `db:"id" json:"id"`
+	ItemID     uuid.UUID       `db:"item_id" json:"item_id"`
 	Type       EntityEventType `db:"event_type" json:"event_type"`
 	EntityType EntityType      `db:"entity_type" json:"entity_type"`
 	EventTime  time.Time       `db:"event_time" json:"event_time"`

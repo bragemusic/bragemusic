@@ -227,6 +227,10 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 
+	if err = s.syncEntityEvents(ctx, tx, syncState.New); err != nil {
+		return err
+	}
+
 	if err := s.syncPlayHistory(ctx, tx, lastSync.SyncedAt); err != nil {
 		return err
 	}
@@ -245,6 +249,49 @@ func (s *Syncer) Sync(ctx context.Context) error {
 	}
 
 	return tx.Commit()
+}
+
+func (s *Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, events []types.EntityEvent) error {
+	for _, e := range events {
+		var f func(ctx context.Context, tx database.DatabaseFace, event types.EntityEvent) error
+
+		switch e.EntityType {
+		case types.EntityRating:
+			f = s.syncRating
+		default:
+			return fmt.Errorf("unsupported entity type '%s'", e.EntityType)
+		}
+
+		if err := f(ctx, tx, e); err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
+func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, event types.EntityEvent) error {
+	switch event.Type {
+	case types.EntityEventCreate:
+		r, err := s.sc.GetRating(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.AddRating(ctx, r); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		r, err := s.sc.GetRating(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+		if err := tx.UpdateRating(ctx, r.ID, r.Rating); err != nil {
+			return err
+		}
+	case types.EntityEventDelete:
+		return errors.New("'delete' not supported for ratings")
+	}
+	return nil
 }
 
 func (s *Syncer) SyncItems(ctx context.Context) error {
