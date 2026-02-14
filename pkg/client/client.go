@@ -135,8 +135,8 @@ func (c *Client) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UU
 	return nil
 }
 
-func (c *Client) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
-	track, err := c.mm.GetTrackDetailed(ctx, trackID, albumID)
+func (c *Client) AddTrackToQueue(ctx context.Context, trackID, albumID, userID uuid.UUID) error {
+	track, err := c.mm.GetTrackDetailed(ctx, trackID, albumID, userID)
 	if err != nil {
 		return err
 	}
@@ -254,8 +254,8 @@ func (c Client) UploadArtistImage(ctx context.Context, artistID string, img serv
 	return c.sc.UploadArtistImage(ctx, artistID, img)
 }
 
-func (c Client) GetArtistTopTracks(ctx context.Context, artistID uuid.UUID) ([]types.TrackDetailed, error) {
-	tracks, err := c.mm.ListTracksDetailedByArtist(ctx, artistID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
+func (c Client) GetArtistTopTracks(ctx context.Context, artistID, userID uuid.UUID) ([]types.TrackDetailed, error) {
+	tracks, err := c.mm.ListTracksDetailedByArtist(ctx, artistID, userID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
 	if err != nil {
 		return nil, err
 	}
