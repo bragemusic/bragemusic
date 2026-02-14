@@ -83,8 +83,8 @@ func (c *Client) Close() error {
 	return c.dbClose()
 }
 
-func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error {
-	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumID)
+func (c *Client) StartPlayerWithAlbum(ctx context.Context, userID, albumID uuid.UUID, trackNumber int) error {
+	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumID, userID)
 	if err != nil {
 		return err
 	}
@@ -135,8 +135,8 @@ func (c *Client) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UU
 	return nil
 }
 
-func (c *Client) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
-	track, err := c.mm.GetTrackDetailed(ctx, trackID, albumID)
+func (c *Client) AddTrackToQueue(ctx context.Context, trackID, albumID, userID uuid.UUID) error {
+	track, err := c.mm.GetTrackDetailed(ctx, trackID, albumID, userID)
 	if err != nil {
 		return err
 	}
@@ -205,13 +205,13 @@ func (c Client) GetAlbum(ctx context.Context, albumID string) (types.AlbumDetail
 	return album, nil
 }
 
-func (c Client) ListTracksByAlbum(ctx context.Context, albumID string) ([]types.TrackDetailed, error) {
+func (c Client) ListTracksByAlbum(ctx context.Context, albumID string, userID uuid.UUID) ([]types.TrackDetailed, error) {
 	albumUID, err := uuid.FromString(albumID)
 	if err != nil {
 		return nil, err
 	}
 
-	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumUID)
+	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumUID, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -242,6 +242,10 @@ func (c Client) UpdateTrack(ctx context.Context, id uuid.UUID, track types.Track
 	return nil
 }
 
+func (s Client) RateTrack(ctx context.Context, trackID uuid.UUID, value int) error {
+	return s.sc.RateTrack(ctx, trackID, value)
+}
+
 func (c Client) CountTracks(ctx context.Context) (int, error) {
 	return c.mm.CountTracks(ctx)
 }
@@ -250,8 +254,8 @@ func (c Client) UploadArtistImage(ctx context.Context, artistID string, img serv
 	return c.sc.UploadArtistImage(ctx, artistID, img)
 }
 
-func (c Client) GetArtistTopTracks(ctx context.Context, artistID uuid.UUID) ([]types.TrackDetailed, error) {
-	tracks, err := c.mm.ListTracksDetailedByArtist(ctx, artistID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
+func (c Client) GetArtistTopTracks(ctx context.Context, artistID, userID uuid.UUID) ([]types.TrackDetailed, error) {
+	tracks, err := c.mm.ListTracksDetailedByArtist(ctx, artistID, userID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
 	if err != nil {
 		return nil, err
 	}

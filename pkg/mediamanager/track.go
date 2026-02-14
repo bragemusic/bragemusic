@@ -17,8 +17,8 @@ func (m MediaManager) GetTrack(ctx context.Context, trackID uuid.UUID) (types.Tr
 	return track, nil
 }
 
-func (m MediaManager) GetTrackDetailed(ctx context.Context, trackID, albumID uuid.UUID) (types.TrackDetailed, error) {
-	track, err := m.db.GetTrackDetailed(ctx, trackID, albumID)
+func (m MediaManager) GetTrackDetailed(ctx context.Context, trackID, albumID, userID uuid.UUID) (types.TrackDetailed, error) {
+	track, err := m.db.GetTrackDetailed(ctx, trackID, albumID, userID)
 	if err != nil {
 		return track, m.berr.DatabaseError(err, types.EntityTrack, &trackID)
 	}
@@ -35,8 +35,8 @@ func (m MediaManager) ListTracksByAlbum(ctx context.Context, albumID uuid.UUID) 
 	return tracks, nil
 }
 
-func (m MediaManager) ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.UUID) ([]types.TrackDetailed, error) {
-	tracks, err := m.db.ListAlbumTracksDetailed(ctx, albumID)
+func (m MediaManager) ListTracksDetailedByAlbum(ctx context.Context, albumID, userID uuid.UUID) ([]types.TrackDetailed, error) {
+	tracks, err := m.db.ListAlbumTracksDetailed(ctx, albumID, userID)
 	if err != nil {
 		return nil, m.berr.DatabaseError(err, types.EntityTrack, nil)
 	}
@@ -44,8 +44,8 @@ func (m MediaManager) ListTracksDetailedByAlbum(ctx context.Context, albumID uui
 	return tracks, nil
 }
 
-func (m MediaManager) ListTracksDetailedByArtist(ctx context.Context, artistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder, limit *int, includeMissingFiles bool) ([]types.TrackDetailed, error) {
-	tracks, err := m.db.GetTracksDetailedFromArtistID(ctx, artistID, sortBy, sortOrder, limit, includeMissingFiles)
+func (m MediaManager) ListTracksDetailedByArtist(ctx context.Context, artistID, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder, limit *int, includeMissingFiles bool) ([]types.TrackDetailed, error) {
+	tracks, err := m.db.GetTracksDetailedFromArtistID(ctx, artistID, userID, sortBy, sortOrder, limit, includeMissingFiles)
 	if err != nil {
 		return nil, m.berr.DatabaseError(err, types.EntityTrack, nil)
 	}

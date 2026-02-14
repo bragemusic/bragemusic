@@ -110,7 +110,7 @@ func (m MediaManager) ListPlaylistTracks(ctx context.Context, playlistID, userID
 		return nil, m.berr.ItemAccessDenied(nil, types.EntityPlaylist, playlistID)
 	}
 
-	tracks, err := m.db.ListPlaylistTracks(ctx, playlistID)
+	tracks, err := m.db.ListPlaylistTracks(ctx, playlistID, userID)
 	if err != nil {
 		return nil, m.berr.DatabaseError(err, types.EntityPlaylistTrack, nil)
 	}

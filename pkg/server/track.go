@@ -4,9 +4,37 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
+
+func (s *Server) addTrackRating() http.HandlerFunc {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
+		ctx := r.Context()
+
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+
+		trackID, err := getParameter[uuid.UUID](ctx, "trackID")
+		if err != nil {
+			return Response{}, err
+		}
+
+		rating := RatingReq{}
+		if err := json.NewDecoder(r.Body).Decode(&rating); err != nil {
+			return Response{}, err
+		}
+
+		if err := s.mediamgr.RateTrack(ctx, trackID, user.ID, rating.Value); err != nil {
+			return Response{}, err
+		}
+
+		return Response{Status: http.StatusNoContent}, nil
+	})
+}
 
 func (s *Server) getTrack() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
@@ -25,6 +53,24 @@ func (s *Server) getTrack() http.HandlerFunc {
 		return Response{Status: http.StatusOK, Payload: track}, nil
 	},
 	)
+}
+
+func (s *Server) getTrackRatings() http.HandlerFunc {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
+		ctx := r.Context()
+
+		trackID, err := getParameter[uuid.UUID](ctx, "trackID")
+		if err != nil {
+			return Response{}, err
+		}
+
+		ratings, err := s.mediamgr.GetTrackRatings(ctx, trackID)
+		if err != nil {
+			return Response{}, err
+		}
+
+		return Response{Status: http.StatusOK, Payload: ratings}, nil
+	})
 }
 
 func (s *Server) listAlbumTracks() http.HandlerFunc {

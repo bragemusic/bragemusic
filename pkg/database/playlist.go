@@ -234,7 +234,7 @@ func (d Database) ListPlaylists(ctx context.Context, userID uuid.UUID, includePu
 	return
 }
 
-func (d Database) ListPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (tracks []types.TrackDetailed, err error) {
+func (d Database) ListPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID) (tracks []types.TrackDetailed, err error) {
 	tracksQuery := `
         SELECT
             t.id,
@@ -273,6 +273,10 @@ func (d Database) ListPlaylistTracks(ctx context.Context, playlistID uuid.UUID) 
 	}
 
 	if err := d.attachMediaFiles(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachTrackRatings(ctx, tracks, userID); err != nil {
 		return nil, err
 	}
 

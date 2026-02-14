@@ -141,7 +141,7 @@ func (d Database) UpdateTrackFromMbID(ctx context.Context, t types.Track) error 
 	return err
 }
 
-func (d Database) GetTrackDetailed(ctx context.Context, trackID, albumID uuid.UUID) (track types.TrackDetailed, err error) {
+func (d Database) GetTrackDetailed(ctx context.Context, trackID, albumID, userID uuid.UUID) (track types.TrackDetailed, err error) {
 	tracksQuery := `
 		SELECT
 			t.id,
@@ -180,6 +180,10 @@ func (d Database) GetTrackDetailed(ctx context.Context, trackID, albumID uuid.UU
 	}
 
 	if err := d.attachMediaFiles(ctx, dummySlice); err != nil {
+		return types.TrackDetailed{}, err
+	}
+
+	if err := d.attachTrackRatings(ctx, dummySlice, userID); err != nil {
 		return types.TrackDetailed{}, err
 	}
 
@@ -230,7 +234,7 @@ func (d Database) GetTracksFromAlbumID(ctx context.Context, albumID uuid.UUID) (
 	return
 }
 
-func (d Database) GetTracksDetailedFromArtistID(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackDetailed, err error) {
+func (d Database) GetTracksDetailedFromArtistID(ctx context.Context, artistID, userID uuid.UUID, sortBy SortBy, sortOrder SortOrder, limit *int, includeMissingFiles bool) (tracks []types.TrackDetailed, err error) {
 	orderBy := "t.title"
 
 	switch sortBy {
@@ -299,6 +303,10 @@ func (d Database) GetTracksDetailedFromArtistID(ctx context.Context, artistID uu
 		return nil, err
 	}
 
+	if err := d.attachTrackRatings(ctx, tracks, userID); err != nil {
+		return nil, err
+	}
+
 	return tracks, nil
 }
 
@@ -354,7 +362,7 @@ func (d Database) ListUpdatedTracks(ctx context.Context, since time.Time) (track
 	return
 }
 
-func (d Database) ListAlbumTracksDetailed(ctx context.Context, albumID uuid.UUID) (tracks []types.TrackDetailed, err error) {
+func (d Database) ListAlbumTracksDetailed(ctx context.Context, albumID, userID uuid.UUID) (tracks []types.TrackDetailed, err error) {
 	tracksQuery := `
 		SELECT
 			t.id,
@@ -390,6 +398,10 @@ func (d Database) ListAlbumTracksDetailed(ctx context.Context, albumID uuid.UUID
 	}
 
 	if err := d.attachMediaFiles(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachTrackRatings(ctx, tracks, userID); err != nil {
 		return nil, err
 	}
 

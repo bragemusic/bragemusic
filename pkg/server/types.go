@@ -56,3 +56,7 @@ type PlaylistTrackReq struct {
 	AlbumID uuid.UUID `json:"album_id"`
 	TrackID uuid.UUID `json:"track_id"`
 }
+
+type RatingReq struct {
+	Value int `json:"Value"`
+}
