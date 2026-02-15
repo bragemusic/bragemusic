@@ -117,7 +117,7 @@ type DatabaseFace interface {
 	ListUpdatedPlayHistory(ctx context.Context, since time.Time) (updatedItems []types.PlayHistory, err error)
 
 	ListEntityEvents(ctx context.Context, eventType types.EntityEventType, entityType types.EntityType, since time.Time) (ids []uuid.UUID, err error)
-	ListEntityEventsTemp(ctx context.Context, entityType types.EntityType, since time.Time) (ids []types.EntityEvent, err error)
+	ListEntityEventsTemp(ctx context.Context, entityType types.EntityType, since time.Time, userID *uuid.UUID) (ids []types.EntityEvent, err error)
 
 	AddSearchItem(ctx context.Context, si types.SearchItem) error
 	DeleteAllSearchItems(ctx context.Context) error

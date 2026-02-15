@@ -55,8 +55,9 @@ func (d Database) ListEntityEvents(ctx context.Context, eventType types.EntityEv
 	return
 }
 
-func (d Database) ListEntityEventsTemp(ctx context.Context, entityType types.EntityType, since time.Time) (ids []types.EntityEvent, err error) {
-	query := `
+func (d Database) ListEntityEventsTemp(ctx context.Context, entityType types.EntityType, since time.Time, userID *uuid.UUID) (ids []types.EntityEvent, err error) {
+	if userID == nil {
+		query := `
         SELECT *
         FROM entity_events
         WHERE
@@ -66,7 +67,27 @@ func (d Database) ListEntityEventsTemp(ctx context.Context, entityType types.Ent
         ORDER BY event_time
         ;
     `
-	err = sqlx.SelectContext(ctx, d.ext, &ids, query, entityType, since, since)
+		err = sqlx.SelectContext(ctx, d.ext, &ids, query, entityType, since)
+		if err != nil {
+			return nil, err
+		}
+
+		return
+	}
+
+	query := `
+        SELECT *
+        FROM entity_events
+        WHERE
+          entity_type = ?
+          AND
+          event_time > ?
+          AND
+          user_id = ?
+        ORDER BY event_time
+        ;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &ids, query, entityType, since, *userID)
 	if err != nil {
 		return nil, err
 	}

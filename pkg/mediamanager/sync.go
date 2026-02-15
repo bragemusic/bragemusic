@@ -17,11 +17,6 @@ func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st typ
 
 	st.Time = time.Now()
 
-	st.CreatedOrUpdated.Artists, err = m.db.ListUpdatedArtists(ctx, since)
-	if err != nil {
-		return types.SyncState{}, err
-	}
-
 	st.CreatedOrUpdated.Albums, err = m.db.ListUpdatedAlbums(ctx, since)
 	if err != nil {
 		return types.SyncState{}, err
@@ -72,10 +67,17 @@ func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st typ
 		return types.SyncState{}, err
 	}
 
-	st.New, err = m.db.ListEntityEventsTemp(ctx, types.EntityRating, since)
+	ratings, err := m.db.ListEntityEventsTemp(ctx, types.EntityRating, since, nil)
 	if err != nil {
 		return types.SyncState{}, err
 	}
+	st.New = append(st.New, ratings...)
+
+	artists, err := m.db.ListEntityEventsTemp(ctx, types.EntityArtist, since, nil)
+	if err != nil {
+		return types.SyncState{}, err
+	}
+	st.New = append(st.New, artists...)
 
 	return
 }

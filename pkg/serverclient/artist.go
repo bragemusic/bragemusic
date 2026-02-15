@@ -8,6 +8,7 @@ import (
 
 	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 )
 
 func (s ServerClient) DownloadArtistImage(ctx context.Context, artistID string, size imagemagick.ImageSize, w io.Writer) error {
@@ -19,8 +20,8 @@ func (s ServerClient) DownloadArtistImage(ctx context.Context, artistID string, 
 	return s.downloadFile(ctx, u, w)
 }
 
-func (s ServerClient) GetArtist(ctx context.Context, artistID string) (artist types.Artist, err error) {
-	u, err := url.JoinPath(s.baseUrl, "api", "artists", artistID)
+func (s ServerClient) GetArtist(ctx context.Context, artistID uuid.UUID) (artist types.Artist, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "artists", artistID.String())
 	if err != nil {
 		return types.Artist{}, err
 	}
