@@ -100,12 +100,17 @@ func (s *Server) updateTrack() http.HandlerFunc {
 			return Response{}, err
 		}
 
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+
 		track := types.TrackUpdate{}
 		if err := json.NewDecoder(r.Body).Decode(&track); err != nil {
 			return Response{}, err
 		}
 
-		if err := s.mediamgr.UpdateTrack(ctx, id, track); err != nil {
+		if err := s.mediamgr.UpdateTrack(ctx, id, track, user.ID); err != nil {
 			return Response{}, err
 		}
 

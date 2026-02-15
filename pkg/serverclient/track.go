@@ -9,8 +9,8 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s ServerClient) GetTrack(ctx context.Context, trackID string) (track types.Track, err error) {
-	u, err := url.JoinPath(s.baseUrl, "api", "tracks", trackID)
+func (s ServerClient) GetTrack(ctx context.Context, trackID uuid.UUID) (track types.Track, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "tracks", trackID.String())
 	if err != nil {
 		return types.Track{}, err
 	}

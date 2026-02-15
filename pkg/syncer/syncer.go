@@ -192,11 +192,6 @@ func (s *Syncer) Sync(ctx context.Context, userID uuid.UUID) error {
 		return err
 	}
 
-	dbSyncState.TracksCreated, dbSyncState.TracksUpdated, err = s.syncTracks(ctx, tx, syncState.CreatedOrUpdated.Tracks)
-	if err != nil {
-		return err
-	}
-
 	_, _, err = s.syncAlbumArtists(ctx, tx, userID, syncState.CreatedOrUpdated.AlbumArtists, syncState.Deleted.AlbumArtists)
 	if err != nil {
 		return err
@@ -243,6 +238,7 @@ func (s *Syncer) Sync(ctx context.Context, userID uuid.UUID) error {
 
 func (s Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, events []types.EntityEvent) error {
 	for _, e := range events {
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing '%s'", e.ItemID), "type", e.EntityType, "action", e.Type)
 		var f func(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) error
 
 		switch e.EntityType {
@@ -250,6 +246,8 @@ func (s Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, 
 			f = s.syncArtist
 		case types.EntityAlbum:
 			f = s.syncAlbum
+		case types.EntityTrack:
+			f = s.syncTrack
 		case types.EntityRating:
 			f = s.syncRating
 		default:
@@ -370,6 +368,32 @@ func (s Syncer) syncAlbum(ctx context.Context, tx database.DatabaseFace, userID 
 	return nil
 }
 
+func (s *Syncer) syncTrack(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var t types.Track
+
+	if event.Type != types.EntityEventDelete {
+		t, err = s.sc.GetTrack(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if _, err := tx.AddTrack(ctx, t, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		if err := tx.UpdateTrack(ctx, t, userID); err != nil {
+			return err
+		}
+	case types.EntityEventDelete:
+		return errors.New("'delete' not supported for tracks")
+	}
+
+	return nil
+}
+
 func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) error {
 	switch event.Type {
 	case types.EntityEventCreate:
@@ -482,35 +506,6 @@ func (s *Syncer) SyncItems(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (s Syncer) syncTracks(ctx context.Context, tx database.DatabaseFace, trackIDs []string) (created, updated int, err error) {
-	for _, tID := range trackIDs {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing track '%s'", tID))
-		exists, err := tx.TrackExists(ctx, tID)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		serverTrack, err := s.sc.GetTrack(ctx, tID)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		if exists {
-			if err = tx.UpdateTrack(ctx, serverTrack); err != nil {
-				return 0, 0, err
-			}
-			updated += 1
-		} else {
-			if _, err = tx.AddTrack(ctx, serverTrack); err != nil {
-				return 0, 0, err
-			}
-			created += 1
-		}
-	}
-
-	return created, updated, nil
 }
 
 func (s Syncer) syncAlbumArtists(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, albumArtists []uuid.UUID, deletedAlbumArtists []uuid.UUID) (created, updated int, err error) {

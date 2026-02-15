@@ -359,7 +359,7 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string, userID uu
 		}
 	}
 
-	albumTracks, err := i.addMultipleTracks(ctx, tx, albumAnalysis, existingAlbum.ID)
+	albumTracks, err := i.addMultipleTracks(ctx, tx, albumAnalysis, existingAlbum.ID, userID)
 	if err != nil {
 		return err
 	}

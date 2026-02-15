@@ -60,11 +60,10 @@ type DatabaseFace interface {
 	ListArtistsWithoutMeta(ctx context.Context) (artists []types.Artist, err error)
 	CountArtists(ctx context.Context) (int, error)
 
-	AddTrack(ctx context.Context, t types.Track) (uuid.UUID, error)
+	AddTrack(ctx context.Context, t types.Track, userID uuid.UUID) (uuid.UUID, error)
 	TrackExists(ctx context.Context, ID string) (bool, error)
 	TrackExistsByNameAndAlbumID(ctx context.Context, title, albumID string) (bool, error)
-	UpdateTrack(ctx context.Context, t types.Track) error
-	UpdateTrackFromMbID(ctx context.Context, t types.Track) error
+	UpdateTrack(ctx context.Context, t types.Track, userID uuid.UUID) error
 	GetTrackFromMbID(ctx context.Context, mbID string) (track types.Track, err error)
 	GetTrackFromID(ctx context.Context, ID uuid.UUID) (track types.Track, err error)
 	GetTrackDetailed(ctx context.Context, trackID, albumID, userID uuid.UUID) (track types.TrackDetailed, err error)

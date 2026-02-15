@@ -85,7 +85,7 @@ func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, 
 	return id, nil, err
 }
 
-func (i Importer) addOrUpdateTrack(ctx context.Context, tx database.DatabaseFace, track types.Track, albumID uuid.UUID) (id uuid.UUID, new bool, err error) {
+func (i Importer) addOrUpdateTrack(ctx context.Context, tx database.DatabaseFace, track types.Track, albumID, userID uuid.UUID) (id uuid.UUID, new bool, err error) {
 	var existingTrack types.Track
 
 	if track.MusicBrainzID != nil {
@@ -113,14 +113,14 @@ func (i Importer) addOrUpdateTrack(ctx context.Context, tx database.DatabaseFace
 
 	if existingTrack.ID != uuid.Nil {
 		track.ID = existingTrack.ID
-		err = tx.UpdateTrack(ctx, track)
+		err = tx.UpdateTrack(ctx, track, userID)
 		if err != nil {
 			return uuid.Nil, false, err
 		}
 		return track.ID, false, nil
 	} else {
 		i.log.InfoContext(ctx, "creating new track")
-		id, err := tx.AddTrack(ctx, track)
+		id, err := tx.AddTrack(ctx, track, userID)
 		return id, true, err
 	}
 }

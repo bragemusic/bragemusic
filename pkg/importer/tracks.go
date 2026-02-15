@@ -10,7 +10,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (i Importer) addMultipleTracks(ctx context.Context, tx database.DatabaseFace, albumAnalysis AlbumAnalysisResults, existingAlbumID uuid.UUID) ([]types.AlbumTrack, error) {
+func (i Importer) addMultipleTracks(ctx context.Context, tx database.DatabaseFace, albumAnalysis AlbumAnalysisResults, existingAlbumID, userID uuid.UUID) ([]types.AlbumTrack, error) {
 	var tracks []types.Track
 	var albumTracks []types.AlbumTrack
 	var err error
@@ -30,7 +30,7 @@ func (i Importer) addMultipleTracks(ctx context.Context, tx database.DatabaseFac
 				if *tracks[tidx].MusicBrainzID == *track.MbID {
 					tracks[tidx].MediaFile = utils.Ptr(track.MediaFileID)
 
-					tracks[tidx].ID, _, err = i.addOrUpdateTrack(ctx, tx, tracks[tidx], existingAlbumID)
+					tracks[tidx].ID, _, err = i.addOrUpdateTrack(ctx, tx, tracks[tidx], existingAlbumID, userID)
 					if err != nil {
 						return nil, err
 					}
@@ -46,7 +46,7 @@ func (i Importer) addMultipleTracks(ctx context.Context, tx database.DatabaseFac
 				MediaFile: utils.Ptr(track.MediaFileID),
 			}
 
-			t.ID, _, err = i.addOrUpdateTrack(ctx, tx, t, existingAlbumID)
+			t.ID, _, err = i.addOrUpdateTrack(ctx, tx, t, existingAlbumID, userID)
 			if err != nil {
 				return nil, err
 			}
@@ -68,7 +68,7 @@ func (i Importer) addMultipleTracks(ctx context.Context, tx database.DatabaseFac
 			continue
 		}
 
-		tracks[tidx].ID, _, err = i.addOrUpdateTrack(ctx, tx, tracks[tidx], existingAlbumID)
+		tracks[tidx].ID, _, err = i.addOrUpdateTrack(ctx, tx, tracks[tidx], existingAlbumID, userID)
 		if err != nil {
 			return nil, err
 		}
