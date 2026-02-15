@@ -9,7 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) addEntityEvent(ctx context.Context, id uuid.UUID, eventType types.EntityEventType, entityType types.EntityType) error {
+func (d Database) addEntityEvent(ctx context.Context, id uuid.UUID, eventType types.EntityEventType, entityType types.EntityType, userID uuid.UUID) error {
 	eid, err := uuid.NewV4()
 	if err != nil {
 		return err

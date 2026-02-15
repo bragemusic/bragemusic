@@ -103,7 +103,7 @@ type DatabaseFace interface {
 	GetAlbumArtistByID(ctx context.Context, id uuid.UUID) (albumArtist types.AlbumArtist, err error)
 	UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist) error
 	ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UUID) (albumArtists []types.AlbumArtist, err error)
-	DeleteAlbumArtist(ctx context.Context, id uuid.UUID) error
+	DeleteAlbumArtist(ctx context.Context, id, userID uuid.UUID) error
 
 	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
 	GetLastSync(ctx context.Context) (sync types.DBSyncState, err error)
@@ -128,7 +128,7 @@ type DatabaseFace interface {
 	CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error)
 	CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error)
 	DeletePlaylist(ctx context.Context, id, userID uuid.UUID) error
-	DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error
+	DeletePlaylistTrack(ctx context.Context, id, userID uuid.UUID) error
 	GetPlaylist(ctx context.Context, ID, userID uuid.UUID) (plist types.Playlist, err error)
 	GetPlaylistTrack(ctx context.Context, id uuid.UUID) (plistTrack types.PlaylistTrack, err error)
 	GetPlaylistTrackByPlaylistAndAlbumTrack(ctx context.Context, playlistID, albumTrackID uuid.UUID) (plistTrack types.PlaylistTrack, err error)
@@ -144,7 +144,7 @@ type DatabaseFace interface {
 	GetRating(ctx context.Context, id uuid.UUID) (rating types.Rating, err error)
 	GetRatingID(ctx context.Context, trackID, userID uuid.UUID) (id uuid.UUID, found bool, err error)
 	GetTrackRatings(ctx context.Context, trackID uuid.UUID) (ratings []types.Rating, err error)
-	UpdateRating(ctx context.Context, id uuid.UUID, rating int) error
+	UpdateRating(ctx context.Context, id uuid.UUID, rating int, userID uuid.UUID) error
 
 	AuthFace
 	ImportFace

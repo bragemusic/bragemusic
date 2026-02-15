@@ -16,7 +16,7 @@ func (m MediaManager) RateTrack(ctx context.Context, trackID, userID uuid.UUID, 
 	}
 
 	if found {
-		if err = m.db.UpdateRating(ctx, rateID, value); err != nil {
+		if err = m.db.UpdateRating(ctx, rateID, value, userID); err != nil {
 			return m.berr.DatabaseError(err, types.EntityRating, &rateID)
 		}
 		return nil

@@ -48,7 +48,7 @@ func (d Database) AddRating(ctx context.Context, r types.Rating) (uuid.UUID, err
 		return uuid.Nil, err
 	}
 
-	err = d.addEntityEvent(ctx, r.ID, types.EntityEventCreate, types.EntityRating)
+	err = d.addEntityEvent(ctx, r.ID, types.EntityEventCreate, types.EntityRating, r.Owner)
 	if err != nil {
 		return uuid.UUID{}, err
 	}
@@ -114,7 +114,7 @@ func (d Database) GetTrackRatings(ctx context.Context, trackID uuid.UUID) (ratin
 	return ratings, nil
 }
 
-func (d Database) UpdateRating(ctx context.Context, id uuid.UUID, rating int) error {
+func (d Database) UpdateRating(ctx context.Context, id uuid.UUID, rating int, userID uuid.UUID) error {
 	query := `
         UPDATE ratings
         SET
@@ -128,7 +128,7 @@ func (d Database) UpdateRating(ctx context.Context, id uuid.UUID, rating int) er
 		return err
 	}
 
-	err = d.addEntityEvent(ctx, id, types.EntityEventUpdate, types.EntityRating)
+	err = d.addEntityEvent(ctx, id, types.EntityEventUpdate, types.EntityRating, userID)
 	if err != nil {
 		return err
 	}

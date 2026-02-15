@@ -222,7 +222,7 @@ func (d Database) ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UU
 	return
 }
 
-func (d Database) DeleteAlbumArtist(ctx context.Context, id uuid.UUID) error {
+func (d Database) DeleteAlbumArtist(ctx context.Context, id, userID uuid.UUID) error {
 	query := `
 		DELETE FROM album_artists
 		WHERE
@@ -234,7 +234,7 @@ func (d Database) DeleteAlbumArtist(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 
-	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityAlbumArtist)
+	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityAlbumArtist, userID)
 }
 
 func (d Database) CountAlbumsByArtist(ctx context.Context, artistID uuid.UUID) (int, error) {

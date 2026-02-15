@@ -134,10 +134,10 @@ func (d Database) DeletePlaylist(ctx context.Context, id, userID uuid.UUID) erro
 		return err
 	}
 
-	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityPlaylist)
+	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityPlaylist, userID)
 }
 
-func (d Database) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error {
+func (d Database) DeletePlaylistTrack(ctx context.Context, id, userID uuid.UUID) error {
 	query := `
 		DELETE FROM playlist_tracks
 		WHERE
@@ -150,7 +150,7 @@ func (d Database) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 
-	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityPlaylistTrack)
+	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityPlaylistTrack, userID)
 }
 
 func (d Database) GetPlaylist(ctx context.Context, ID, userID uuid.UUID) (plist types.Playlist, err error) {

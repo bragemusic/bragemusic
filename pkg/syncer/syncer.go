@@ -97,7 +97,7 @@ func (s *Syncer) StartSyncDaemon(ctx context.Context, done func()) {
 			case <-tickerSync.C:
 				if s.serverAvailable {
 					s.log.InfoContext(ctx, "starting periodic sync")
-					err := s.Sync(ctx)
+					err := s.Sync(ctx, s.user.ID)
 					if err != nil {
 						s.log.ErrorContext(ctx, "periodic sync finished with errors", "error", err.Error())
 					}
@@ -149,7 +149,7 @@ func (s *Syncer) ServerStatus() server.Status {
 	return s.serverStatus
 }
 
-func (s *Syncer) Sync(ctx context.Context) error {
+func (s *Syncer) Sync(ctx context.Context, userID uuid.UUID) error {
 	if !s.serverAvailable {
 		return errors.New("server is not available")
 	}
@@ -203,7 +203,7 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 
-	_, _, err = s.syncAlbumArtists(ctx, tx, syncState.CreatedOrUpdated.AlbumArtists, syncState.Deleted.AlbumArtists)
+	_, _, err = s.syncAlbumArtists(ctx, tx, userID, syncState.CreatedOrUpdated.AlbumArtists, syncState.Deleted.AlbumArtists)
 	if err != nil {
 		return err
 	}
@@ -218,7 +218,7 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 
-	_, _, err = s.syncPlaylistTracks(ctx, tx, syncState.CreatedOrUpdated.PlaylistTracks, syncState.Deleted.PlaylistTracks)
+	_, _, err = s.syncPlaylistTracks(ctx, tx, userID, syncState.CreatedOrUpdated.PlaylistTracks, syncState.Deleted.PlaylistTracks)
 	if err != nil {
 		return err
 	}
@@ -227,7 +227,7 @@ func (s *Syncer) Sync(ctx context.Context) error {
 		return err
 	}
 
-	if err = s.syncEntityEvents(ctx, tx, syncState.New); err != nil {
+	if err = s.syncEntityEvents(ctx, tx, userID, syncState.New); err != nil {
 		return err
 	}
 
@@ -251,9 +251,9 @@ func (s *Syncer) Sync(ctx context.Context) error {
 	return tx.Commit()
 }
 
-func (s *Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, events []types.EntityEvent) error {
+func (s *Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, events []types.EntityEvent) error {
 	for _, e := range events {
-		var f func(ctx context.Context, tx database.DatabaseFace, event types.EntityEvent) error
+		var f func(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) error
 
 		switch e.EntityType {
 		case types.EntityRating:
@@ -262,7 +262,7 @@ func (s *Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace,
 			return fmt.Errorf("unsupported entity type '%s'", e.EntityType)
 		}
 
-		if err := f(ctx, tx, e); err != nil {
+		if err := f(ctx, tx, userID, e); err != nil {
 			return err
 		}
 
@@ -270,7 +270,7 @@ func (s *Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace,
 	return nil
 }
 
-func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, event types.EntityEvent) error {
+func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) error {
 	switch event.Type {
 	case types.EntityEventCreate:
 		r, err := s.sc.GetRating(ctx, event.ItemID)
@@ -285,7 +285,7 @@ func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, event
 		if err != nil {
 			return err
 		}
-		if err := tx.UpdateRating(ctx, r.ID, r.Rating); err != nil {
+		if err := tx.UpdateRating(ctx, r.ID, r.Rating, userID); err != nil {
 			return err
 		}
 	case types.EntityEventDelete:
@@ -527,10 +527,10 @@ func (s Syncer) syncTracks(ctx context.Context, tx database.DatabaseFace, trackI
 	return created, updated, nil
 }
 
-func (s Syncer) syncAlbumArtists(ctx context.Context, tx database.DatabaseFace, albumArtists []uuid.UUID, deletedAlbumArtists []uuid.UUID) (created, updated int, err error) {
+func (s Syncer) syncAlbumArtists(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, albumArtists []uuid.UUID, deletedAlbumArtists []uuid.UUID) (created, updated int, err error) {
 	for _, aa := range deletedAlbumArtists {
 		s.log.DebugContext(ctx, fmt.Sprintf("deleting album artist '%s'", aa.String()))
-		if err := tx.DeleteAlbumArtist(ctx, aa); err != nil {
+		if err := tx.DeleteAlbumArtist(ctx, aa, userID); err != nil {
 			return 0, 0, err
 		}
 	}
@@ -592,15 +592,10 @@ func (s Syncer) syncAlbumTracks(ctx context.Context, tx database.DatabaseFace, a
 	return created, updated, nil
 }
 
-func (s Syncer) syncPlaylistTracks(ctx context.Context, tx database.DatabaseFace, added []uuid.UUID, deleted []uuid.UUID) (created, updated int, err error) {
-	// user, err := auth.UserFromContext(ctx)
-	// if err != nil {
-	// 	return 0, 0, err
-	// }
-
+func (s Syncer) syncPlaylistTracks(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, added []uuid.UUID, deleted []uuid.UUID) (created, updated int, err error) {
 	for _, d := range deleted {
 		s.log.DebugContext(ctx, fmt.Sprintf("deleting playlist_track '%s'", d.String()))
-		if err := tx.DeletePlaylistTrack(ctx, d); err != nil {
+		if err := tx.DeletePlaylistTrack(ctx, d, userID); err != nil {
 			return 0, 0, err
 		}
 	}

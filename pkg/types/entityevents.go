@@ -35,9 +35,10 @@ const (
 )
 
 type EntityEvent struct {
-	ID         uuid.UUID       `db:"id" json:"id"`
-	ItemID     uuid.UUID       `db:"item_id" json:"item_id"`
+	ID         uuid.UUID       `db:"id" json:"id" ts_type:"string"`
+	ItemID     uuid.UUID       `db:"item_id" json:"item_id" ts_type:"string"`
+	UserID     uuid.UUID       `db:"user_id" json:"user_id" ts_type:"string"`
 	Type       EntityEventType `db:"event_type" json:"event_type"`
 	EntityType EntityType      `db:"entity_type" json:"entity_type"`
-	EventTime  time.Time       `db:"event_time" json:"event_time"`
+	EventTime  time.Time       `db:"event_time" json:"event_time" ts_type:"string"`
 }

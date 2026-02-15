@@ -59,8 +59,8 @@ func (c *Client) RegisterUserCallback(f func(*types.UserDetails)) {
 	c.AuthClient.RegisterUserCallback(f)
 }
 
-func (c Client) Sync(ctx context.Context) error {
-	if err := c.sy.Sync(ctx); err != nil {
+func (c Client) Sync(ctx context.Context, userID uuid.UUID) error {
+	if err := c.sy.Sync(ctx, userID); err != nil {
 		return err
 	}
 
