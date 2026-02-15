@@ -42,3 +42,30 @@ type EntityEvent struct {
 	EntityType EntityType      `db:"entity_type" json:"entity_type"`
 	EventTime  time.Time       `db:"event_time" json:"event_time" ts_type:"string"`
 }
+
+type EntityEvents []EntityEvent
+
+func (es EntityEvents) LaterDeleteExists(e EntityEvent) bool {
+	if e.Type == EntityEventDelete {
+		return false
+	}
+
+	for _, ee := range es {
+		if ee.EventTime.Before(e.EventTime) {
+			continue
+		}
+
+		if ee.ItemID != e.ItemID {
+			continue
+		}
+
+		if ee.Type != EntityEventDelete {
+			continue
+		}
+
+		return true
+
+	}
+
+	return false
+}

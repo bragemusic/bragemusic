@@ -94,13 +94,13 @@ type DatabaseFace interface {
 	UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) error
 	CountTracksByArtist(ctx context.Context, artistID uuid.UUID) (int, error)
 
-	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) (uuid.UUID, error)
+	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist, userID uuid.UUID) (uuid.UUID, error)
 	AlbumArtistExistsByID(ctx context.Context, id uuid.UUID) (bool, error)
 	AlbumArtistExists(ctx context.Context, id uuid.UUID, artistID uuid.UUID, role types.ArtistRole) (bool, error)
 	ListUpdatedAlbumArtists(ctx context.Context, since time.Time) (albumArtists []uuid.UUID, err error)
 	GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role types.ArtistRole) (albumArtist types.AlbumArtist, err error)
 	GetAlbumArtistByID(ctx context.Context, id uuid.UUID) (albumArtist types.AlbumArtist, err error)
-	UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist) error
+	UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist, userID uuid.UUID) error
 	ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UUID) (albumArtists []types.AlbumArtist, err error)
 	DeleteAlbumArtist(ctx context.Context, id, userID uuid.UUID) error
 

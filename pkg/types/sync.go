@@ -20,10 +20,10 @@ const (
 )
 
 type SyncState struct {
-	Time             time.Time     `json:"time"`
-	CreatedOrUpdated SyncData      `json:"created_or_updated"`
-	Deleted          SyncData      `json:"deleted"`
-	New              []EntityEvent `json:"new"`
+	Time             time.Time    `json:"time"`
+	CreatedOrUpdated SyncData     `json:"created_or_updated"`
+	Deleted          SyncData     `json:"deleted"`
+	New              EntityEvents `json:"new"`
 }
 
 type SyncData struct {

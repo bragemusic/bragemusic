@@ -144,7 +144,7 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 				// FIXME: Need to do something about positions
 				Position: 0,
 			}
-			if _, err := tx.AddAlbumArtist(ctx, aa); err != nil {
+			if _, err := tx.AddAlbumArtist(ctx, aa, userID); err != nil {
 				return m.berr.DatabaseError(err, types.EntityAlbumArtist, nil)
 			}
 		}

@@ -378,7 +378,7 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string, userID uu
 		return err
 	}
 
-	if err = i.addAlbumArtists(ctx, tx, album.ID, artistID); err != nil {
+	if err = i.addAlbumArtists(ctx, tx, album.ID, artistID, userID); err != nil {
 		return err
 	}
 

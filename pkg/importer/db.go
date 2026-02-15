@@ -27,7 +27,7 @@ func (i Importer) addAlbumTracks(ctx context.Context, tx database.DatabaseFace, 
 	return nil
 }
 
-func (i Importer) addAlbumArtists(ctx context.Context, tx database.DatabaseFace, albumID, artistID uuid.UUID) error {
+func (i Importer) addAlbumArtists(ctx context.Context, tx database.DatabaseFace, albumID, artistID, userID uuid.UUID) error {
 	role := types.ArPrimary
 
 	exists, err := tx.AlbumArtistExists(ctx, albumID, artistID, role)
@@ -43,7 +43,7 @@ func (i Importer) addAlbumArtists(ctx context.Context, tx database.DatabaseFace,
 	}
 
 	if !exists {
-		if _, err = tx.AddAlbumArtist(ctx, aa); err != nil {
+		if _, err = tx.AddAlbumArtist(ctx, aa, userID); err != nil {
 			return err
 		}
 	}
