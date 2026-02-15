@@ -103,7 +103,7 @@ func (s *Server) addImage(imageType ImageType) http.HandlerFunc {
 				return Response{}, err
 			}
 		case AlbumImage:
-			if err = s.mediamgr.AddAlbumImage(ctx, orgImgPath, assetID); err != nil {
+			if err = s.mediamgr.AddAlbumImage(ctx, orgImgPath, assetID, user.ID); err != nil {
 				return Response{}, err
 			}
 		case PlaylistImage:

@@ -121,7 +121,7 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 	albumData.ID = albumID
 	albumData.Owner = existingAlbum.Owner
 
-	err = tx.UpdateAlbum(ctx, albumData.Album)
+	err = tx.UpdateAlbum(ctx, albumData.Album, userID)
 	if err != nil {
 		return m.berr.DatabaseError(err, types.EntityAlbum, &albumID)
 	}

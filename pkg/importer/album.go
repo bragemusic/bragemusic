@@ -26,7 +26,7 @@ var (
 	ErrAlbumNotFound      = errors.New("no existing album found")
 )
 
-func (i Importer) addAlbum(ctx context.Context, tx database.DatabaseFace, albumAnalysis AlbumAnalysisResults, existingAlbum types.Album) (album types.Album, err error) {
+func (i Importer) addAlbum(ctx context.Context, tx database.DatabaseFace, albumAnalysis AlbumAnalysisResults, existingAlbum types.Album, userID uuid.UUID) (album types.Album, err error) {
 	if albumAnalysis.AlbumID != "" {
 		album, err = i.generateAlbumFromMbID(ctx, albumAnalysis.AlbumID)
 		if err != nil {
@@ -40,14 +40,14 @@ func (i Importer) addAlbum(ctx context.Context, tx database.DatabaseFace, albumA
 		// Exisiting album is not created from musicbrainz id but new one is, update it
 		if existingAlbum.MusicBrainzID == nil && album.MusicBrainzID != nil {
 			album.ID = existingAlbum.ID
-			if err = tx.UpdateAlbum(ctx, album); err != nil {
+			if err = tx.UpdateAlbum(ctx, album, userID); err != nil {
 				return types.Album{}, err
 			}
 		} else {
 			album = existingAlbum
 		}
 	} else {
-		album.ID, err = tx.AddAlbum(ctx, album)
+		album.ID, err = tx.AddAlbum(ctx, album, userID)
 		if err != nil {
 			return types.Album{}, err
 		}

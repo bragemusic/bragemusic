@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddAlbum(ctx context.Context, a types.Album) (uuid.UUID, error) {
+func (d Database) AddAlbum(ctx context.Context, a types.Album, userID uuid.UUID) (uuid.UUID, error) {
 	if a.ID == uuid.Nil {
 		uid, err := uuid.NewV4()
 		if err != nil {
@@ -48,6 +48,11 @@ func (d Database) AddAlbum(ctx context.Context, a types.Album) (uuid.UUID, error
 	)
 	if err != nil {
 		return uuid.Nil, err
+	}
+
+	err = d.addEntityEvent(ctx, a.ID, types.EntityEventCreate, types.EntityAlbum, userID)
+	if err != nil {
+		return uuid.UUID{}, err
 	}
 
 	return a.ID, nil
@@ -234,7 +239,7 @@ func (d Database) ListUpdatedAlbums(ctx context.Context, since time.Time) (album
 	return
 }
 
-func (d Database) UpdateAlbum(ctx context.Context, a types.Album) error {
+func (d Database) UpdateAlbum(ctx context.Context, a types.Album, userID uuid.UUID) error {
 	a.UpdatedAt = time.Now()
 	query := `
         UPDATE albums
@@ -253,6 +258,11 @@ func (d Database) UpdateAlbum(ctx context.Context, a types.Album) error {
     `
 
 	_, err := sqlx.NamedExecContext(ctx, d.ext, query, a)
+	if err != nil {
+		return err
+	}
+
+	err = d.addEntityEvent(ctx, a.ID, types.EntityEventUpdate, types.EntityAlbum, userID)
 	if err != nil {
 		return err
 	}

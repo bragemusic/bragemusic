@@ -364,7 +364,7 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string, userID uu
 		return err
 	}
 
-	album, err := i.addAlbum(ctx, tx, albumAnalysis, existingAlbum)
+	album, err := i.addAlbum(ctx, tx, albumAnalysis, existingAlbum, userID)
 	if err != nil {
 		return err
 	}

@@ -35,9 +35,9 @@ type DatabaseFace interface {
 	Begin(ctx context.Context) (DatabaseFace, error)
 	driver.Tx
 
-	AddAlbum(ctx context.Context, a types.Album) (uuid.UUID, error)
+	AddAlbum(ctx context.Context, a types.Album, userID uuid.UUID) (uuid.UUID, error)
 	AlbumExists(ctx context.Context, ID string) (bool, error)
-	UpdateAlbum(ctx context.Context, a types.Album) error
+	UpdateAlbum(ctx context.Context, a types.Album, userID uuid.UUID) error
 	GetAlbumFromArtistAndName(ctx context.Context, artistName, albumName string) (album types.Album, err error)
 	GetAlbumFromMbID(ctx context.Context, mbID string) (album types.Album, err error)
 	GetAlbumFromID(ctx context.Context, id uuid.UUID) (album types.Album, err error)

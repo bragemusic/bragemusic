@@ -31,7 +31,7 @@ func (m MediaManager) AddArtistImage(ctx context.Context, filename string, artis
 	return nil
 }
 
-func (m MediaManager) AddAlbumImage(ctx context.Context, filename string, albumID uuid.UUID) error {
+func (m MediaManager) AddAlbumImage(ctx context.Context, filename string, albumID, userID uuid.UUID) error {
 	if m.im == nil {
 		return m.berr.DependencyMissing(nil, "imagemagick")
 	}
@@ -47,7 +47,7 @@ func (m MediaManager) AddAlbumImage(ctx context.Context, filename string, albumI
 		return err
 	}
 
-	if err = m.db.UpdateAlbum(ctx, album); err != nil {
+	if err = m.db.UpdateAlbum(ctx, album, userID); err != nil {
 		return m.berr.DatabaseError(err, types.EntityAlbum, &albumID)
 	}
 
