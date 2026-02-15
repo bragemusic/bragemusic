@@ -8,7 +8,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (i Importer) addArtist(ctx context.Context, tx database.DatabaseFace, albumAnalysis AlbumAnalysisResults) (artistID uuid.UUID, err error) {
+func (i Importer) addArtist(ctx context.Context, tx database.DatabaseFace, albumAnalysis AlbumAnalysisResults, userID uuid.UUID) (artistID uuid.UUID, err error) {
 	var artist types.Artist
 
 	if albumAnalysis.AlbumID != "" {
@@ -21,7 +21,7 @@ func (i Importer) addArtist(ctx context.Context, tx database.DatabaseFace, album
 		artist = i.generateArtistFromID3(ctx, albumAnalysis)
 	}
 
-	artistID, existingArtist, err := i.addOrGetArtist(ctx, tx, artist)
+	artistID, existingArtist, err := i.addOrGetArtist(ctx, tx, artist, userID)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -29,7 +29,7 @@ func (i Importer) addArtist(ctx context.Context, tx database.DatabaseFace, album
 	if existingArtist != nil {
 		artist.ID = existingArtist.ID
 		if existingArtist.MusicBrainzID == nil && artist.MusicBrainzID != nil {
-			err = tx.UpdateArtist(ctx, artist)
+			err = tx.UpdateArtist(ctx, artist, userID)
 			if err != nil {
 				return uuid.Nil, err
 			}

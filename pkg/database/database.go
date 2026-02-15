@@ -49,9 +49,9 @@ type DatabaseFace interface {
 	CountAlbums(ctx context.Context) (int, error)
 	CountAlbumsByArtist(ctx context.Context, artistID uuid.UUID) (int, error)
 
-	AddArtist(ctx context.Context, a types.Artist) (uuid.UUID, error)
+	AddArtist(ctx context.Context, a types.Artist, userID uuid.UUID) (uuid.UUID, error)
 	ArtistExists(ctx context.Context, ID string) (bool, error)
-	UpdateArtist(ctx context.Context, a types.Artist) error
+	UpdateArtist(ctx context.Context, a types.Artist, userID uuid.UUID) error
 	GetArtistFromID(ctx context.Context, id uuid.UUID) (artist types.Artist, err error)
 	GetArtistFromMbID(ctx context.Context, mbID string) (artist types.Artist, err error)
 	GetArtistFromName(ctx context.Context, name string) (artist types.Artist, err error)
@@ -199,6 +199,21 @@ func New(db *sqlx.DB) (Database, error) {
 
 		// Enable foreign key enforcement on every connection
 		if _, err := conn.Exec("PRAGMA foreign_keys = ON;", nil); err != nil {
+			return err
+		}
+
+		// Enable multiple readers while writing
+		if _, err := conn.Exec("PRAGMA journal_mode=WAL;", nil); err != nil {
+			return err
+		}
+
+		// Enable multiple readers while writing
+		if _, err := conn.Exec("PRAGMA synchronous=NORMAL;", nil); err != nil {
+			return err
+		}
+
+		// Set timeout to 5s
+		if _, err := conn.Exec("PRAGMA busy_timeout = 5000;", nil); err != nil {
 			return err
 		}
 

@@ -17,8 +17,8 @@ func (d Database) addEntityEvent(ctx context.Context, id uuid.UUID, eventType ty
 
 	const query = `
 		INSERT INTO entity_events (
-			id, item_id, event_type, entity_type, event_time
-		) VALUES (?, ?, ?, ?, ?);
+			id, item_id, user_id, event_type, entity_type, event_time
+		) VALUES (?, ?, ?, ?, ?, ?);
 	`
 
 	_, err = d.ext.ExecContext(
@@ -26,6 +26,7 @@ func (d Database) addEntityEvent(ctx context.Context, id uuid.UUID, eventType ty
 		query,
 		eid,
 		id,
+		userID,
 		eventType,
 		entityType,
 		time.Now(),

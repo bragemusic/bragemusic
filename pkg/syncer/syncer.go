@@ -188,7 +188,7 @@ func (s *Syncer) Sync(ctx context.Context, userID uuid.UUID) error {
 	}
 	defer tx.Rollback()
 
-	dbSyncState.ArtistsCreated, dbSyncState.ArtistsUpdated, err = s.syncArtists(ctx, tx, syncState.CreatedOrUpdated.Artists)
+	dbSyncState.ArtistsCreated, dbSyncState.ArtistsUpdated, err = s.syncArtists(ctx, tx, userID, syncState.CreatedOrUpdated.Artists)
 	if err != nil {
 		return err
 	}
@@ -384,7 +384,7 @@ func (s *Syncer) SyncItems(ctx context.Context) error {
 	return nil
 }
 
-func (s Syncer) syncArtists(ctx context.Context, tx database.DatabaseFace, artistIDs []string) (created, updated int, err error) {
+func (s Syncer) syncArtists(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, artistIDs []string) (created, updated int, err error) {
 	for _, aID := range artistIDs {
 		s.log.DebugContext(ctx, fmt.Sprintf("syncing artist '%s'", aID))
 		exists, err := tx.ArtistExists(ctx, aID)
@@ -398,12 +398,12 @@ func (s Syncer) syncArtists(ctx context.Context, tx database.DatabaseFace, artis
 		}
 
 		if exists {
-			if err = tx.UpdateArtist(ctx, serverArtist); err != nil {
+			if err = tx.UpdateArtist(ctx, serverArtist, userID); err != nil {
 				return 0, 0, err
 			}
 			updated += 1
 		} else {
-			if _, err = tx.AddArtist(ctx, serverArtist); err != nil {
+			if _, err = tx.AddArtist(ctx, serverArtist, userID); err != nil {
 				return 0, 0, err
 			}
 			created += 1

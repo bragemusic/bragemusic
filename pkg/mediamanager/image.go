@@ -8,7 +8,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (m MediaManager) AddArtistImage(ctx context.Context, filename string, artistID uuid.UUID) error {
+func (m MediaManager) AddArtistImage(ctx context.Context, filename string, artistID, userID uuid.UUID) error {
 	if m.im == nil {
 		return m.berr.DependencyMissing(nil, "imagemagick")
 	}
@@ -24,7 +24,7 @@ func (m MediaManager) AddArtistImage(ctx context.Context, filename string, artis
 		return err
 	}
 
-	if err = m.db.UpdateArtist(ctx, artist); err != nil {
+	if err = m.db.UpdateArtist(ctx, artist, userID); err != nil {
 		return m.berr.DatabaseError(err, types.EntityArtist, &artistID)
 	}
 

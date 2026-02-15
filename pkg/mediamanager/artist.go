@@ -26,9 +26,9 @@ func (m MediaManager) ListArtists(ctx context.Context, sortBy database.SortBy, s
 	return artists, nil
 }
 
-func (m MediaManager) UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData types.Artist) error {
+func (m MediaManager) UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData types.Artist, userID uuid.UUID) error {
 	artistData.ID = artistID
-	err := m.db.UpdateArtist(ctx, artistData)
+	err := m.db.UpdateArtist(ctx, artistData, userID)
 	if err != nil {
 		return m.berr.DatabaseError(err, types.EntityArtist, &artistID)
 	}

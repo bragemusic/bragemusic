@@ -51,7 +51,7 @@ func (i Importer) addAlbumArtists(ctx context.Context, tx database.DatabaseFace,
 	return nil
 }
 
-func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, artist types.Artist) (id uuid.UUID, retArtist *types.Artist, err error) {
+func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, artist types.Artist, userID uuid.UUID) (id uuid.UUID, retArtist *types.Artist, err error) {
 	var existingArtist types.Artist
 
 	if artist.MusicBrainzID != nil {
@@ -80,7 +80,7 @@ func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, 
 	}
 
 	i.log.InfoContext(ctx, "creating new artist")
-	id, err = tx.AddArtist(ctx, artist)
+	id, err = tx.AddArtist(ctx, artist, userID)
 
 	return id, nil, err
 }

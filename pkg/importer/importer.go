@@ -85,7 +85,7 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 
 	switch ie.Type {
 	case types.ImportTypeAlbum:
-		err = i.importAlbum(ctx, path, ie.MusicBrainzID)
+		err = i.importAlbum(ctx, path, ie.Owner, ie.MusicBrainzID)
 	case types.ImportTypeTrack:
 		err = i.importTrack(ctx, path)
 	}
@@ -161,7 +161,7 @@ func (i *Importer) runImportCheck2(ctx context.Context) error {
 		})
 }
 
-func (i *Importer) importAlbum(ctx context.Context, filename string, mbID *string) error {
+func (i *Importer) importAlbum(ctx context.Context, filename string, userID uuid.UUID, mbID *string) error {
 	i.log.InfoContext(ctx, "parsing album", "filename", filename)
 
 	tempFolder, err := os.MkdirTemp(os.TempDir(), "brage-album")
@@ -174,7 +174,7 @@ func (i *Importer) importAlbum(ctx context.Context, filename string, mbID *strin
 		return err
 	}
 
-	if err = i.importAlbumFiles(ctx, tempFolder, mbID); err != nil {
+	if err = i.importAlbumFiles(ctx, tempFolder, userID, mbID); err != nil {
 		return err
 	}
 
@@ -323,7 +323,7 @@ func (i Importer) downloadAlbumCoverImage(ctx context.Context, album types.Album
 	return fmt.Errorf("could not get album cover for album '%s'", album.ID)
 }
 
-func (i Importer) importAlbumFiles(ctx context.Context, folder string, mbID *string) error {
+func (i Importer) importAlbumFiles(ctx context.Context, folder string, userID uuid.UUID, mbID *string) error {
 	tx, err := i.db.Begin(ctx)
 	if err != nil {
 		return err
@@ -373,7 +373,7 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string, mbID *str
 		return err
 	}
 
-	artistID, err := i.addArtist(ctx, tx, albumAnalysis)
+	artistID, err := i.addArtist(ctx, tx, albumAnalysis, userID)
 	if err != nil {
 		return err
 	}
