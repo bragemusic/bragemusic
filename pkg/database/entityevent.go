@@ -35,7 +35,7 @@ func (d Database) addEntityEvent(ctx context.Context, id uuid.UUID, eventType ty
 	return err
 }
 
-func (d Database) ListEntityEvents(ctx context.Context, eventType types.EntityEventType, entityType types.EntityType, since time.Time) (ids []uuid.UUID, err error) {
+func (d Database) ListEntityEventsByType(ctx context.Context, eventType types.EntityEventType, entityType types.EntityType, since time.Time) (ids []uuid.UUID, err error) {
 	query := `
         SELECT item_id
         FROM entity_events
@@ -55,7 +55,7 @@ func (d Database) ListEntityEvents(ctx context.Context, eventType types.EntityEv
 	return
 }
 
-func (d Database) ListEntityEventsTemp(ctx context.Context, entityType types.EntityType, since time.Time, userID *uuid.UUID) (ids []types.EntityEvent, err error) {
+func (d Database) ListEntityEventsByEntityType(ctx context.Context, entityType types.EntityType, since time.Time, userID *uuid.UUID) (ids []types.EntityEvent, err error) {
 	if userID == nil {
 		query := `
         SELECT *
