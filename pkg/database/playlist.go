@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddPlaylist(ctx context.Context, p types.Playlist) (uuid.UUID, error) {
+func (d Database) AddPlaylist(ctx context.Context, p types.Playlist, userID uuid.UUID) (uuid.UUID, error) {
 	if p.Owner == uuid.Nil {
 		return uuid.Nil, ErrNoUser
 	}
@@ -47,6 +47,11 @@ func (d Database) AddPlaylist(ctx context.Context, p types.Playlist) (uuid.UUID,
 	)
 	if err != nil {
 		return uuid.Nil, err
+	}
+
+	err = d.addEntityEvent(ctx, p.ID, types.EntityEventCreate, types.EntityPlaylist, userID)
+	if err != nil {
+		return uuid.UUID{}, err
 	}
 
 	return p.ID, nil
@@ -355,7 +360,7 @@ func (d Database) PlaylistTrackExists(ctx context.Context, id uuid.UUID) (bool, 
 	return exists, nil
 }
 
-func (d Database) UpdatePlaylist(ctx context.Context, plist types.Playlist) error {
+func (d Database) UpdatePlaylist(ctx context.Context, plist types.Playlist, userID uuid.UUID) error {
 	plist.UpdatedAt = time.Now()
 	query := `
         UPDATE playlists SET
@@ -368,5 +373,14 @@ func (d Database) UpdatePlaylist(ctx context.Context, plist types.Playlist) erro
     `
 
 	_, err := sqlx.NamedExecContext(ctx, d.ext, query, plist)
-	return err
+	if err != nil {
+		return err
+	}
+
+	err = d.addEntityEvent(ctx, plist.ID, types.EntityEventUpdate, types.EntityPlaylist, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

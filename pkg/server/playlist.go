@@ -13,12 +13,17 @@ func (s *Server) addPlaylist() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+
 		plist := types.Playlist{}
 		if err := json.NewDecoder(r.Body).Decode(&plist); err != nil {
 			return Response{}, err
 		}
 
-		if err := s.mediamgr.AddPlaylist(ctx, plist); err != nil {
+		if err := s.mediamgr.AddPlaylist(ctx, plist, user.ID); err != nil {
 			return Response{}, err
 		}
 

@@ -17,10 +17,10 @@ func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st typ
 
 	st.Time = time.Now()
 
-	st.CreatedOrUpdated.Playlists, err = m.db.ListUpdatedPlaylists(ctx, since, user.ID)
-	if err != nil {
-		return types.SyncState{}, err
-	}
+	// st.CreatedOrUpdated.Playlists, err = m.db.ListUpdatedPlaylists(ctx, since, user.ID)
+	// if err != nil {
+	// 	return types.SyncState{}, err
+	// }
 
 	st.CreatedOrUpdated.PlaylistTracks, err = m.db.ListUpdatedPlaylistTracks(ctx, since, user.ID)
 	if err != nil {
@@ -37,10 +37,10 @@ func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st typ
 	// 	return types.SyncState{}, err
 	// }
 
-	st.Deleted.Playlists, err = m.db.ListEntityEvents(ctx, types.EntityEventDelete, types.EntityPlaylist, since)
-	if err != nil {
-		return types.SyncState{}, err
-	}
+	// st.Deleted.Playlists, err = m.db.ListEntityEvents(ctx, types.EntityEventDelete, types.EntityPlaylist, since)
+	// if err != nil {
+	// 	return types.SyncState{}, err
+	// }
 
 	st.Deleted.PlaylistTracks, err = m.db.ListEntityEvents(ctx, types.EntityEventDelete, types.EntityPlaylistTrack, since)
 	if err != nil {
@@ -76,6 +76,12 @@ func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st typ
 		return types.SyncState{}, err
 	}
 	st.New = append(st.New, albumTracks...)
+
+	playlists, err := m.db.ListEntityEventsTemp(ctx, types.EntityPlaylist, since, &user.ID)
+	if err != nil {
+		return types.SyncState{}, err
+	}
+	st.New = append(st.New, playlists...)
 
 	ratings, err := m.db.ListEntityEventsTemp(ctx, types.EntityRating, since, nil)
 	if err != nil {

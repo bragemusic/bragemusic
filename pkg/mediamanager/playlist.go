@@ -9,7 +9,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (m MediaManager) AddPlaylist(ctx context.Context, p types.Playlist) error {
+func (m MediaManager) AddPlaylist(ctx context.Context, p types.Playlist, userID uuid.UUID) error {
 	user, err := auth.UserFromContext(ctx)
 	if err != nil {
 		return m.berr.Unauthenticated(err)
@@ -21,7 +21,7 @@ func (m MediaManager) AddPlaylist(ctx context.Context, p types.Playlist) error {
 
 	p.Owner = user.ID
 
-	if _, err := m.db.AddPlaylist(ctx, p); err != nil {
+	if _, err := m.db.AddPlaylist(ctx, p, userID); err != nil {
 		return m.berr.DatabaseError(err, types.EntityPlaylist, nil)
 	}
 
@@ -137,7 +137,7 @@ func (m MediaManager) UpdatePlaylist(ctx context.Context, id uuid.UUID, data typ
 	data.ID = id
 	data.Owner = existingPlist.Owner
 
-	err = tx.UpdatePlaylist(ctx, data)
+	err = tx.UpdatePlaylist(ctx, data, userID)
 	if err != nil {
 		return m.berr.DatabaseError(err, types.EntityPlaylist, &id)
 	}
