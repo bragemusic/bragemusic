@@ -191,16 +191,6 @@ func (s *Syncer) Sync(ctx context.Context, userID uuid.UUID) error {
 		return err
 	}
 
-	// _, _, err = s.syncPlaylists(ctx, tx, syncState.CreatedOrUpdated.Playlists, syncState.Deleted.Playlists)
-	// if err != nil {
-	// 	return err
-	// }
-
-	_, _, err = s.syncPlaylistTracks(ctx, tx, userID, syncState.CreatedOrUpdated.PlaylistTracks, syncState.Deleted.PlaylistTracks)
-	if err != nil {
-		return err
-	}
-
 	if err = s.syncMediaFiles(ctx, tx, syncState.CreatedOrUpdated.MediaFiles); err != nil {
 		return err
 	}
@@ -249,6 +239,8 @@ func (s Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, 
 			f = s.syncAlbumTrack
 		case types.EntityPlaylist:
 			f = s.syncPlaylist
+		case types.EntityPlaylistTrack:
+			f = s.syncPlaylistTrack
 		case types.EntityRating:
 			f = s.syncRating
 		default:
@@ -504,6 +496,32 @@ func (s *Syncer) syncPlaylist(ctx context.Context, tx database.DatabaseFace, use
 	return nil
 }
 
+func (s *Syncer) syncPlaylistTrack(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var p types.PlaylistTrack
+
+	if event.Type != types.EntityEventDelete {
+		p, err = s.sc.GetPlaylistTrack(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if _, err = tx.AddPlaylistTrack(ctx, p, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		return errors.New("'update' not supported for ratings")
+	case types.EntityEventDelete:
+		if err = tx.DeletePlaylistTrack(ctx, event.ItemID, userID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) error {
 	switch event.Type {
 	case types.EntityEventCreate:
@@ -616,44 +634,6 @@ func (s *Syncer) SyncItems(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (s Syncer) syncPlaylistTracks(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, added []uuid.UUID, deleted []uuid.UUID) (created, updated int, err error) {
-	for _, d := range deleted {
-		s.log.DebugContext(ctx, fmt.Sprintf("deleting playlist_track '%s'", d.String()))
-		if err := tx.DeletePlaylistTrack(ctx, d, userID); err != nil {
-			return 0, 0, err
-		}
-	}
-
-	for _, a := range added {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing playlist '%s'", a.String()))
-		exists, err := tx.PlaylistTrackExists(ctx, a)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		pt, err := s.sc.GetPlaylistTrack(ctx, a)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		if exists {
-			// FIXME
-			// if err = tx.UpdatePlaylistTrack(ctx, playlist); err != nil {
-			// 	return 0, 0, err
-			// }
-			// updated += 1
-		} else {
-			if _, err = tx.AddPlaylistTrack(ctx, pt); err != nil {
-				return 0, 0, err
-			}
-			created += 1
-		}
-
-	}
-
-	return created, updated, nil
 }
 
 func (s Syncer) syncMediaFiles(ctx context.Context, tx database.DatabaseFace, mediaFiles []uuid.UUID) error {

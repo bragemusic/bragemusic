@@ -57,7 +57,7 @@ func (d Database) AddPlaylist(ctx context.Context, p types.Playlist, userID uuid
 	return p.ID, nil
 }
 
-func (d Database) AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack) (uuid.UUID, error) {
+func (d Database) AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack, userID uuid.UUID) (uuid.UUID, error) {
 	if p.ID == uuid.Nil {
 		uid, err := uuid.NewV4()
 		if err != nil {
@@ -88,6 +88,11 @@ func (d Database) AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack) (
 	)
 	if err != nil {
 		return uuid.Nil, err
+	}
+
+	err = d.addEntityEvent(ctx, p.ID, types.EntityEventCreate, types.EntityPlaylistTrack, userID)
+	if err != nil {
+		return uuid.UUID{}, err
 	}
 
 	return p.ID, nil

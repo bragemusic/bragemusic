@@ -33,7 +33,7 @@ func (m MediaManager) AddPlaylistTrack(ctx context.Context, playlistID, albumID,
 		AlbumTrackID: albumTrack.ID,
 	}
 
-	if _, err := tx.AddPlaylistTrack(ctx, plistTrack); err != nil {
+	if _, err := tx.AddPlaylistTrack(ctx, plistTrack, userID); err != nil {
 		return m.berr.DatabaseError(err, types.EntityPlaylistTrack, nil)
 	}
 
