@@ -82,7 +82,7 @@ func (m MediaManager) UpdateTrack(ctx context.Context, trackID uuid.UUID, trackD
 		albumTrack.DiscNumber = trackData.DiscNumber
 		albumTrack.TrackNumber = trackData.TrackNumber
 
-		if err = tx.UpdateAlbumTrack(ctx, albumTrack); err != nil {
+		if err = tx.UpdateAlbumTrack(ctx, albumTrack, userID); err != nil {
 			return m.berr.DatabaseError(err, types.EntityAlbumTrack, &albumTrack.ID)
 		}
 	}

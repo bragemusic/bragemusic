@@ -10,7 +10,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (i Importer) addAlbumTracks(ctx context.Context, tx database.DatabaseFace, albumTracks []types.AlbumTrack, albumID uuid.UUID) error {
+func (i Importer) addAlbumTracks(ctx context.Context, tx database.DatabaseFace, albumTracks []types.AlbumTrack, albumID, userID uuid.UUID) error {
 	for _, at := range albumTracks {
 		at.AlbumID = albumID
 		exists, err := tx.AlbumTrackExists(ctx, at.AlbumID, at.TrackID)
@@ -18,7 +18,7 @@ func (i Importer) addAlbumTracks(ctx context.Context, tx database.DatabaseFace, 
 			return err
 		}
 		if !exists {
-			if _, err := tx.AddAlbumTrack(ctx, at); err != nil {
+			if _, err := tx.AddAlbumTrack(ctx, at, userID); err != nil {
 				return err
 			}
 		}

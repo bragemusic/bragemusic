@@ -9,7 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddAlbumTrack(ctx context.Context, at types.AlbumTrack) (uuid.UUID, error) {
+func (d Database) AddAlbumTrack(ctx context.Context, at types.AlbumTrack, userID uuid.UUID) (uuid.UUID, error) {
 	if at.ID == uuid.Nil {
 		uid, err := uuid.NewV4()
 		if err != nil {
@@ -49,6 +49,11 @@ func (d Database) AddAlbumTrack(ctx context.Context, at types.AlbumTrack) (uuid.
 	)
 	if err != nil {
 		return uuid.Nil, err
+	}
+
+	err = d.addEntityEvent(ctx, at.ID, types.EntityEventCreate, types.EntityAlbumTrack, userID)
+	if err != nil {
+		return uuid.UUID{}, err
 	}
 
 	return at.ID, nil
@@ -191,7 +196,7 @@ func (d Database) ListAlbumTracksByTrackID(ctx context.Context, trackID uuid.UUI
 	return
 }
 
-func (d Database) UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) error {
+func (d Database) UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack, userID uuid.UUID) error {
 	at.UpdatedAt = time.Now()
 	query := `
         UPDATE album_tracks SET
@@ -204,7 +209,16 @@ func (d Database) UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) err
     `
 
 	_, err := sqlx.NamedExecContext(ctx, d.ext, query, at)
-	return err
+	if err != nil {
+		return err
+	}
+
+	err = d.addEntityEvent(ctx, at.ID, types.EntityEventUpdate, types.EntityAlbumTrack, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (d Database) CountTracksByArtist(ctx context.Context, artistID uuid.UUID) (int, error) {

@@ -192,10 +192,10 @@ func (s *Syncer) Sync(ctx context.Context, userID uuid.UUID) error {
 		return err
 	}
 
-	_, _, err = s.syncAlbumTracks(ctx, tx, syncState.CreatedOrUpdated.AlbumTracks)
-	if err != nil {
-		return err
-	}
+	// _, _, err = s.syncAlbumTracks(ctx, tx, syncState.CreatedOrUpdated.AlbumTracks)
+	// if err != nil {
+	// 	return err
+	// }
 
 	_, _, err = s.syncPlaylists(ctx, tx, syncState.CreatedOrUpdated.Playlists, syncState.Deleted.Playlists)
 	if err != nil {
@@ -251,6 +251,8 @@ func (s Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, 
 			f = s.syncTrack
 		case types.EntityAlbumArtist:
 			f = s.syncAlbumArtist
+		case types.EntityAlbumTrack:
+			f = s.syncAlbumTrack
 		case types.EntityRating:
 			f = s.syncRating
 		default:
@@ -425,6 +427,32 @@ func (s *Syncer) syncAlbumArtist(ctx context.Context, tx database.DatabaseFace, 
 	return nil
 }
 
+func (s *Syncer) syncAlbumTrack(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var at types.AlbumTrack
+
+	if event.Type != types.EntityEventDelete {
+		at, err = s.sc.GetAlbumTrackByID(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if _, err := tx.AddAlbumTrack(ctx, at, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		if err := tx.UpdateAlbumTrack(ctx, at, userID); err != nil {
+			return err
+		}
+	case types.EntityEventDelete:
+		return errors.New("'delete' not supported for album_tracks")
+	}
+
+	return nil
+}
+
 func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) error {
 	switch event.Type {
 	case types.EntityEventCreate:
@@ -537,71 +565,6 @@ func (s *Syncer) SyncItems(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// func (s Syncer) syncAlbumArtists(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, albumArtists []uuid.UUID, deletedAlbumArtists []uuid.UUID) (created, updated int, err error) {
-// 	for _, aa := range deletedAlbumArtists {
-// 		s.log.DebugContext(ctx, fmt.Sprintf("deleting album artist '%s'", aa.String()))
-// 		if err := tx.DeleteAlbumArtist(ctx, aa, userID); err != nil {
-// 			return 0, 0, err
-// 		}
-// 	}
-
-// 	for _, aa := range albumArtists {
-// 		s.log.DebugContext(ctx, fmt.Sprintf("syncing album artist '%s'", aa.String()))
-// 		exists, err := tx.AlbumArtistExistsByID(ctx, aa)
-// 		if err != nil {
-// 			return 0, 0, err
-// 		}
-
-// 		albumArtist, err := s.sc.GetAlbumArtistByID(ctx, aa)
-// 		if err != nil {
-// 			return 0, 0, err
-// 		}
-
-// 		if exists {
-// 			if err = tx.UpdateAlbumArtist(ctx, albumArtist); err != nil {
-// 				return 0, 0, err
-// 			}
-// 			updated += 1
-// 		} else {
-// 			if _, err = tx.AddAlbumArtist(ctx, albumArtist); err != nil {
-// 				return 0, 0, err
-// 			}
-// 			created += 1
-// 		}
-// 	}
-
-// 	return created, updated, nil
-// }
-
-func (s Syncer) syncAlbumTracks(ctx context.Context, tx database.DatabaseFace, albumTracks []uuid.UUID) (created, updated int, err error) {
-	for _, at := range albumTracks {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing album track '%s'", at.String()))
-		exists, err := tx.AlbumTrackExistsByID(ctx, at)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		albumTrack, err := s.sc.GetAlbumTrackByID(ctx, at)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		if exists {
-			if err = tx.UpdateAlbumTrack(ctx, albumTrack); err != nil {
-				return 0, 0, err
-			}
-			updated += 1
-		} else {
-			if _, err = tx.AddAlbumTrack(ctx, albumTrack); err != nil {
-				return 0, 0, err
-			}
-			created += 1
-		}
-	}
-
-	return created, updated, nil
 }
 
 func (s Syncer) syncPlaylistTracks(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, added []uuid.UUID, deleted []uuid.UUID) (created, updated int, err error) {
