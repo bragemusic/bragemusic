@@ -191,10 +191,6 @@ func (s *Syncer) Sync(ctx context.Context, userID uuid.UUID) error {
 		return err
 	}
 
-	if err = s.syncMediaFiles(ctx, tx, syncState.CreatedOrUpdated.MediaFiles); err != nil {
-		return err
-	}
-
 	if err := s.syncPlayHistory(ctx, tx, lastSync.SyncedAt); err != nil {
 		return err
 	}
@@ -241,6 +237,8 @@ func (s Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, 
 			f = s.syncPlaylist
 		case types.EntityPlaylistTrack:
 			f = s.syncPlaylistTrack
+		case types.EntityMediaFile:
+			f = s.syncMediaFile
 		case types.EntityRating:
 			f = s.syncRating
 		default:
@@ -522,6 +520,21 @@ func (s *Syncer) syncPlaylistTrack(ctx context.Context, tx database.DatabaseFace
 	return nil
 }
 
+func (s *Syncer) syncMediaFile(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	_, err = tx.AddSyncItem(ctx, types.SyncItem{
+		// FIXME: This should be added
+		SyncID: uuid.Nil,
+		ItemID: event.ItemID,
+		Type:   types.SiTypeMediaFile,
+		State:  types.SiStateNotStarted,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) error {
 	switch event.Type {
 	case types.EntityEventCreate:
@@ -593,11 +606,11 @@ func (s *Syncer) SyncItems(ctx context.Context) error {
 		}
 
 		if exists {
-			if err = tx.UpdateMediaFile(ctx, mf); err != nil {
+			if err = tx.UpdateMediaFile(ctx, mf, s.user.ID); err != nil {
 				return err
 			}
 		} else {
-			if _, err = tx.AddMediaFile(ctx, mf); err != nil {
+			if _, err = tx.AddMediaFile(ctx, mf, s.user.ID); err != nil {
 				return err
 			}
 		}
@@ -629,25 +642,6 @@ func (s *Syncer) SyncItems(ctx context.Context) error {
 		}
 
 		if err := tx.Commit(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (s Syncer) syncMediaFiles(ctx context.Context, tx database.DatabaseFace, mediaFiles []uuid.UUID) error {
-	for _, mfID := range mediaFiles {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing media file '%s'", mfID.String()))
-
-		_, err := tx.AddSyncItem(ctx, types.SyncItem{
-			// FIXME: This should be added
-			SyncID: uuid.Nil,
-			ItemID: mfID,
-			Type:   types.SiTypeMediaFile,
-			State:  types.SiStateNotStarted,
-		})
-		if err != nil {
 			return err
 		}
 	}

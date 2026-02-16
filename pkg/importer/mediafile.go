@@ -13,9 +13,10 @@ import (
 	"github.com/bragemusic/core/pkg/filetx"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
+	"github.com/gofrs/uuid/v5"
 )
 
-func (i Importer) importMediaFiles(ctx context.Context, tx database.DatabaseFace, ftx *filetx.FileTx, folder string) (mediaFiles []types.MediaFile, err error) {
+func (i Importer) importMediaFiles(ctx context.Context, tx database.DatabaseFace, ftx *filetx.FileTx, folder string, userID uuid.UUID) (mediaFiles []types.MediaFile, err error) {
 	tempFiles, err := os.ReadDir(folder)
 	if err != nil {
 		return nil, err
@@ -58,7 +59,7 @@ func (i Importer) importMediaFiles(ctx context.Context, tx database.DatabaseFace
 				Checksum: checksum,
 			}
 
-			mfId, err := tx.AddMediaFile(ctx, mf)
+			mfId, err := tx.AddMediaFile(ctx, mf, userID)
 			if err != nil {
 				return nil, err
 			}

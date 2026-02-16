@@ -75,12 +75,12 @@ type DatabaseFace interface {
 	ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error)
 	CountTracks(ctx context.Context) (int, error)
 
-	AddMediaFile(ctx context.Context, mf types.MediaFile) (uuid.UUID, error)
+	AddMediaFile(ctx context.Context, mf types.MediaFile, userID uuid.UUID) (uuid.UUID, error)
 	GetMediaFile(ctx context.Context, id uuid.UUID) (mf types.MediaFile, err error)
 	GetMediaFileFromChecksum(ctx context.Context, cs string) (mf types.MediaFile, err error)
 	ListUpdatedMediaFiles(ctx context.Context, since time.Time) (mediaFileIDs []uuid.UUID, err error)
 	MediaFileExists(ctx context.Context, ID uuid.UUID) (bool, error)
-	UpdateMediaFile(ctx context.Context, mf types.MediaFile) error
+	UpdateMediaFile(ctx context.Context, mf types.MediaFile, userID uuid.UUID) error
 
 	AddAlbumTrack(ctx context.Context, at types.AlbumTrack, userID uuid.UUID) (uuid.UUID, error)
 	AlbumTrackExists(ctx context.Context, albumID uuid.UUID, trackID uuid.UUID) (bool, error)

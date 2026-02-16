@@ -336,7 +336,7 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string, userID uu
 	}
 	defer ftx.Rollback()
 
-	mediaFiles, err := i.importMediaFiles(ctx, tx, &ftx, folder)
+	mediaFiles, err := i.importMediaFiles(ctx, tx, &ftx, folder, userID)
 	if err != nil {
 		return err
 	}
