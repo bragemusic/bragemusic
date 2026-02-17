@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddPlaylist(ctx context.Context, p types.Playlist) (uuid.UUID, error) {
+func (d Database) AddPlaylist(ctx context.Context, p types.Playlist, userID uuid.UUID) (uuid.UUID, error) {
 	if p.Owner == uuid.Nil {
 		return uuid.Nil, ErrNoUser
 	}
@@ -49,10 +49,15 @@ func (d Database) AddPlaylist(ctx context.Context, p types.Playlist) (uuid.UUID,
 		return uuid.Nil, err
 	}
 
+	err = d.addEntityEvent(ctx, p.ID, types.EntityEventCreate, types.EntityPlaylist, userID)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
 	return p.ID, nil
 }
 
-func (d Database) AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack) (uuid.UUID, error) {
+func (d Database) AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack, userID uuid.UUID) (uuid.UUID, error) {
 	if p.ID == uuid.Nil {
 		uid, err := uuid.NewV4()
 		if err != nil {
@@ -83,6 +88,11 @@ func (d Database) AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack) (
 	)
 	if err != nil {
 		return uuid.Nil, err
+	}
+
+	err = d.addEntityEvent(ctx, p.ID, types.EntityEventCreate, types.EntityPlaylistTrack, userID)
+	if err != nil {
+		return uuid.UUID{}, err
 	}
 
 	return p.ID, nil
@@ -134,10 +144,10 @@ func (d Database) DeletePlaylist(ctx context.Context, id, userID uuid.UUID) erro
 		return err
 	}
 
-	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityPlaylist)
+	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityPlaylist, userID)
 }
 
-func (d Database) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error {
+func (d Database) DeletePlaylistTrack(ctx context.Context, id, userID uuid.UUID) error {
 	query := `
 		DELETE FROM playlist_tracks
 		WHERE
@@ -150,7 +160,7 @@ func (d Database) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error {
 		return err
 	}
 
-	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityPlaylistTrack)
+	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityPlaylistTrack, userID)
 }
 
 func (d Database) GetPlaylist(ctx context.Context, ID, userID uuid.UUID) (plist types.Playlist, err error) {
@@ -355,7 +365,7 @@ func (d Database) PlaylistTrackExists(ctx context.Context, id uuid.UUID) (bool, 
 	return exists, nil
 }
 
-func (d Database) UpdatePlaylist(ctx context.Context, plist types.Playlist) error {
+func (d Database) UpdatePlaylist(ctx context.Context, plist types.Playlist, userID uuid.UUID) error {
 	plist.UpdatedAt = time.Now()
 	query := `
         UPDATE playlists SET
@@ -368,5 +378,14 @@ func (d Database) UpdatePlaylist(ctx context.Context, plist types.Playlist) erro
     `
 
 	_, err := sqlx.NamedExecContext(ctx, d.ext, query, plist)
-	return err
+	if err != nil {
+		return err
+	}
+
+	err = d.addEntityEvent(ctx, plist.ID, types.EntityEventUpdate, types.EntityPlaylist, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

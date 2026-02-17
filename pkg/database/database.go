@@ -35,9 +35,9 @@ type DatabaseFace interface {
 	Begin(ctx context.Context) (DatabaseFace, error)
 	driver.Tx
 
-	AddAlbum(ctx context.Context, a types.Album) (uuid.UUID, error)
+	AddAlbum(ctx context.Context, a types.Album, userID uuid.UUID) (uuid.UUID, error)
 	AlbumExists(ctx context.Context, ID string) (bool, error)
-	UpdateAlbum(ctx context.Context, a types.Album) error
+	UpdateAlbum(ctx context.Context, a types.Album, userID uuid.UUID) error
 	GetAlbumFromArtistAndName(ctx context.Context, artistName, albumName string) (album types.Album, err error)
 	GetAlbumFromMbID(ctx context.Context, mbID string) (album types.Album, err error)
 	GetAlbumFromID(ctx context.Context, id uuid.UUID) (album types.Album, err error)
@@ -49,9 +49,9 @@ type DatabaseFace interface {
 	CountAlbums(ctx context.Context) (int, error)
 	CountAlbumsByArtist(ctx context.Context, artistID uuid.UUID) (int, error)
 
-	AddArtist(ctx context.Context, a types.Artist) (uuid.UUID, error)
+	AddArtist(ctx context.Context, a types.Artist, userID uuid.UUID) (uuid.UUID, error)
 	ArtistExists(ctx context.Context, ID string) (bool, error)
-	UpdateArtist(ctx context.Context, a types.Artist) error
+	UpdateArtist(ctx context.Context, a types.Artist, userID uuid.UUID) error
 	GetArtistFromID(ctx context.Context, id uuid.UUID) (artist types.Artist, err error)
 	GetArtistFromMbID(ctx context.Context, mbID string) (artist types.Artist, err error)
 	GetArtistFromName(ctx context.Context, name string) (artist types.Artist, err error)
@@ -60,11 +60,10 @@ type DatabaseFace interface {
 	ListArtistsWithoutMeta(ctx context.Context) (artists []types.Artist, err error)
 	CountArtists(ctx context.Context) (int, error)
 
-	AddTrack(ctx context.Context, t types.Track) (uuid.UUID, error)
+	AddTrack(ctx context.Context, t types.Track, userID uuid.UUID) (uuid.UUID, error)
 	TrackExists(ctx context.Context, ID string) (bool, error)
 	TrackExistsByNameAndAlbumID(ctx context.Context, title, albumID string) (bool, error)
-	UpdateTrack(ctx context.Context, t types.Track) error
-	UpdateTrackFromMbID(ctx context.Context, t types.Track) error
+	UpdateTrack(ctx context.Context, t types.Track, userID uuid.UUID) error
 	GetTrackFromMbID(ctx context.Context, mbID string) (track types.Track, err error)
 	GetTrackFromID(ctx context.Context, ID uuid.UUID) (track types.Track, err error)
 	GetTrackDetailed(ctx context.Context, trackID, albumID, userID uuid.UUID) (track types.TrackDetailed, err error)
@@ -76,14 +75,14 @@ type DatabaseFace interface {
 	ListUpdatedTracks(ctx context.Context, since time.Time) (trackIDs []string, err error)
 	CountTracks(ctx context.Context) (int, error)
 
-	AddMediaFile(ctx context.Context, mf types.MediaFile) (uuid.UUID, error)
+	AddMediaFile(ctx context.Context, mf types.MediaFile, userID uuid.UUID) (uuid.UUID, error)
 	GetMediaFile(ctx context.Context, id uuid.UUID) (mf types.MediaFile, err error)
 	GetMediaFileFromChecksum(ctx context.Context, cs string) (mf types.MediaFile, err error)
 	ListUpdatedMediaFiles(ctx context.Context, since time.Time) (mediaFileIDs []uuid.UUID, err error)
 	MediaFileExists(ctx context.Context, ID uuid.UUID) (bool, error)
-	UpdateMediaFile(ctx context.Context, mf types.MediaFile) error
+	UpdateMediaFile(ctx context.Context, mf types.MediaFile, userID uuid.UUID) error
 
-	AddAlbumTrack(ctx context.Context, at types.AlbumTrack) (uuid.UUID, error)
+	AddAlbumTrack(ctx context.Context, at types.AlbumTrack, userID uuid.UUID) (uuid.UUID, error)
 	AlbumTrackExists(ctx context.Context, albumID uuid.UUID, trackID uuid.UUID) (bool, error)
 	AlbumTrackExistsByPos(ctx context.Context, albumID uuid.UUID, discNumber, trackNumber int) (bool, error)
 	AlbumTrackExistsByID(ctx context.Context, id uuid.UUID) (bool, error)
@@ -92,18 +91,18 @@ type DatabaseFace interface {
 	GetAlbumTrackByID(ctx context.Context, id uuid.UUID) (albumTrack types.AlbumTrack, err error)
 	GetAlbumTrackFromAlbumAndTrack(ctx context.Context, albumID, trackID uuid.UUID) (albumTrack types.AlbumTrack, err error)
 	ListAlbumTracksByTrackID(ctx context.Context, trackID uuid.UUID) (results []types.AlbumTrack, err error)
-	UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack) error
+	UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack, userID uuid.UUID) error
 	CountTracksByArtist(ctx context.Context, artistID uuid.UUID) (int, error)
 
-	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist) (uuid.UUID, error)
+	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist, userID uuid.UUID) (uuid.UUID, error)
 	AlbumArtistExistsByID(ctx context.Context, id uuid.UUID) (bool, error)
 	AlbumArtistExists(ctx context.Context, id uuid.UUID, artistID uuid.UUID, role types.ArtistRole) (bool, error)
 	ListUpdatedAlbumArtists(ctx context.Context, since time.Time) (albumArtists []uuid.UUID, err error)
 	GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role types.ArtistRole) (albumArtist types.AlbumArtist, err error)
 	GetAlbumArtistByID(ctx context.Context, id uuid.UUID) (albumArtist types.AlbumArtist, err error)
-	UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist) error
+	UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist, userID uuid.UUID) error
 	ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UUID) (albumArtists []types.AlbumArtist, err error)
-	DeleteAlbumArtist(ctx context.Context, id uuid.UUID) error
+	DeleteAlbumArtist(ctx context.Context, id, userID uuid.UUID) error
 
 	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
 	GetLastSync(ctx context.Context) (sync types.DBSyncState, err error)
@@ -116,19 +115,20 @@ type DatabaseFace interface {
 	AddPlayHistoryStruct(ctx context.Context, ph types.PlayHistory) (string, error)
 	ListUpdatedPlayHistory(ctx context.Context, since time.Time) (updatedItems []types.PlayHistory, err error)
 
-	ListEntityEvents(ctx context.Context, eventType types.EntityEventType, entityType types.EntityType, since time.Time) (ids []uuid.UUID, err error)
-	ListEntityEventsTemp(ctx context.Context, entityType types.EntityType, since time.Time) (ids []types.EntityEvent, err error)
+	ListEntityEvents(ctx context.Context, since time.Time) (events []types.EntityEvent, err error)
+	ListEntityEventsByType(ctx context.Context, eventType types.EntityEventType, entityType types.EntityType, since time.Time) (ids []uuid.UUID, err error)
+	ListEntityEventsByEntityType(ctx context.Context, entityType types.EntityType, since time.Time, userID *uuid.UUID) (ids []types.EntityEvent, err error)
 
 	AddSearchItem(ctx context.Context, si types.SearchItem) error
 	DeleteAllSearchItems(ctx context.Context) error
 	SearchFull(ctx context.Context, searchTerm string, limit int) (results []types.SearchItem, err error)
 
-	AddPlaylist(ctx context.Context, p types.Playlist) (uuid.UUID, error)
-	AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack) (uuid.UUID, error)
+	AddPlaylist(ctx context.Context, p types.Playlist, userID uuid.UUID) (uuid.UUID, error)
+	AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack, userID uuid.UUID) (uuid.UUID, error)
 	CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error)
 	CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error)
 	DeletePlaylist(ctx context.Context, id, userID uuid.UUID) error
-	DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error
+	DeletePlaylistTrack(ctx context.Context, id, userID uuid.UUID) error
 	GetPlaylist(ctx context.Context, ID, userID uuid.UUID) (plist types.Playlist, err error)
 	GetPlaylistTrack(ctx context.Context, id uuid.UUID) (plistTrack types.PlaylistTrack, err error)
 	GetPlaylistTrackByPlaylistAndAlbumTrack(ctx context.Context, playlistID, albumTrackID uuid.UUID) (plistTrack types.PlaylistTrack, err error)
@@ -138,13 +138,13 @@ type DatabaseFace interface {
 	ListUpdatedPlaylistTracks(ctx context.Context, since time.Time, userID uuid.UUID) (plists []uuid.UUID, err error)
 	PlaylistExistsByID(ctx context.Context, id uuid.UUID) (bool, error)
 	PlaylistTrackExists(ctx context.Context, id uuid.UUID) (bool, error)
-	UpdatePlaylist(ctx context.Context, plist types.Playlist) error
+	UpdatePlaylist(ctx context.Context, plist types.Playlist, userID uuid.UUID) error
 
 	AddRating(ctx context.Context, r types.Rating) (uuid.UUID, error)
 	GetRating(ctx context.Context, id uuid.UUID) (rating types.Rating, err error)
 	GetRatingID(ctx context.Context, trackID, userID uuid.UUID) (id uuid.UUID, found bool, err error)
 	GetTrackRatings(ctx context.Context, trackID uuid.UUID) (ratings []types.Rating, err error)
-	UpdateRating(ctx context.Context, id uuid.UUID, rating int) error
+	UpdateRating(ctx context.Context, id uuid.UUID, rating int, userID uuid.UUID) error
 
 	AuthFace
 	ImportFace
@@ -199,6 +199,21 @@ func New(db *sqlx.DB) (Database, error) {
 
 		// Enable foreign key enforcement on every connection
 		if _, err := conn.Exec("PRAGMA foreign_keys = ON;", nil); err != nil {
+			return err
+		}
+
+		// Enable multiple readers while writing
+		if _, err := conn.Exec("PRAGMA journal_mode=WAL;", nil); err != nil {
+			return err
+		}
+
+		// Enable multiple readers while writing
+		if _, err := conn.Exec("PRAGMA synchronous=NORMAL;", nil); err != nil {
+			return err
+		}
+
+		// Set timeout to 5s
+		if _, err := conn.Exec("PRAGMA busy_timeout = 5000;", nil); err != nil {
 			return err
 		}
 

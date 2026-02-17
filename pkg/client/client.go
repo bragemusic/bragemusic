@@ -59,8 +59,8 @@ func (c *Client) RegisterUserCallback(f func(*types.UserDetails)) {
 	c.AuthClient.RegisterUserCallback(f)
 }
 
-func (c Client) Sync(ctx context.Context) error {
-	if err := c.sy.Sync(ctx); err != nil {
+func (c Client) Sync(ctx context.Context, userID uuid.UUID) error {
+	if err := c.sy.Sync(ctx, userID); err != nil {
 		return err
 	}
 
@@ -318,6 +318,14 @@ func (c Client) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Pla
 
 func (c Client) UploadPlaylistImage(ctx context.Context, id string, img serverclient.FileUpload) error {
 	return c.sc.UploadPlaylistImage(ctx, id, img)
+}
+
+func (c Client) ListEntityEvents(ctx context.Context) ([]types.EntityEvent, error) {
+	return c.sc.ListEntityEvents(ctx)
+}
+
+func (c Client) ListUsers(ctx context.Context) ([]types.User, error) {
+	return c.sc.ListUsers(ctx)
 }
 
 func (c Client) SearchFull(ctx context.Context, searchTerm string) (si []types.SearchItem, err error) {

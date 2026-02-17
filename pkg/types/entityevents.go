@@ -28,6 +28,7 @@ const (
 	EntitySearchItem      EntityType = "search_item"
 	EntityImport          EntityType = "import"
 	EntityRating          EntityType = "rating"
+	EntityEntityEvent     EntityType = "entity_event"
 
 	EntityEventDelete EntityEventType = "delete"
 	EntityEventCreate EntityEventType = "create"
@@ -35,9 +36,37 @@ const (
 )
 
 type EntityEvent struct {
-	ID         uuid.UUID       `db:"id" json:"id"`
-	ItemID     uuid.UUID       `db:"item_id" json:"item_id"`
+	ID         uuid.UUID       `db:"id" json:"id" ts_type:"string"`
+	ItemID     uuid.UUID       `db:"item_id" json:"item_id" ts_type:"string"`
+	UserID     uuid.UUID       `db:"user_id" json:"user_id" ts_type:"string"`
 	Type       EntityEventType `db:"event_type" json:"event_type"`
 	EntityType EntityType      `db:"entity_type" json:"entity_type"`
-	EventTime  time.Time       `db:"event_time" json:"event_time"`
+	EventTime  time.Time       `db:"event_time" json:"event_time" ts_type:"string"`
+}
+
+type EntityEvents []EntityEvent
+
+func (es EntityEvents) LaterDeleteExists(e EntityEvent) bool {
+	if e.Type == EntityEventDelete {
+		return false
+	}
+
+	for _, ee := range es {
+		if ee.EventTime.Before(e.EventTime) {
+			continue
+		}
+
+		if ee.ItemID != e.ItemID {
+			continue
+		}
+
+		if ee.Type != EntityEventDelete {
+			continue
+		}
+
+		return true
+
+	}
+
+	return false
 }

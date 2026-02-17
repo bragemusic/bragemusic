@@ -13,6 +13,7 @@ import (
 	"github.com/bragemusic/core/pkg/filetx"
 	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/importer"
+	"github.com/bragemusic/core/pkg/internalusers"
 	"github.com/bragemusic/core/pkg/jobs"
 	"github.com/bragemusic/core/pkg/metasyncer"
 	"github.com/bragemusic/core/pkg/musicbrainz"
@@ -78,7 +79,7 @@ func main() {
 
 	imp := importer.New(impCfg, &db, mb, aid, im, slogHandler)
 
-	ms := metasyncer.New(impCfg.ImageDirPath, &db, musicbrainz.MusicBrainz{}, w, im, slogHandler)
+	ms := metasyncer.New(impCfg.ImageDirPath, &db, musicbrainz.MusicBrainz{}, w, im, internalusers.MetaSyncer, slogHandler)
 
 	ctx := context.Background()
 	imp.Run(ctx)

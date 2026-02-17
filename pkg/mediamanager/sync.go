@@ -17,65 +17,59 @@ func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st typ
 
 	st.Time = time.Now()
 
-	st.CreatedOrUpdated.Artists, err = m.db.ListUpdatedArtists(ctx, since)
+	artists, err := m.db.ListEntityEventsByEntityType(ctx, types.EntityArtist, since, nil)
 	if err != nil {
 		return types.SyncState{}, err
 	}
+	st.New = append(st.New, artists...)
 
-	st.CreatedOrUpdated.Albums, err = m.db.ListUpdatedAlbums(ctx, since)
+	albums, err := m.db.ListEntityEventsByEntityType(ctx, types.EntityAlbum, since, nil)
 	if err != nil {
 		return types.SyncState{}, err
 	}
+	st.New = append(st.New, albums...)
 
-	st.CreatedOrUpdated.Tracks, err = m.db.ListUpdatedTracks(ctx, since)
+	tracks, err := m.db.ListEntityEventsByEntityType(ctx, types.EntityTrack, since, nil)
 	if err != nil {
 		return types.SyncState{}, err
 	}
+	st.New = append(st.New, tracks...)
 
-	st.CreatedOrUpdated.AlbumArtists, err = m.db.ListUpdatedAlbumArtists(ctx, since)
+	albumArtists, err := m.db.ListEntityEventsByEntityType(ctx, types.EntityAlbumArtist, since, nil)
 	if err != nil {
 		return types.SyncState{}, err
 	}
+	st.New = append(st.New, albumArtists...)
 
-	st.CreatedOrUpdated.AlbumTracks, err = m.db.ListUpdatedAlbumTracks(ctx, since)
+	albumTracks, err := m.db.ListEntityEventsByEntityType(ctx, types.EntityAlbumTrack, since, nil)
 	if err != nil {
 		return types.SyncState{}, err
 	}
+	st.New = append(st.New, albumTracks...)
 
-	st.CreatedOrUpdated.Playlists, err = m.db.ListUpdatedPlaylists(ctx, since, user.ID)
+	playlists, err := m.db.ListEntityEventsByEntityType(ctx, types.EntityPlaylist, since, &user.ID)
 	if err != nil {
 		return types.SyncState{}, err
 	}
+	st.New = append(st.New, playlists...)
 
-	st.CreatedOrUpdated.PlaylistTracks, err = m.db.ListUpdatedPlaylistTracks(ctx, since, user.ID)
+	playlistTracks, err := m.db.ListEntityEventsByEntityType(ctx, types.EntityPlaylistTrack, since, &user.ID)
 	if err != nil {
 		return types.SyncState{}, err
 	}
+	st.New = append(st.New, playlistTracks...)
 
-	st.CreatedOrUpdated.MediaFiles, err = m.db.ListUpdatedMediaFiles(ctx, since)
+	mediaFiles, err := m.db.ListEntityEventsByEntityType(ctx, types.EntityMediaFile, since, nil)
 	if err != nil {
 		return types.SyncState{}, err
 	}
+	st.New = append(st.New, mediaFiles...)
 
-	st.Deleted.AlbumArtists, err = m.db.ListEntityEvents(ctx, types.EntityEventDelete, types.EntityAlbumArtist, since)
+	ratings, err := m.db.ListEntityEventsByEntityType(ctx, types.EntityRating, since, nil)
 	if err != nil {
 		return types.SyncState{}, err
 	}
-
-	st.Deleted.Playlists, err = m.db.ListEntityEvents(ctx, types.EntityEventDelete, types.EntityPlaylist, since)
-	if err != nil {
-		return types.SyncState{}, err
-	}
-
-	st.Deleted.PlaylistTracks, err = m.db.ListEntityEvents(ctx, types.EntityEventDelete, types.EntityPlaylistTrack, since)
-	if err != nil {
-		return types.SyncState{}, err
-	}
-
-	st.New, err = m.db.ListEntityEventsTemp(ctx, types.EntityRating, since)
-	if err != nil {
-		return types.SyncState{}, err
-	}
+	st.New = append(st.New, ratings...)
 
 	return
 }

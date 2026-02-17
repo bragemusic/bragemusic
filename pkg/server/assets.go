@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/bragemusic/core/pkg/auth"
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
 )
@@ -59,6 +60,11 @@ func (s *Server) addImage(imageType ImageType) http.HandlerFunc {
 			}
 		}
 
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+
 		err = r.ParseMultipartForm(10 << 20) // Limit upload size to 10MB
 		if err != nil {
 			return Response{}, err
@@ -93,15 +99,15 @@ func (s *Server) addImage(imageType ImageType) http.HandlerFunc {
 
 		switch imageType {
 		case ArtistImage:
-			if err = s.mediamgr.AddArtistImage(ctx, orgImgPath, assetID); err != nil {
+			if err = s.mediamgr.AddArtistImage(ctx, orgImgPath, assetID, user.ID); err != nil {
 				return Response{}, err
 			}
 		case AlbumImage:
-			if err = s.mediamgr.AddAlbumImage(ctx, orgImgPath, assetID); err != nil {
+			if err = s.mediamgr.AddAlbumImage(ctx, orgImgPath, assetID, user.ID); err != nil {
 				return Response{}, err
 			}
 		case PlaylistImage:
-			if err = s.mediamgr.AddPlaylistImage(ctx, orgImgPath, assetID); err != nil {
+			if err = s.mediamgr.AddPlaylistImage(ctx, orgImgPath, assetID, user.ID); err != nil {
 				return Response{}, err
 			}
 		}

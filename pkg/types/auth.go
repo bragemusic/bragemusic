@@ -17,6 +17,7 @@ const (
 	UserRoleRead          UserRole = "read"
 	UserRoleWrite         UserRole = "write"
 	UserRoleImporterWrite UserRole = "importer:write"
+	UserRoleUsersGet      UserRole = "users:get"
 
 	AuthLocal AuthProvider = "local"
 
@@ -45,7 +46,7 @@ func (u UserDetails) HasRole(r UserRole) bool {
 }
 
 type User struct {
-	ID        uuid.UUID `db:"id" json:"id"`
+	ID        uuid.UUID `db:"id" json:"id" ts_type:"string"`
 	Email     string    `db:"email" json:"email"`
 	Username  string    `db:"username" json:"username"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`

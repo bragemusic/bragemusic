@@ -9,7 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddMediaFile(ctx context.Context, mf types.MediaFile) (uuid.UUID, error) {
+func (d Database) AddMediaFile(ctx context.Context, mf types.MediaFile, userID uuid.UUID) (uuid.UUID, error) {
 	if mf.ID == uuid.Nil {
 		uid, err := uuid.NewV4()
 		if err != nil {
@@ -51,6 +51,11 @@ func (d Database) AddMediaFile(ctx context.Context, mf types.MediaFile) (uuid.UU
 	)
 	if err != nil {
 		return uuid.Nil, err
+	}
+
+	err = d.addEntityEvent(ctx, mf.ID, types.EntityEventCreate, types.EntityMediaFile, userID)
+	if err != nil {
+		return uuid.UUID{}, err
 	}
 
 	return mf.ID, nil
@@ -171,7 +176,7 @@ func (d Database) MediaFileExists(ctx context.Context, ID uuid.UUID) (bool, erro
 	return count > 0, nil
 }
 
-func (d Database) UpdateMediaFile(ctx context.Context, mf types.MediaFile) error {
+func (d Database) UpdateMediaFile(ctx context.Context, mf types.MediaFile, userID uuid.UUID) error {
 	now := time.Now()
 
 	if mf.UpdatedAt.IsZero() {
@@ -191,5 +196,14 @@ func (d Database) UpdateMediaFile(ctx context.Context, mf types.MediaFile) error
     `
 
 	_, err := sqlx.NamedExecContext(ctx, d.ext, query, mf)
-	return err
+	if err != nil {
+		return err
+	}
+
+	err = d.addEntityEvent(ctx, mf.ID, types.EntityEventUpdate, types.EntityMediaFile, userID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

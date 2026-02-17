@@ -33,7 +33,7 @@ func (m MediaManager) AddPlaylistTrack(ctx context.Context, playlistID, albumID,
 		AlbumTrackID: albumTrack.ID,
 	}
 
-	if _, err := tx.AddPlaylistTrack(ctx, plistTrack); err != nil {
+	if _, err := tx.AddPlaylistTrack(ctx, plistTrack, userID); err != nil {
 		return m.berr.DatabaseError(err, types.EntityPlaylistTrack, nil)
 	}
 
@@ -55,7 +55,7 @@ func (m MediaManager) DeletePlaylistTrack(ctx context.Context, id, userID uuid.U
 		return m.berr.ItemAccessDenied(nil, types.EntityPlaylist, pt.PlaylistID)
 	}
 
-	if err = m.db.DeletePlaylistTrack(ctx, pt.ID); err != nil {
+	if err = m.db.DeletePlaylistTrack(ctx, pt.ID, userID); err != nil {
 		return m.berr.DatabaseError(err, types.EntityPlaylistTrack, &id)
 	}
 

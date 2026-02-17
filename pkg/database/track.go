@@ -10,7 +10,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddTrack(ctx context.Context, t types.Track) (uuid.UUID, error) {
+func (d Database) AddTrack(ctx context.Context, t types.Track, userID uuid.UUID) (uuid.UUID, error) {
 	if t.ID == uuid.Nil {
 		uid, err := uuid.NewV4()
 		if err != nil {
@@ -46,6 +46,11 @@ func (d Database) AddTrack(ctx context.Context, t types.Track) (uuid.UUID, error
 	)
 	if err != nil {
 		return uuid.Nil, err
+	}
+
+	err = d.addEntityEvent(ctx, t.ID, types.EntityEventCreate, types.EntityTrack, userID)
+	if err != nil {
+		return uuid.UUID{}, err
 	}
 
 	return t.ID, nil
@@ -99,7 +104,7 @@ func (d Database) TrackExistsByMbID(ctx context.Context, trackMbID string) (bool
 	return count > 0, nil
 }
 
-func (d Database) UpdateTrack(ctx context.Context, t types.Track) error {
+func (d Database) UpdateTrack(ctx context.Context, t types.Track, userID uuid.UUID) error {
 	t.UpdatedAt = time.Now()
 	query := `
         UPDATE tracks SET
@@ -113,32 +118,16 @@ func (d Database) UpdateTrack(ctx context.Context, t types.Track) error {
     `
 
 	_, err := sqlx.NamedExecContext(ctx, d.ext, query, t)
-	return err
-}
+	if err != nil {
+		return err
+	}
 
-func (d Database) UpdateTrackFromMbID(ctx context.Context, t types.Track) error {
-	query := `
-        UPDATE tracks SET
-            title = :title,
-            album_id = :album_id,
-            track_artist = :track_artist,
-            track_number = :track_number,
-            disc_number = :disc_number,
-            genre = :genre,
-            year = :year,
-            composer = :composer,
-            comment = :comment,
-            duration_ms = :duration_ms,
-            bitrate = :bitrate,
-            sample_rate = :sample_rate,
-            file_path = :file_path,
-            file_size = :file_size,
-            mime_type = :mime_type
-        WHERE musicbrainz_id = :musicbrainz_id;
-    `
+	err = d.addEntityEvent(ctx, t.ID, types.EntityEventUpdate, types.EntityTrack, userID)
+	if err != nil {
+		return err
+	}
 
-	_, err := sqlx.NamedExecContext(ctx, d.ext, query, t)
-	return err
+	return nil
 }
 
 func (d Database) GetTrackDetailed(ctx context.Context, trackID, albumID, userID uuid.UUID) (track types.TrackDetailed, err error) {

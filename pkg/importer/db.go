@@ -10,7 +10,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (i Importer) addAlbumTracks(ctx context.Context, tx database.DatabaseFace, albumTracks []types.AlbumTrack, albumID uuid.UUID) error {
+func (i Importer) addAlbumTracks(ctx context.Context, tx database.DatabaseFace, albumTracks []types.AlbumTrack, albumID, userID uuid.UUID) error {
 	for _, at := range albumTracks {
 		at.AlbumID = albumID
 		exists, err := tx.AlbumTrackExists(ctx, at.AlbumID, at.TrackID)
@@ -18,7 +18,7 @@ func (i Importer) addAlbumTracks(ctx context.Context, tx database.DatabaseFace, 
 			return err
 		}
 		if !exists {
-			if _, err := tx.AddAlbumTrack(ctx, at); err != nil {
+			if _, err := tx.AddAlbumTrack(ctx, at, userID); err != nil {
 				return err
 			}
 		}
@@ -27,7 +27,7 @@ func (i Importer) addAlbumTracks(ctx context.Context, tx database.DatabaseFace, 
 	return nil
 }
 
-func (i Importer) addAlbumArtists(ctx context.Context, tx database.DatabaseFace, albumID, artistID uuid.UUID) error {
+func (i Importer) addAlbumArtists(ctx context.Context, tx database.DatabaseFace, albumID, artistID, userID uuid.UUID) error {
 	role := types.ArPrimary
 
 	exists, err := tx.AlbumArtistExists(ctx, albumID, artistID, role)
@@ -43,7 +43,7 @@ func (i Importer) addAlbumArtists(ctx context.Context, tx database.DatabaseFace,
 	}
 
 	if !exists {
-		if _, err = tx.AddAlbumArtist(ctx, aa); err != nil {
+		if _, err = tx.AddAlbumArtist(ctx, aa, userID); err != nil {
 			return err
 		}
 	}
@@ -51,7 +51,7 @@ func (i Importer) addAlbumArtists(ctx context.Context, tx database.DatabaseFace,
 	return nil
 }
 
-func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, artist types.Artist) (id uuid.UUID, retArtist *types.Artist, err error) {
+func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, artist types.Artist, userID uuid.UUID) (id uuid.UUID, retArtist *types.Artist, err error) {
 	var existingArtist types.Artist
 
 	if artist.MusicBrainzID != nil {
@@ -80,12 +80,12 @@ func (i Importer) addOrGetArtist(ctx context.Context, tx database.DatabaseFace, 
 	}
 
 	i.log.InfoContext(ctx, "creating new artist")
-	id, err = tx.AddArtist(ctx, artist)
+	id, err = tx.AddArtist(ctx, artist, userID)
 
 	return id, nil, err
 }
 
-func (i Importer) addOrUpdateTrack(ctx context.Context, tx database.DatabaseFace, track types.Track, albumID uuid.UUID) (id uuid.UUID, new bool, err error) {
+func (i Importer) addOrUpdateTrack(ctx context.Context, tx database.DatabaseFace, track types.Track, albumID, userID uuid.UUID) (id uuid.UUID, new bool, err error) {
 	var existingTrack types.Track
 
 	if track.MusicBrainzID != nil {
@@ -113,14 +113,14 @@ func (i Importer) addOrUpdateTrack(ctx context.Context, tx database.DatabaseFace
 
 	if existingTrack.ID != uuid.Nil {
 		track.ID = existingTrack.ID
-		err = tx.UpdateTrack(ctx, track)
+		err = tx.UpdateTrack(ctx, track, userID)
 		if err != nil {
 			return uuid.Nil, false, err
 		}
 		return track.ID, false, nil
 	} else {
 		i.log.InfoContext(ctx, "creating new track")
-		id, err := tx.AddTrack(ctx, track)
+		id, err := tx.AddTrack(ctx, track, userID)
 		return id, true, err
 	}
 }

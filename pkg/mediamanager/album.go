@@ -106,7 +106,7 @@ func (m MediaManager) GetAlbumTrackByID(ctx context.Context, id uuid.UUID) (type
 	return albumArtist, nil
 }
 
-func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumData types.AlbumUpdate) error {
+func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumData types.AlbumUpdate, userID uuid.UUID) error {
 	tx, err := m.db.Begin(ctx)
 	if err != nil {
 		return err
@@ -121,7 +121,7 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 	albumData.ID = albumID
 	albumData.Owner = existingAlbum.Owner
 
-	err = tx.UpdateAlbum(ctx, albumData.Album)
+	err = tx.UpdateAlbum(ctx, albumData.Album, userID)
 	if err != nil {
 		return m.berr.DatabaseError(err, types.EntityAlbum, &albumID)
 	}
@@ -144,7 +144,7 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 				// FIXME: Need to do something about positions
 				Position: 0,
 			}
-			if _, err := tx.AddAlbumArtist(ctx, aa); err != nil {
+			if _, err := tx.AddAlbumArtist(ctx, aa, userID); err != nil {
 				return m.berr.DatabaseError(err, types.EntityAlbumArtist, nil)
 			}
 		}
@@ -156,7 +156,7 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 		})
 
 		if !exists {
-			if err := tx.DeleteAlbumArtist(ctx, existingAa.ID); err != nil {
+			if err := tx.DeleteAlbumArtist(ctx, existingAa.ID, userID); err != nil {
 				return m.berr.DatabaseError(err, types.EntityAlbumArtist, &existingAa.ID)
 			}
 		}

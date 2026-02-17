@@ -8,7 +8,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (m MediaManager) AddArtistImage(ctx context.Context, filename string, artistID uuid.UUID) error {
+func (m MediaManager) AddArtistImage(ctx context.Context, filename string, artistID, userID uuid.UUID) error {
 	if m.im == nil {
 		return m.berr.DependencyMissing(nil, "imagemagick")
 	}
@@ -24,14 +24,14 @@ func (m MediaManager) AddArtistImage(ctx context.Context, filename string, artis
 		return err
 	}
 
-	if err = m.db.UpdateArtist(ctx, artist); err != nil {
+	if err = m.db.UpdateArtist(ctx, artist, userID); err != nil {
 		return m.berr.DatabaseError(err, types.EntityArtist, &artistID)
 	}
 
 	return nil
 }
 
-func (m MediaManager) AddAlbumImage(ctx context.Context, filename string, albumID uuid.UUID) error {
+func (m MediaManager) AddAlbumImage(ctx context.Context, filename string, albumID, userID uuid.UUID) error {
 	if m.im == nil {
 		return m.berr.DependencyMissing(nil, "imagemagick")
 	}
@@ -47,14 +47,14 @@ func (m MediaManager) AddAlbumImage(ctx context.Context, filename string, albumI
 		return err
 	}
 
-	if err = m.db.UpdateAlbum(ctx, album); err != nil {
+	if err = m.db.UpdateAlbum(ctx, album, userID); err != nil {
 		return m.berr.DatabaseError(err, types.EntityAlbum, &albumID)
 	}
 
 	return nil
 }
 
-func (m MediaManager) AddPlaylistImage(ctx context.Context, filename string, id uuid.UUID) error {
+func (m MediaManager) AddPlaylistImage(ctx context.Context, filename string, id, userID uuid.UUID) error {
 	if m.im == nil {
 		return m.berr.DependencyMissing(nil, "imagemagick")
 	}
@@ -70,7 +70,7 @@ func (m MediaManager) AddPlaylistImage(ctx context.Context, filename string, id 
 		return err
 	}
 
-	if err = m.db.UpdatePlaylist(ctx, plist); err != nil {
+	if err = m.db.UpdatePlaylist(ctx, plist, userID); err != nil {
 		return m.berr.DatabaseError(err, types.EntityPlaylist, &id)
 	}
 

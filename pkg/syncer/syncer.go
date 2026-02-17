@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/server"
@@ -97,7 +96,7 @@ func (s *Syncer) StartSyncDaemon(ctx context.Context, done func()) {
 			case <-tickerSync.C:
 				if s.serverAvailable {
 					s.log.InfoContext(ctx, "starting periodic sync")
-					err := s.Sync(ctx)
+					err := s.Sync(ctx, s.user.ID)
 					if err != nil {
 						s.log.ErrorContext(ctx, "periodic sync finished with errors", "error", err.Error())
 					}
@@ -149,7 +148,7 @@ func (s *Syncer) ServerStatus() server.Status {
 	return s.serverStatus
 }
 
-func (s *Syncer) Sync(ctx context.Context) error {
+func (s *Syncer) Sync(ctx context.Context, userID uuid.UUID) error {
 	if !s.serverAvailable {
 		return errors.New("server is not available")
 	}
@@ -188,46 +187,7 @@ func (s *Syncer) Sync(ctx context.Context) error {
 	}
 	defer tx.Rollback()
 
-	dbSyncState.ArtistsCreated, dbSyncState.ArtistsUpdated, err = s.syncArtists(ctx, tx, syncState.CreatedOrUpdated.Artists)
-	if err != nil {
-		return err
-	}
-
-	dbSyncState.AlbumsCreated, dbSyncState.AlbumsUpdated, err = s.syncAlbums(ctx, tx, syncState.CreatedOrUpdated.Albums)
-	if err != nil {
-		return err
-	}
-
-	dbSyncState.TracksCreated, dbSyncState.TracksUpdated, err = s.syncTracks(ctx, tx, syncState.CreatedOrUpdated.Tracks)
-	if err != nil {
-		return err
-	}
-
-	_, _, err = s.syncAlbumArtists(ctx, tx, syncState.CreatedOrUpdated.AlbumArtists, syncState.Deleted.AlbumArtists)
-	if err != nil {
-		return err
-	}
-
-	_, _, err = s.syncAlbumTracks(ctx, tx, syncState.CreatedOrUpdated.AlbumTracks)
-	if err != nil {
-		return err
-	}
-
-	_, _, err = s.syncPlaylists(ctx, tx, syncState.CreatedOrUpdated.Playlists, syncState.Deleted.Playlists)
-	if err != nil {
-		return err
-	}
-
-	_, _, err = s.syncPlaylistTracks(ctx, tx, syncState.CreatedOrUpdated.PlaylistTracks, syncState.Deleted.PlaylistTracks)
-	if err != nil {
-		return err
-	}
-
-	if err = s.syncMediaFiles(ctx, tx, syncState.CreatedOrUpdated.MediaFiles); err != nil {
-		return err
-	}
-
-	if err = s.syncEntityEvents(ctx, tx, syncState.New); err != nil {
+	if err = s.syncEntityEvents(ctx, tx, userID, syncState.New); err != nil {
 		return err
 	}
 
@@ -251,18 +211,41 @@ func (s *Syncer) Sync(ctx context.Context) error {
 	return tx.Commit()
 }
 
-func (s *Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, events []types.EntityEvent) error {
+func (s Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, events types.EntityEvents) error {
 	for _, e := range events {
-		var f func(ctx context.Context, tx database.DatabaseFace, event types.EntityEvent) error
+		s.log.DebugContext(ctx, fmt.Sprintf("syncing '%s'", e.ItemID), "type", e.EntityType, "action", e.Type)
+
+		if events.LaterDeleteExists(e) {
+			s.log.DebugContext(ctx, fmt.Sprintf("skipping '%s'. There is a later delete event.", e.ItemID), "type", e.EntityType, "action", e.Type)
+			continue
+		}
+
+		var f func(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) error
 
 		switch e.EntityType {
+		case types.EntityArtist:
+			f = s.syncArtist
+		case types.EntityAlbum:
+			f = s.syncAlbum
+		case types.EntityTrack:
+			f = s.syncTrack
+		case types.EntityAlbumArtist:
+			f = s.syncAlbumArtist
+		case types.EntityAlbumTrack:
+			f = s.syncAlbumTrack
+		case types.EntityPlaylist:
+			f = s.syncPlaylist
+		case types.EntityPlaylistTrack:
+			f = s.syncPlaylistTrack
+		case types.EntityMediaFile:
+			f = s.syncMediaFile
 		case types.EntityRating:
 			f = s.syncRating
 		default:
 			return fmt.Errorf("unsupported entity type '%s'", e.EntityType)
 		}
 
-		if err := f(ctx, tx, e); err != nil {
+		if err := f(ctx, tx, userID, e); err != nil {
 			return err
 		}
 
@@ -270,7 +253,289 @@ func (s *Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace,
 	return nil
 }
 
-func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, event types.EntityEvent) error {
+func (s Syncer) syncArtist(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var a types.Artist
+
+	if event.Type != types.EntityEventDelete {
+		a, err = s.sc.GetArtist(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if _, err := tx.AddArtist(ctx, a, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		if err := tx.UpdateArtist(ctx, a, userID); err != nil {
+			return err
+		}
+	case types.EntityEventDelete:
+		return errors.New("'delete' not supported for albums")
+	}
+
+	for _, size := range []imagemagick.ImageSize{imagemagick.Size320, imagemagick.Size640, imagemagick.Size1024, imagemagick.Size1600, imagemagick.Size2400} {
+		filename := filepath.Join(s.imgDir, "artists", a.ID.String(), fmt.Sprintf("%d.jpg", size))
+
+		if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
+			return err
+		}
+
+		dst, err := os.Create(filename)
+		if err != nil {
+			return err
+		}
+
+		s.log.DebugContext(ctx, fmt.Sprintf("downloading artist image '%s' to '%s'", a.ID.String(), filename))
+
+		if err = s.sc.DownloadArtistImage(ctx, a.ID.String(), size, dst); err != nil {
+			serr, ok := err.(serverclient.ErrStatus)
+			if !ok || serr.Status >= 500 {
+				dst.Close()
+				return err
+			}
+		}
+
+		if err = dst.Close(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s Syncer) syncAlbum(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var a types.Album
+
+	if event.Type != types.EntityEventDelete {
+		a, err = s.sc.GetAlbum(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if _, err := tx.AddAlbum(ctx, a, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		if err := tx.UpdateAlbum(ctx, a, userID); err != nil {
+			return err
+		}
+	case types.EntityEventDelete:
+		return errors.New("'delete' not supported for albums")
+	}
+
+	for _, size := range []imagemagick.ImageSize{imagemagick.Size320, imagemagick.Size640, imagemagick.Size1024, imagemagick.Size1600, imagemagick.Size2400} {
+		filename := filepath.Join(s.imgDir, "albums", a.ID.String(), fmt.Sprintf("%d.jpg", size))
+
+		if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
+			return err
+		}
+
+		dst, err := os.Create(filename)
+		if err != nil {
+			return err
+		}
+
+		s.log.DebugContext(ctx, fmt.Sprintf("downloading album cover '%s' to '%s'", a.ID.String(), filename))
+
+		if err = s.sc.DownloadAlbumCover(ctx, a.ID, size, dst); err != nil {
+			serr, ok := err.(serverclient.ErrStatus)
+			if !ok || serr.Status >= 500 {
+				dst.Close()
+				return err
+			}
+		}
+
+		if err = dst.Close(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Syncer) syncTrack(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var t types.Track
+
+	if event.Type != types.EntityEventDelete {
+		t, err = s.sc.GetTrack(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if _, err := tx.AddTrack(ctx, t, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		if err := tx.UpdateTrack(ctx, t, userID); err != nil {
+			return err
+		}
+	case types.EntityEventDelete:
+		return errors.New("'delete' not supported for tracks")
+	}
+
+	return nil
+}
+
+func (s *Syncer) syncAlbumArtist(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var aa types.AlbumArtist
+
+	if event.Type != types.EntityEventDelete {
+		aa, err = s.sc.GetAlbumArtistByID(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if _, err := tx.AddAlbumArtist(ctx, aa, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		if err := tx.UpdateAlbumArtist(ctx, aa, userID); err != nil {
+			return err
+		}
+	case types.EntityEventDelete:
+		if err := tx.DeleteAlbumArtist(ctx, event.ItemID, userID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Syncer) syncAlbumTrack(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var at types.AlbumTrack
+
+	if event.Type != types.EntityEventDelete {
+		at, err = s.sc.GetAlbumTrackByID(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if _, err := tx.AddAlbumTrack(ctx, at, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		if err := tx.UpdateAlbumTrack(ctx, at, userID); err != nil {
+			return err
+		}
+	case types.EntityEventDelete:
+		return errors.New("'delete' not supported for album_tracks")
+	}
+
+	return nil
+}
+
+func (s *Syncer) syncPlaylist(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var p types.Playlist
+
+	if event.Type != types.EntityEventDelete {
+		p, err = s.sc.GetPlaylist(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if _, err = tx.AddPlaylist(ctx, p, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		if err = tx.UpdatePlaylist(ctx, p, userID); err != nil {
+			return err
+		}
+	case types.EntityEventDelete:
+		if err = tx.DeletePlaylist(ctx, event.ItemID, userID); err != nil {
+			return err
+		}
+	}
+
+	for _, size := range []imagemagick.ImageSize{imagemagick.Size320, imagemagick.Size640, imagemagick.Size1024, imagemagick.Size1600, imagemagick.Size2400} {
+		filename := filepath.Join(s.imgDir, "playlists", event.ItemID.String(), fmt.Sprintf("%d.jpg", size))
+
+		if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
+			return err
+		}
+
+		dst, err := os.Create(filename)
+		if err != nil {
+			return err
+		}
+
+		s.log.DebugContext(ctx, fmt.Sprintf("downloading playlist image '%s' to '%s'", event.ItemID.String(), filename))
+
+		if err = s.sc.DownloadPlaylistImage(ctx, event.ItemID, size, dst); err != nil {
+			serr, ok := err.(serverclient.ErrStatus)
+			if !ok || serr.Status >= 500 {
+				dst.Close()
+				return err
+			}
+		}
+
+		if err = dst.Close(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Syncer) syncPlaylistTrack(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var p types.PlaylistTrack
+
+	if event.Type != types.EntityEventDelete {
+		p, err = s.sc.GetPlaylistTrack(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if _, err = tx.AddPlaylistTrack(ctx, p, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		return errors.New("'update' not supported for ratings")
+	case types.EntityEventDelete:
+		if err = tx.DeletePlaylistTrack(ctx, event.ItemID, userID); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *Syncer) syncMediaFile(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	_, err = tx.AddSyncItem(ctx, types.SyncItem{
+		// FIXME: This should be added
+		SyncID: uuid.Nil,
+		ItemID: event.ItemID,
+		Type:   types.SiTypeMediaFile,
+		State:  types.SiStateNotStarted,
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) error {
 	switch event.Type {
 	case types.EntityEventCreate:
 		r, err := s.sc.GetRating(ctx, event.ItemID)
@@ -285,7 +550,7 @@ func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, event
 		if err != nil {
 			return err
 		}
-		if err := tx.UpdateRating(ctx, r.ID, r.Rating); err != nil {
+		if err := tx.UpdateRating(ctx, r.ID, r.Rating, userID); err != nil {
 			return err
 		}
 	case types.EntityEventDelete:
@@ -341,11 +606,11 @@ func (s *Syncer) SyncItems(ctx context.Context) error {
 		}
 
 		if exists {
-			if err = tx.UpdateMediaFile(ctx, mf); err != nil {
+			if err = tx.UpdateMediaFile(ctx, mf, s.user.ID); err != nil {
 				return err
 			}
 		} else {
-			if _, err = tx.AddMediaFile(ctx, mf); err != nil {
+			if _, err = tx.AddMediaFile(ctx, mf, s.user.ID); err != nil {
 				return err
 			}
 		}
@@ -377,344 +642,6 @@ func (s *Syncer) SyncItems(ctx context.Context) error {
 		}
 
 		if err := tx.Commit(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (s Syncer) syncArtists(ctx context.Context, tx database.DatabaseFace, artistIDs []string) (created, updated int, err error) {
-	for _, aID := range artistIDs {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing artist '%s'", aID))
-		exists, err := tx.ArtistExists(ctx, aID)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		serverArtist, err := s.sc.GetArtist(ctx, aID)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		if exists {
-			if err = tx.UpdateArtist(ctx, serverArtist); err != nil {
-				return 0, 0, err
-			}
-			updated += 1
-		} else {
-			if _, err = tx.AddArtist(ctx, serverArtist); err != nil {
-				return 0, 0, err
-			}
-			created += 1
-		}
-
-		for _, size := range []imagemagick.ImageSize{imagemagick.Size320, imagemagick.Size640, imagemagick.Size1024, imagemagick.Size1600, imagemagick.Size2400} {
-			filename := filepath.Join(s.imgDir, "artists", aID, fmt.Sprintf("%d.jpg", size))
-
-			if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
-				return 0, 0, err
-			}
-
-			dst, err := os.Create(filename)
-			if err != nil {
-				return 0, 0, err
-			}
-
-			s.log.DebugContext(ctx, fmt.Sprintf("downloading artist image '%s' to '%s'", aID, filename))
-
-			if err = s.sc.DownloadArtistImage(ctx, aID, size, dst); err != nil {
-				serr, ok := err.(serverclient.ErrStatus)
-				if !ok || serr.Status >= 500 {
-					dst.Close()
-					return 0, 0, err
-				}
-			}
-
-			if err = dst.Close(); err != nil {
-				return 0, 0, err
-			}
-		}
-
-	}
-
-	return created, updated, nil
-}
-
-func (s Syncer) syncAlbums(ctx context.Context, tx database.DatabaseFace, albumIDs []string) (created, updated int, err error) {
-	for _, aID := range albumIDs {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing album '%s'", aID))
-		exists, err := tx.AlbumExists(ctx, aID)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		serverAlbum, err := s.sc.GetAlbum(ctx, aID)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		if exists {
-			if err = tx.UpdateAlbum(ctx, serverAlbum); err != nil {
-				return 0, 0, err
-			}
-			updated += 1
-		} else {
-			if _, err = tx.AddAlbum(ctx, serverAlbum); err != nil {
-				return 0, 0, err
-			}
-			created += 1
-		}
-
-		for _, size := range []imagemagick.ImageSize{imagemagick.Size320, imagemagick.Size640, imagemagick.Size1024, imagemagick.Size1600, imagemagick.Size2400} {
-			filename := filepath.Join(s.imgDir, "albums", aID, fmt.Sprintf("%d.jpg", size))
-
-			if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
-				return 0, 0, err
-			}
-
-			dst, err := os.Create(filename)
-			if err != nil {
-				return 0, 0, err
-			}
-
-			s.log.DebugContext(ctx, fmt.Sprintf("downloading album cover '%s' to '%s'", aID, filename))
-
-			if err = s.sc.DownloadAlbumCover(ctx, aID, size, dst); err != nil {
-				serr, ok := err.(serverclient.ErrStatus)
-				if !ok || serr.Status >= 500 {
-					dst.Close()
-					return 0, 0, err
-				}
-			}
-
-			if err = dst.Close(); err != nil {
-				return 0, 0, err
-			}
-		}
-
-	}
-
-	return created, updated, nil
-}
-
-func (s Syncer) syncTracks(ctx context.Context, tx database.DatabaseFace, trackIDs []string) (created, updated int, err error) {
-	for _, tID := range trackIDs {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing track '%s'", tID))
-		exists, err := tx.TrackExists(ctx, tID)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		serverTrack, err := s.sc.GetTrack(ctx, tID)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		if exists {
-			if err = tx.UpdateTrack(ctx, serverTrack); err != nil {
-				return 0, 0, err
-			}
-			updated += 1
-		} else {
-			if _, err = tx.AddTrack(ctx, serverTrack); err != nil {
-				return 0, 0, err
-			}
-			created += 1
-		}
-	}
-
-	return created, updated, nil
-}
-
-func (s Syncer) syncAlbumArtists(ctx context.Context, tx database.DatabaseFace, albumArtists []uuid.UUID, deletedAlbumArtists []uuid.UUID) (created, updated int, err error) {
-	for _, aa := range deletedAlbumArtists {
-		s.log.DebugContext(ctx, fmt.Sprintf("deleting album artist '%s'", aa.String()))
-		if err := tx.DeleteAlbumArtist(ctx, aa); err != nil {
-			return 0, 0, err
-		}
-	}
-
-	for _, aa := range albumArtists {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing album artist '%s'", aa.String()))
-		exists, err := tx.AlbumArtistExistsByID(ctx, aa)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		albumArtist, err := s.sc.GetAlbumArtistByID(ctx, aa)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		if exists {
-			if err = tx.UpdateAlbumArtist(ctx, albumArtist); err != nil {
-				return 0, 0, err
-			}
-			updated += 1
-		} else {
-			if _, err = tx.AddAlbumArtist(ctx, albumArtist); err != nil {
-				return 0, 0, err
-			}
-			created += 1
-		}
-	}
-
-	return created, updated, nil
-}
-
-func (s Syncer) syncAlbumTracks(ctx context.Context, tx database.DatabaseFace, albumTracks []uuid.UUID) (created, updated int, err error) {
-	for _, at := range albumTracks {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing album track '%s'", at.String()))
-		exists, err := tx.AlbumTrackExistsByID(ctx, at)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		albumTrack, err := s.sc.GetAlbumTrackByID(ctx, at)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		if exists {
-			if err = tx.UpdateAlbumTrack(ctx, albumTrack); err != nil {
-				return 0, 0, err
-			}
-			updated += 1
-		} else {
-			if _, err = tx.AddAlbumTrack(ctx, albumTrack); err != nil {
-				return 0, 0, err
-			}
-			created += 1
-		}
-	}
-
-	return created, updated, nil
-}
-
-func (s Syncer) syncPlaylistTracks(ctx context.Context, tx database.DatabaseFace, added []uuid.UUID, deleted []uuid.UUID) (created, updated int, err error) {
-	// user, err := auth.UserFromContext(ctx)
-	// if err != nil {
-	// 	return 0, 0, err
-	// }
-
-	for _, d := range deleted {
-		s.log.DebugContext(ctx, fmt.Sprintf("deleting playlist_track '%s'", d.String()))
-		if err := tx.DeletePlaylistTrack(ctx, d); err != nil {
-			return 0, 0, err
-		}
-	}
-
-	for _, a := range added {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing playlist '%s'", a.String()))
-		exists, err := tx.PlaylistTrackExists(ctx, a)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		pt, err := s.sc.GetPlaylistTrack(ctx, a)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		if exists {
-			// FIXME
-			// if err = tx.UpdatePlaylistTrack(ctx, playlist); err != nil {
-			// 	return 0, 0, err
-			// }
-			// updated += 1
-		} else {
-			if _, err = tx.AddPlaylistTrack(ctx, pt); err != nil {
-				return 0, 0, err
-			}
-			created += 1
-		}
-
-	}
-
-	return created, updated, nil
-}
-
-func (s Syncer) syncPlaylists(ctx context.Context, tx database.DatabaseFace, added []uuid.UUID, deleted []uuid.UUID) (created, updated int, err error) {
-	user, err := auth.UserFromContext(ctx)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	for _, d := range deleted {
-		s.log.DebugContext(ctx, fmt.Sprintf("deleting playlist '%s'", d.String()))
-		if err := tx.DeletePlaylist(ctx, d, user.ID); err != nil {
-			return 0, 0, err
-		}
-	}
-
-	for _, a := range added {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing playlist '%s'", a.String()))
-		exists, err := tx.PlaylistExistsByID(ctx, a)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		playlist, err := s.sc.GetPlaylist(ctx, a)
-		if err != nil {
-			return 0, 0, err
-		}
-
-		if exists {
-			if err = tx.UpdatePlaylist(ctx, playlist); err != nil {
-				return 0, 0, err
-			}
-			updated += 1
-		} else {
-			if _, err = tx.AddPlaylist(ctx, playlist); err != nil {
-				return 0, 0, err
-			}
-			created += 1
-		}
-
-		for _, size := range []imagemagick.ImageSize{imagemagick.Size320, imagemagick.Size640, imagemagick.Size1024, imagemagick.Size1600, imagemagick.Size2400} {
-			filename := filepath.Join(s.imgDir, "playlists", a.String(), fmt.Sprintf("%d.jpg", size))
-
-			if err = os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
-				return 0, 0, err
-			}
-
-			dst, err := os.Create(filename)
-			if err != nil {
-				return 0, 0, err
-			}
-
-			s.log.DebugContext(ctx, fmt.Sprintf("downloading playlist image '%s' to '%s'", a.String(), filename))
-
-			if err = s.sc.DownloadPlaylistImage(ctx, a, size, dst); err != nil {
-				serr, ok := err.(serverclient.ErrStatus)
-				if !ok || serr.Status >= 500 {
-					dst.Close()
-					return 0, 0, err
-				}
-			}
-
-			if err = dst.Close(); err != nil {
-				return 0, 0, err
-			}
-		}
-	}
-
-	return created, updated, nil
-}
-
-func (s Syncer) syncMediaFiles(ctx context.Context, tx database.DatabaseFace, mediaFiles []uuid.UUID) error {
-	for _, mfID := range mediaFiles {
-		s.log.DebugContext(ctx, fmt.Sprintf("syncing media file '%s'", mfID.String()))
-
-		_, err := tx.AddSyncItem(ctx, types.SyncItem{
-			// FIXME: This should be added
-			SyncID: uuid.Nil,
-			ItemID: mfID,
-			Type:   types.SiTypeMediaFile,
-			State:  types.SiStateNotStarted,
-		})
-		if err != nil {
 			return err
 		}
 	}

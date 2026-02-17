@@ -53,7 +53,7 @@ func (m MediaManager) ListTracksDetailedByArtist(ctx context.Context, artistID, 
 	return tracks, nil
 }
 
-func (m MediaManager) UpdateTrack(ctx context.Context, trackID uuid.UUID, trackData types.TrackUpdate) error {
+func (m MediaManager) UpdateTrack(ctx context.Context, trackID uuid.UUID, trackData types.TrackUpdate, userID uuid.UUID) error {
 	tx, err := m.db.Begin(ctx)
 	if err != nil {
 		return m.berr.DatabaseError(err, types.EntityTrack, &trackID)
@@ -68,7 +68,7 @@ func (m MediaManager) UpdateTrack(ctx context.Context, trackID uuid.UUID, trackD
 	trackData.ID = trackID
 	trackData.MediaFile = existingTrack.MediaFile
 
-	err = tx.UpdateTrack(ctx, trackData.Track)
+	err = tx.UpdateTrack(ctx, trackData.Track, userID)
 	if err != nil {
 		return m.berr.DatabaseError(err, types.EntityTrack, &trackID)
 	}
@@ -82,7 +82,7 @@ func (m MediaManager) UpdateTrack(ctx context.Context, trackID uuid.UUID, trackD
 		albumTrack.DiscNumber = trackData.DiscNumber
 		albumTrack.TrackNumber = trackData.TrackNumber
 
-		if err = tx.UpdateAlbumTrack(ctx, albumTrack); err != nil {
+		if err = tx.UpdateAlbumTrack(ctx, albumTrack, userID); err != nil {
 			return m.berr.DatabaseError(err, types.EntityAlbumTrack, &albumTrack.ID)
 		}
 	}

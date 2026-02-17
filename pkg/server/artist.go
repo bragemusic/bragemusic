@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
@@ -49,12 +50,17 @@ func (s *Server) updateArtist() http.HandlerFunc {
 			return Response{}, err
 		}
 
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+
 		artist := types.Artist{}
 		if err := json.NewDecoder(r.Body).Decode(&artist); err != nil {
 			return Response{}, err
 		}
 
-		if err := s.mediamgr.UpdateArtist(ctx, artistID, artist); err != nil {
+		if err := s.mediamgr.UpdateArtist(ctx, artistID, artist, user.ID); err != nil {
 			return Response{}, err
 		}
 

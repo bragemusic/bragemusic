@@ -15,12 +15,13 @@ import (
 )
 
 type MetaSyncer struct {
-	db       database.DatabaseFace
-	mb       musicbrainz.MusicBrainz
-	wiki     wiki.Wiki
-	im       imagemagick.ImageMagick
-	imageDir string
-	log      *slog.Logger
+	db             database.DatabaseFace
+	mb             musicbrainz.MusicBrainz
+	wiki           wiki.Wiki
+	im             imagemagick.ImageMagick
+	imageDir       string
+	log            *slog.Logger
+	internalUserID uuid.UUID
 }
 
 func (m MetaSyncer) artistHasImage(artistID string) bool {
@@ -79,7 +80,7 @@ func (m MetaSyncer) Sync(ctx context.Context) error {
 		}
 
 		a.Description = wikiData.Summary
-		err = m.db.UpdateArtist(ctx, a)
+		err = m.db.UpdateArtist(ctx, a, m.internalUserID)
 		if err != nil {
 			m.log.ErrorContext(ctx, "could not update artist", "error", err.Error(), "artist", a.Name)
 			continue
@@ -119,13 +120,14 @@ func (m MetaSyncer) downloadArtistImage(ctx context.Context, imageUrl string, ar
 	return nil
 }
 
-func New(imageDir string, db database.DatabaseFace, mb musicbrainz.MusicBrainz, wiki wiki.Wiki, im imagemagick.ImageMagick, slogHandler slog.Handler) MetaSyncer {
+func New(imageDir string, db database.DatabaseFace, mb musicbrainz.MusicBrainz, wiki wiki.Wiki, im imagemagick.ImageMagick, internalUserID uuid.UUID, slogHandler slog.Handler) MetaSyncer {
 	return MetaSyncer{
-		db:       db,
-		log:      slog.New(slogHandler).With("service", "meta-syncer"),
-		mb:       mb,
-		wiki:     wiki,
-		im:       im,
-		imageDir: imageDir,
+		db:             db,
+		log:            slog.New(slogHandler).With("service", "meta-syncer"),
+		mb:             mb,
+		wiki:           wiki,
+		im:             im,
+		imageDir:       imageDir,
+		internalUserID: internalUserID,
 	}
 }

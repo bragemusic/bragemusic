@@ -11,8 +11,8 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s ServerClient) DownloadAlbumCover(ctx context.Context, albumID string, size imagemagick.ImageSize, w io.Writer) error {
-	u, err := url.JoinPath(s.baseUrl, "api", "img", "albums", albumID, fmt.Sprintf("%d.jpg", size))
+func (s ServerClient) DownloadAlbumCover(ctx context.Context, albumID uuid.UUID, size imagemagick.ImageSize, w io.Writer) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "img", "albums", albumID.String(), fmt.Sprintf("%d.jpg", size))
 	if err != nil {
 		return err
 	}
@@ -20,8 +20,8 @@ func (s ServerClient) DownloadAlbumCover(ctx context.Context, albumID string, si
 	return s.downloadFile(ctx, u, w)
 }
 
-func (s ServerClient) GetAlbum(ctx context.Context, albumID string) (album types.Album, err error) {
-	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID)
+func (s ServerClient) GetAlbum(ctx context.Context, albumID uuid.UUID) (album types.Album, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID.String())
 	if err != nil {
 		return types.Album{}, err
 	}
