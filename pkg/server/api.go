@@ -3,8 +3,10 @@ package server
 import (
 	"net/http"
 
+	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/go-chi/chi/v5"
+	"github.com/gofrs/uuid/v5"
 )
 
 func (s *Server) api() http.Handler {
@@ -12,7 +14,7 @@ func (s *Server) api() http.Handler {
 
 	r.Use(s.authPkg.Middleware)
 
-	r.Get("/status", s.status())
+	r.Get("/info", s.apiInfo())
 	r.Get("/user", s.user())
 
 	r.Get("/img/*", s.getImage())
@@ -66,14 +68,17 @@ func (s *Server) api() http.Handler {
 	return r
 }
 
-func (s *Server) status() http.HandlerFunc {
+func (s *Server) apiInfo() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		return Response{
-			Payload: Status{
-				Application: "brage-server", // hardcoded
-				Name:        "Brage Server", // from config
-				Version:     "v0.0.1",
-				Status:      HealthzRunning,
+			Payload: ServerApiInfo{
+				Name:    s.config.Name,
+				Version: config.VERSION,
+				ServerInfo: ServerInfo{
+					Application: config.SERVER_APP_NAME,
+					Status:      HealthzRunning,
+					ID:          uuid.Nil,
+				},
 			},
 			Status: http.StatusOK,
 		}, nil

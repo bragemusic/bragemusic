@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/server"
@@ -17,8 +18,6 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-const expectedServerApplication = "brage-server"
-
 type Syncer struct {
 	sc                       *serverclient.ServerClient
 	db                       database.DatabaseFace
@@ -26,15 +25,15 @@ type Syncer struct {
 	musicDir                 string
 	imgDir                   string
 	serverAvailable          bool
-	serverStatus             server.Status
+	serverStatus             server.ServerApiInfo
 	syncInProgress           bool
 	user                     *types.UserDetails
-	serverAvailableCallbacks []func(server.Status)
+	serverAvailableCallbacks []func(server.ServerApiInfo)
 	syncInProgressCallbacks  []func(bool)
 	userCallbacks            []func(*types.UserDetails)
 }
 
-func (s *Syncer) RegisterServerAvailabilityCallback(f func(server.Status)) {
+func (s *Syncer) RegisterServerAvailabilityCallback(f func(server.ServerApiInfo)) {
 	s.serverAvailableCallbacks = append(s.serverAvailableCallbacks, f)
 }
 
@@ -119,8 +118,10 @@ func (s *Syncer) StartSyncDaemon(ctx context.Context, done func()) {
 func (s *Syncer) updateServerAvailability(ctx context.Context) error {
 	h, err := s.sc.CheckStatus(ctx)
 	if err != nil {
-		h = server.Status{
-			Status: server.HealthzUnavailable,
+		h = server.ServerApiInfo{
+			ServerInfo: server.ServerInfo{
+				Status: server.HealthzUnavailable,
+			},
 		}
 	}
 
@@ -133,8 +134,8 @@ func (s *Syncer) updateServerAvailability(ctx context.Context) error {
 		return err
 	}
 
-	if h.Application != expectedServerApplication {
-		return fmt.Errorf("expected server application name differs. '%s' != expected '%s'", h.Application, expectedServerApplication)
+	if h.Application != config.SERVER_APP_NAME {
+		return fmt.Errorf("expected server application name differs. '%s' != expected '%s'", h.Application, config.SERVER_APP_NAME)
 	}
 
 	if h.Status == server.HealthzUnavailable {
@@ -144,8 +145,11 @@ func (s *Syncer) updateServerAvailability(ctx context.Context) error {
 	return nil
 }
 
-func (s *Syncer) ServerStatus() server.Status {
-	return s.serverStatus
+func (s *Syncer) ServerStatus(ctx context.Context) (server.ServerApiInfo, error) {
+	if err := s.updateServerAvailability(ctx); err != nil {
+		return server.ServerApiInfo{}, err
+	}
+	return s.serverStatus, nil
 }
 
 func (s *Syncer) Sync(ctx context.Context, userID uuid.UUID) error {
@@ -679,7 +683,7 @@ func New(sc *serverclient.ServerClient, db database.DatabaseFace, musicDir, imgD
 		db:           db,
 		musicDir:     musicDir,
 		imgDir:       imgDir,
-		serverStatus: server.Status{Status: server.HealthzUnavailable},
+		serverStatus: server.ServerApiInfo{ServerInfo: server.ServerInfo{Status: server.HealthzUnavailable}},
 		log:          slog.New(slogHandler).With("service", "syncer"),
 	}
 }

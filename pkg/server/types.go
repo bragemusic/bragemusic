@@ -24,11 +24,16 @@ type Response struct {
 	Status  int `json:"-"`
 }
 
-type Status struct {
+type ServerInfo struct {
 	Application string        `json:"application"`
-	Name        string        `json:"name"`
-	Version     string        `json:"version"`
+	ID          uuid.UUID     `json:"id" ts_type:"string"`
 	Status      HealthzStatus `json:"status"`
+}
+
+type ServerApiInfo struct {
+	ServerInfo
+	Name    string `json:"name"`
+	Version string `json:"version"`
 }
 
 type SyncReq struct {

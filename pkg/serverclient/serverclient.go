@@ -157,22 +157,22 @@ func (s ServerClient) downloadFile(ctx context.Context, u string, w io.Writer) e
 	return nil
 }
 
-func (s ServerClient) CheckStatus(ctx context.Context) (h server.Status, err error) {
-	u, err := url.JoinPath(s.baseUrl, "healthz")
+func (s ServerClient) CheckStatus(ctx context.Context) (h server.ServerApiInfo, err error) {
+	u, err := url.JoinPath(s.baseUrl, "info")
 	if err != nil {
-		return server.Status{}, err
+		return server.ServerApiInfo{}, err
 	}
 
 	if err = s.doGetJson(ctx, u, &h); err != nil {
-		return server.Status{}, err
+		return server.ServerApiInfo{}, err
 	}
 
-	u, err = url.JoinPath(s.baseUrl, "api", "status")
+	u, err = url.JoinPath(s.baseUrl, "api", "info")
 	if err != nil {
-		return server.Status{}, err
+		return server.ServerApiInfo{}, err
 	}
 
-	hAuthed := server.Status{}
+	hAuthed := server.ServerApiInfo{}
 
 	if err := s.doGetJson(ctx, u, &hAuthed); err != nil {
 		h.Status = server.HealthzNoAuth

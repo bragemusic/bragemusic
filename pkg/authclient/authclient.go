@@ -17,18 +17,29 @@ import (
 )
 
 type AuthClient struct {
-	sc            *serverclient.ServerClient
-	log           *slog.Logger
-	userCallbacks []func(*types.UserDetails)
+	sc                          *serverclient.ServerClient
+	log                         *slog.Logger
+	userCallbacks               []func(*types.UserDetails)
+	updateServerStatusCallbacks []func(context.Context)
 }
 
 func (s *AuthClient) RegisterUserCallback(f func(*types.UserDetails)) {
 	s.userCallbacks = append(s.userCallbacks, f)
 }
 
+func (s *AuthClient) RegisterUpdateServerStatusCallback(f func(context.Context)) {
+	s.updateServerStatusCallbacks = append(s.updateServerStatusCallbacks, f)
+}
+
 func (ac *AuthClient) UserCallback(user *types.UserDetails) {
 	for _, f := range ac.userCallbacks {
 		f(user)
+	}
+}
+
+func (ac *AuthClient) UpdateServerStatusCallbacks(ctx context.Context) {
+	for _, f := range ac.updateServerStatusCallbacks {
+		f(ctx)
 	}
 }
 
@@ -43,6 +54,8 @@ func (ac *AuthClient) LoginCachedServerUser(ctx context.Context, user types.User
 	if err = ac.saveToken(ctx, loginResp.Token, user.ID); err != nil {
 		return err
 	}
+
+	ac.UpdateServerStatusCallbacks(ctx)
 
 	return nil
 }
@@ -68,6 +81,8 @@ func (ac *AuthClient) Login(ctx context.Context, username, password string, long
 		return types.UserDetails{}, err
 	}
 
+	ac.UpdateServerStatusCallbacks(ctx)
+
 	return user, err
 }
 
@@ -75,6 +90,8 @@ func (ac *AuthClient) LogoutServerUser(ctx context.Context, userID uuid.UUID) er
 	if err := ac.removeToken(ctx, userID); err != nil {
 		return err
 	}
+
+	ac.UpdateServerStatusCallbacks(ctx)
 
 	return nil
 }
@@ -120,6 +137,8 @@ func (ac *AuthClient) LoginLocalUser(ctx context.Context, userID uuid.UUID, runC
 	if runCallback {
 		ac.UserCallback(&user)
 	}
+
+	ac.UpdateServerStatusCallbacks(ctx)
 
 	return user, nil
 }

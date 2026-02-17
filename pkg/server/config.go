@@ -40,6 +40,7 @@ type Config struct {
 	Jobs      Jobs      `toml:"jobs"`
 	Paths     Paths     `toml:"paths"`
 	Wikipedia Wikipedia `toml:"wikipedia"`
+	Name      string    `toml:"name" desc:"Name of the server. Defaults to 'Brage Music Server'"`
 	Port      int       `toml:"port" desc:"Port of the server. Defaults to 3000."`
 }
 
@@ -54,6 +55,7 @@ var defaultConfig = Config{
 		Importer:   180,
 		MetaSyncer: 180,
 	},
+	Name: "Brage Music Server",
 	Port: 3000,
 }
 
