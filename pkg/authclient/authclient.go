@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/adrg/xdg"
+	"github.com/bragemusic/core/internal/config"
+	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
@@ -19,16 +21,22 @@ import (
 type AuthClient struct {
 	sc                          *serverclient.ServerClient
 	log                         *slog.Logger
+	serverStatus                server.ServerApiInfo
+	serverAvailableCallbacks    []func(server.ServerApiInfo)
 	userCallbacks               []func(*types.UserDetails)
 	updateServerStatusCallbacks []func(context.Context)
 }
 
-func (s *AuthClient) RegisterUserCallback(f func(*types.UserDetails)) {
-	s.userCallbacks = append(s.userCallbacks, f)
+func (ac *AuthClient) RegisterUserCallback(f func(*types.UserDetails)) {
+	ac.userCallbacks = append(ac.userCallbacks, f)
 }
 
-func (s *AuthClient) RegisterUpdateServerStatusCallback(f func(context.Context)) {
-	s.updateServerStatusCallbacks = append(s.updateServerStatusCallbacks, f)
+func (ac *AuthClient) RegisterUpdateServerStatusCallback(f func(context.Context)) {
+	ac.updateServerStatusCallbacks = append(ac.updateServerStatusCallbacks, f)
+}
+
+func (ac *AuthClient) RegisterServerAvailabilityCallback(f func(server.ServerApiInfo)) {
+	ac.serverAvailableCallbacks = append(ac.serverAvailableCallbacks, f)
 }
 
 func (ac *AuthClient) UserCallback(user *types.UserDetails) {
@@ -41,6 +49,42 @@ func (ac *AuthClient) UpdateServerStatusCallbacks(ctx context.Context) {
 	for _, f := range ac.updateServerStatusCallbacks {
 		f(ctx)
 	}
+}
+
+func (ac *AuthClient) UpdateServerStatus(ctx context.Context) error {
+	h, err := ac.sc.CheckStatus(ctx)
+	if err != nil {
+		h = server.ServerApiInfo{
+			ServerInfo: server.ServerInfo{
+				Status: server.HealthzUnavailable,
+			},
+		}
+	}
+
+	ac.serverStatus = h
+
+	for _, f := range ac.serverAvailableCallbacks {
+		f(h)
+	}
+	if err != nil {
+		return err
+	}
+
+	if h.Application != config.SERVER_APP_NAME {
+		return fmt.Errorf("expected server application name differs. '%s' != expected '%s'", h.Application, config.SERVER_APP_NAME)
+	}
+
+	if h.Status == server.HealthzUnavailable {
+		return fmt.Errorf("server status is not running. '%s'", h.Status)
+	}
+	return nil
+}
+
+func (ac *AuthClient) ServerStatus(ctx context.Context) (server.ServerApiInfo, error) {
+	if err := ac.UpdateServerStatus(ctx); err != nil {
+		return server.ServerApiInfo{}, err
+	}
+	return ac.serverStatus, nil
 }
 
 func (ac *AuthClient) LoginCachedServerUser(ctx context.Context, user types.UserDetails, password string, longLivedToken bool) error {

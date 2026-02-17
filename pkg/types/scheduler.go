@@ -3,6 +3,8 @@ package types
 type JobType string
 
 const (
-	JobImporterRun JobType = "importer:run"
-	JobMetaSyncRun JobType = "metasync:run"
+	JobImporterRun            JobType = "importer:run"
+	JobMetaSyncRun            JobType = "metasync:run"
+	JobAuthClientServerStatus JobType = "authclient:serverstatus"
+	JobSyncerDaemon           JobType = "syncer:daemon"
 )
