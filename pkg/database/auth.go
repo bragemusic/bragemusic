@@ -19,6 +19,7 @@ type AuthFace interface {
 	UpdateUser(ctx context.Context, user types.User) error
 	RemoveUser(ctx context.Context, userID uuid.UUID) error
 	GetUserFromEmail(ctx context.Context, email string) (types.User, error)
+	ListUsers(ctx context.Context) (users []types.User, err error)
 
 	CreateAuthIdentity(ctx context.Context, ai types.AuthIdentity) (uuid.UUID, error)
 	GetAuthIdentityForUser(ctx context.Context, userID uuid.UUID) (ai types.AuthIdentity, err error)
@@ -136,6 +137,20 @@ func (d Database) GetUserFromEmail(ctx context.Context, email string) (user type
 	err = sqlx.GetContext(ctx, d.ext, &user, query, email)
 	if err != nil {
 		return types.User{}, err
+	}
+
+	return
+}
+
+func (d Database) ListUsers(ctx context.Context) (users []types.User, err error) {
+	query := `
+        SELECT *
+        FROM users
+        ;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &users, query)
+	if err != nil {
+		return nil, err
 	}
 
 	return

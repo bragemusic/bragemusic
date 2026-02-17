@@ -115,6 +115,7 @@ type DatabaseFace interface {
 	AddPlayHistoryStruct(ctx context.Context, ph types.PlayHistory) (string, error)
 	ListUpdatedPlayHistory(ctx context.Context, since time.Time) (updatedItems []types.PlayHistory, err error)
 
+	ListEntityEvents(ctx context.Context, since time.Time) (events []types.EntityEvent, err error)
 	ListEntityEventsByType(ctx context.Context, eventType types.EntityEventType, entityType types.EntityType, since time.Time) (ids []uuid.UUID, err error)
 	ListEntityEventsByEntityType(ctx context.Context, entityType types.EntityType, since time.Time, userID *uuid.UUID) (ids []types.EntityEvent, err error)
 

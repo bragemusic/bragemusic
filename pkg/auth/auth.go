@@ -39,6 +39,11 @@ func (a Auth) GetUserFromContext(ctx context.Context) (types.UserDetails, error)
 	return user, err
 }
 
+func (a Auth) ListUsers(ctx context.Context) ([]types.User, error) {
+	users, err := a.db.ListUsers(ctx)
+	return users, err
+}
+
 func (a Auth) CreateUser(ctx context.Context, userID uuid.UUID, email, username, password string, roles []types.UserRole) error {
 	tx, err := a.db.Begin(ctx)
 	if err != nil {

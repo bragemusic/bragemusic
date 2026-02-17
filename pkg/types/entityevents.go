@@ -28,6 +28,7 @@ const (
 	EntitySearchItem      EntityType = "search_item"
 	EntityImport          EntityType = "import"
 	EntityRating          EntityType = "rating"
+	EntityEntityEvent     EntityType = "entity_event"
 
 	EntityEventDelete EntityEventType = "delete"
 	EntityEventCreate EntityEventType = "create"

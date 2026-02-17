@@ -320,6 +320,14 @@ func (c Client) UploadPlaylistImage(ctx context.Context, id string, img servercl
 	return c.sc.UploadPlaylistImage(ctx, id, img)
 }
 
+func (c Client) ListEntityEvents(ctx context.Context) ([]types.EntityEvent, error) {
+	return c.sc.ListEntityEvents(ctx)
+}
+
+func (c Client) ListUsers(ctx context.Context) ([]types.User, error) {
+	return c.sc.ListUsers(ctx)
+}
+
 func (c Client) SearchFull(ctx context.Context, searchTerm string) (si []types.SearchItem, err error) {
 	return c.mm.SearchFull(ctx, searchTerm)
 }

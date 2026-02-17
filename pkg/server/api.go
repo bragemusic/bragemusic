@@ -59,6 +59,10 @@ func (s *Server) api() http.Handler {
 
 	r.With(s.authPkg.RoleCheckMiddleware(types.UserRoleAdmin, types.UserRoleImporterWrite)).Post("/import/album", s.importAlbum())
 
+	r.With(s.authPkg.RoleCheckMiddleware(types.UserRoleAdmin)).Get("/admin/entity-events", s.getEntityEvents())
+
+	r.With(s.authPkg.RoleCheckMiddleware(types.UserRoleAdmin, types.UserRoleUsersGet)).Get("/users", s.listUsers())
+
 	return r
 }
 

@@ -35,6 +35,23 @@ func (d Database) addEntityEvent(ctx context.Context, id uuid.UUID, eventType ty
 	return err
 }
 
+func (d Database) ListEntityEvents(ctx context.Context, since time.Time) (events []types.EntityEvent, err error) {
+	query := `
+        SELECT *
+        FROM entity_events
+        WHERE
+          event_time > ?
+        ORDER BY event_time DESC
+        ;
+    `
+	err = sqlx.SelectContext(ctx, d.ext, &events, query, since)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
+
 func (d Database) ListEntityEventsByType(ctx context.Context, eventType types.EntityEventType, entityType types.EntityType, since time.Time) (ids []uuid.UUID, err error) {
 	query := `
         SELECT item_id
