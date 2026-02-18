@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/adhocore/gronx"
 	"github.com/bragemusic/core/pkg/utils"
 )
 
@@ -30,8 +31,8 @@ type Wikipedia struct {
 }
 
 type Jobs struct {
-	Importer   int `toml:"importer" desc:"How often the importer will look for new media files. In seconds. Defaults to 180."`
-	MetaSyncer int `toml:"meta_syncer" desc:"How often the meta-syncer will sync the needed metadata. In seconds. Defaults to 180."`
+	Importer   string `toml:"importer" desc:"How often the importer will look for new media files. Cron expression. Defaults to '*/3 * * * *'"`
+	MetaSyncer string `toml:"meta_syncer" desc:"How often the meta-syncer will sync the needed metadata. Cron expression. Defaults to '*/3 * * * *'"`
 }
 
 type Config struct {
@@ -52,8 +53,8 @@ var defaultConfig = Config{
 	},
 	Paths: Paths{},
 	Jobs: Jobs{
-		Importer:   180,
-		MetaSyncer: 180,
+		Importer:   "*/3 * * * *",
+		MetaSyncer: "*/3 * * * *",
 	},
 	Name: "Brage Music Server",
 	Port: 3000,
@@ -90,12 +91,12 @@ func verify(cfg Config) error {
 		errs = append(errs, errors.New("Wikipedia.Email not set"))
 	}
 
-	if cfg.Jobs.Importer < 10 {
-		errs = append(errs, errors.New("Jobs.Importer must be atleast 10"))
+	if !gronx.IsValid(cfg.Jobs.Importer) {
+		errs = append(errs, errors.New("Jobs.Importer is not a valid Cron Expression"))
 	}
 
-	if cfg.Jobs.MetaSyncer < 10 {
-		errs = append(errs, errors.New("Jobs.MetaSyncer must be atleast 10"))
+	if !gronx.IsValid(cfg.Jobs.MetaSyncer) {
+		errs = append(errs, errors.New("Jobs.MetaSyncer is not a valid Cron Expression"))
 	}
 
 	if cfg.Port < 1024 || cfg.Port > 49151 {

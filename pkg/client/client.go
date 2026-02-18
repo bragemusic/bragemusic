@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/bragemusic/core/pkg/audiointerface"
 	"github.com/bragemusic/core/pkg/audioplayer"
@@ -455,13 +454,13 @@ func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c 
 
 	jm.RegisterJob(ctx, jobmanager.JobDefinition{
 		Type:     types.JobAuthClientServerStatus,
-		Interval: 10 * time.Second,
+		CronExpr: "*/10 * * * * *",
 		Run:      c.AuthClient.UpdateServerStatus,
 	})
 
 	jm.RegisterJob(ctx, jobmanager.JobDefinition{
 		Type:     types.JobSyncerDaemon,
-		Interval: 10 * time.Minute,
+		CronExpr: "*/10 * * * *",
 		Run:      c.sy.Daemon,
 	})
 

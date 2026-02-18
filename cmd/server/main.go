@@ -112,12 +112,12 @@ func main() {
 	jmgr := jobmanager.New(slogHandler)
 	jmgr.RegisterJob(ctx, jobmanager.JobDefinition{
 		Type:     types.JobImporterRun,
-		Interval: time.Duration(scfg.Jobs.Importer) * time.Second,
+		CronExpr: scfg.Jobs.Importer,
 		Run:      imp.Run,
 	})
 	jmgr.RegisterJob(ctx, jobmanager.JobDefinition{
 		Type:     types.JobMetaSyncRun,
-		Interval: time.Duration(scfg.Jobs.MetaSyncer) * time.Second,
+		CronExpr: scfg.Jobs.MetaSyncer,
 		Run:      ms.Sync,
 	})
 

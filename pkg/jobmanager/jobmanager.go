@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/adhocore/gronx"
 	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/types"
 )
@@ -17,7 +18,7 @@ type JobConfig struct {
 
 type JobDefinition struct {
 	Type     types.JobType
-	Interval time.Duration
+	CronExpr string
 	Run      func(context.Context) error
 	c        chan struct{}
 }
@@ -45,14 +46,19 @@ func (j *JobManager) RunJob(ctx context.Context, jobType types.JobType) error {
 }
 
 func (j *JobManager) startJob(ctx context.Context, job JobDefinition) {
-	ticker := time.NewTicker(job.Interval)
-	defer ticker.Stop()
-
 	for {
+		next, err := gronx.NextTick(job.CronExpr, false)
+		if err != nil {
+			j.log.ErrorContext(ctx, "job failed: could not get next cron time",
+				"job", job.Type,
+				"error", err,
+			)
+		}
+
+		wait := time.Until(next)
+
 		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
+		case <-time.After(wait):
 			j.log.DebugContext(ctx, "running job", "job", job.Type)
 			if err := job.Run(ctx); err != nil {
 				j.log.ErrorContext(ctx, "job failed",
@@ -60,6 +66,7 @@ func (j *JobManager) startJob(ctx context.Context, job JobDefinition) {
 					"error", err,
 				)
 			}
+
 		case <-job.c:
 			j.log.DebugContext(ctx, "running job", "job", job.Type)
 			if err := job.Run(ctx); err != nil {
@@ -68,7 +75,8 @@ func (j *JobManager) startJob(ctx context.Context, job JobDefinition) {
 					"error", err,
 				)
 			}
-
+		case <-ctx.Done():
+			return
 		}
 	}
 }
