@@ -21,6 +21,7 @@ import (
 	"github.com/bragemusic/core/pkg/metasyncer"
 	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/server"
+	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/wiki"
 
 	"github.com/jmoiron/sqlx"
@@ -108,12 +109,17 @@ func main() {
 
 	ms := metasyncer.New(impCfg.ImageDirPath, &db, mb, w, im, internalusers.MetaSyncer, slogHandler)
 
-	jobCfg := jobmanager.JobConfig{
-		ImporterRunTiming:   scfg.Jobs.Importer,
-		MetaSyncerRunTiming: scfg.Jobs.MetaSyncer,
-	}
-
-	jmgr := jobmanager.New(slogHandler, jobCfg, &m, &imp, &ms)
+	jmgr := jobmanager.New(slogHandler)
+	jmgr.RegisterJob(ctx, jobmanager.JobDefinition{
+		Type:     types.JobImporterRun,
+		CronExpr: scfg.Jobs.Importer,
+		Run:      imp.Run,
+	})
+	jmgr.RegisterJob(ctx, jobmanager.JobDefinition{
+		Type:     types.JobMetaSyncRun,
+		CronExpr: scfg.Jobs.MetaSyncer,
+		Run:      ms.Sync,
+	})
 
 	s := server.New(slogHandler, &m, &a, &imp, &jmgr, scfg)
 

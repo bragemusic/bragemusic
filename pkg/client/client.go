@@ -11,10 +11,10 @@ import (
 	"github.com/bragemusic/core/pkg/audioplayer"
 	"github.com/bragemusic/core/pkg/authclient"
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/jobs"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/migrations"
-	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/types"
@@ -34,6 +34,7 @@ type Config struct {
 type Client struct {
 	authclient.AuthClient
 	*audioplayer.AudioPlayer
+	*jobmanager.JobManager
 	sc      *serverclient.ServerClient
 	mm      *mediamanager.MediaManager
 	sy      *syncer.Syncer
@@ -46,17 +47,16 @@ type Client struct {
 	// tracks []types.TrackEnhanced
 }
 
-func (c *Client) RegisterServerAvailabilityCallback(f func(server.Status)) {
-	c.sy.RegisterServerAvailabilityCallback(f)
-}
-
 func (c *Client) RegisterSyncInProgressCallback(f func(bool)) {
 	c.sy.RegisterSyncInProgressCallback(f)
 }
 
 func (c *Client) RegisterUserCallback(f func(*types.UserDetails)) {
-	c.sy.RegisterUserCallback(f)
 	c.AuthClient.RegisterUserCallback(f)
+}
+
+func (c *Client) updateServerStatusCallback(ctx context.Context) {
+	c.ServerStatus(ctx)
 }
 
 func (c Client) Sync(ctx context.Context, userID uuid.UUID) error {
@@ -73,10 +73,6 @@ func (c Client) Sync(ctx context.Context, userID uuid.UUID) error {
 	}
 
 	return nil
-}
-
-func (c Client) ServerStatus() server.Status {
-	return c.sy.ServerStatus()
 }
 
 func (c *Client) Close() error {
@@ -342,13 +338,13 @@ func (c Client) ImportAlbum(ctx context.Context, filename string, musicbrainzID 
 	return c.sc.ImportAlbum(ctx, r, filename, musicbrainzID)
 }
 
-func (c *Client) StartSyncDaemon(ctx context.Context, done func()) {
-	c.sy.StartSyncDaemon(ctx, done)
-}
+// func (c *Client) StartSyncDaemon(ctx context.Context, done func()) {
+// 	c.sy.StartSyncDaemon(ctx, done)
+// }
 
-func (c *Client) StartStatusDaemon(ctx context.Context, done func()) {
-	c.sy.StartStatusDaemon(ctx, done)
-}
+// func (c *Client) StartStatusDaemon(ctx context.Context, done func()) {
+// 	c.sy.StartStatusDaemon(ctx, done)
+// }
 
 func (c *Client) updatePlayCount(trackID string) {
 	// FIXME: Do we need context here?
@@ -410,6 +406,7 @@ func (c *Client) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
 	}
 
 	c.AuthClient.UserCallback(&user)
+	c.ServerStatus(ctx)
 
 	return nil
 }
@@ -438,17 +435,34 @@ func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c 
 		return nil, err
 	}
 
+	jm := jobmanager.New(slogHandler)
+
 	c = &Client{
 		AuthClient:  authclient.New(&sc, slogHandler),
 		sc:          &sc,
 		mm:          &mm,
 		sy:          &sy,
+		JobManager:  &jm,
 		AudioPlayer: ap,
 		config:      config,
 		log:         slog.New(slogHandler).With("service", "client"),
 	}
 
 	ap.RegisterPlayCountCallback(c.updatePlayCount)
+	c.RegisterUserCallback(sy.SetUser)
+	c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
+
+	jm.RegisterJob(ctx, jobmanager.JobDefinition{
+		Type:     types.JobAuthClientServerStatus,
+		CronExpr: "*/10 * * * * *",
+		Run:      c.AuthClient.UpdateServerStatus,
+	})
+
+	jm.RegisterJob(ctx, jobmanager.JobDefinition{
+		Type:     types.JobSyncerDaemon,
+		CronExpr: "*/10 * * * *",
+		Run:      c.sy.Daemon,
+	})
 
 	return c, nil
 }

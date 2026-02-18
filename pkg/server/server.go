@@ -10,12 +10,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/importer"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/go-chi/chi/v5"
+	"github.com/gofrs/uuid/v5"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -41,6 +43,7 @@ func (s *Server) Handler() http.Handler {
 
 	r.Get("/healthz", s.healthz())
 	r.Get("/readyz", s.readyz())
+	r.Get("/info", s.info())
 
 	r.Mount("/api", s.api())
 	r.Mount("/auth", s.auth())
@@ -50,10 +53,17 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) healthz() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		return Response{Status: http.StatusOK, Payload: Status{
-			Application: "brage-server", // hardcoded
-			Name:        "Brage Server", // from config
-			Version:     "v0.0.1",
+		return Response{Status: http.StatusOK, Payload: Healthz{
+			Status: HealthzRunning,
+		}}, nil
+	})
+}
+
+func (s *Server) info() http.HandlerFunc {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
+		return Response{Status: http.StatusOK, Payload: ServerInfo{
+			Application: config.SERVER_APP_NAME,
+			ID:          uuid.Nil,
 			Status:      HealthzRunning,
 		}}, nil
 	})
