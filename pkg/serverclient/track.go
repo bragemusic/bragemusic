@@ -61,8 +61,8 @@ func (s ServerClient) RateTrack(ctx context.Context, trackID uuid.UUID, value in
 	return nil
 }
 
-func (s ServerClient) UpdateTrack(ctx context.Context, id string, data types.TrackUpdate) error {
-	u, err := url.JoinPath(s.baseUrl, "api", "tracks", id)
+func (s ServerClient) UpdateTrack(ctx context.Context, id uuid.UUID, data types.TrackUpdate) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "tracks", id.String())
 	if err != nil {
 		return err
 	}

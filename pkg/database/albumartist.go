@@ -100,8 +100,8 @@ func (d Database) attachTrackArtists(ctx context.Context, tracks []types.TrackDe
 	trackIndex := make(map[string]*types.TrackDetailed)
 
 	for i := range tracks {
-		trackIDs = append(trackIDs, tracks[i].ID)
-		trackIndex[tracks[i].ID] = &tracks[i]
+		trackIDs = append(trackIDs, tracks[i].ID.String())
+		trackIndex[tracks[i].ID.String()] = &tracks[i]
 	}
 
 	query := `

@@ -14,6 +14,7 @@ import (
 	"github.com/bragemusic/core/pkg/files"
 	"github.com/bragemusic/core/pkg/mpris"
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 )
 
 const playCountCountFrac = 0.75
@@ -36,7 +37,7 @@ type AudioPlayer struct {
 	currentPlayCtxChangeCallbacks []func(PlayContext)
 	pausePlayCallbacks            []func(isPlaying bool)
 	progressCallbacks             []func(ms int64)
-	playCountCallbacks            []func(trackID string)
+	playCountCallbacks            []func(trackID uuid.UUID)
 	errCallback                   func(context.Context, error)
 	musicDirPath                  string
 	playCountReported             bool
@@ -59,7 +60,7 @@ func (a *AudioPlayer) RegisterProgressCallback(f func(ms int64)) {
 	a.progressCallbacks = append(a.progressCallbacks, f)
 }
 
-func (a *AudioPlayer) RegisterPlayCountCallback(f func(trackID string)) {
+func (a *AudioPlayer) RegisterPlayCountCallback(f func(trackID uuid.UUID)) {
 	a.playCountCallbacks = append(a.playCountCallbacks, f)
 }
 

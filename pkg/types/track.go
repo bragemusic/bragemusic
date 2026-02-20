@@ -19,7 +19,7 @@ type Track struct {
 }
 
 type TrackDetailed struct {
-	ID            string     `db:"id" json:"id"` // UUID
+	ID            uuid.UUID  `db:"id" json:"id" ts_type:"string"` // UUID
 	Title         string     `db:"title" json:"title"`
 	AlbumID       string     `db:"album_id" json:"album_id,omitempty"`
 	AlbumName     string     `db:"album_name" json:"album_name,omitempty"`

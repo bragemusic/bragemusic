@@ -98,8 +98,8 @@ func (s ServerClient) GetAlbumTrackByID(ctx context.Context, id uuid.UUID) (albu
 	return albumTrack, nil
 }
 
-func (s ServerClient) UpdateAlbum(ctx context.Context, albumID string, albumData types.AlbumUpdate) error {
-	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID)
+func (s ServerClient) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumData types.AlbumUpdate) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID.String())
 	if err != nil {
 		return err
 	}

@@ -46,8 +46,8 @@ func (s ServerClient) ListArtists(ctx context.Context) (artists []types.Artist, 
 	return artists, nil
 }
 
-func (s ServerClient) UpdateArtist(ctx context.Context, artistID string, artistData types.Artist) error {
-	u, err := url.JoinPath(s.baseUrl, "api", "artists", artistID)
+func (s ServerClient) UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData types.Artist) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "artists", artistID.String())
 	if err != nil {
 		return err
 	}
