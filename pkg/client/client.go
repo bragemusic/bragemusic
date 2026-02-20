@@ -10,6 +10,7 @@ import (
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
+	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/types"
@@ -28,12 +29,32 @@ type SyncFace interface {
 type AuthFace interface {
 	RegisterUserCallback(f func(*types.UserDetails))
 	LoginLocalUser(ctx context.Context, userID uuid.UUID) error
+
+	RegisterServerAvailabilityCallback(f func(server.ServerApiInfo))
+	GetCachedUsers(ctx context.Context) (users []types.UserDetails, err error)
+	Login(ctx context.Context, username, password string, longLivedToken bool) (types.UserDetails, error)
+	LoginCachedServerUser(ctx context.Context, user types.UserDetails, password string, longLivedToken bool) error
+	LogoutServerUser(ctx context.Context, userID uuid.UUID) error
+	ServerStatus(ctx context.Context) (server.ServerApiInfo, error)
+	//
 }
 
 type AudioPlayerFace interface {
 	StartPlayerWithAlbum(ctx context.Context, userID, albumID uuid.UUID, trackNumber int) error
 	StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) error
 	AddTrackToQueue(ctx context.Context, trackID, albumID, userID uuid.UUID) error
+
+	RegisterPlayContextChangeCallback(f func(audioplayer.PlayContext))
+	RegisterPlayPauseCallback(f func(isPlaying bool))
+	RegisterProgressCallback(f func(ms int64))
+
+	NextTrack(ctx context.Context) (err error)
+	PlayContext() audioplayer.PlayContext
+	PlayPause(ctx context.Context)
+	PreviousTrack(ctx context.Context) (err error)
+	SetRepeat(ctx context.Context, r audioplayer.RepeatType)
+	SetShuffle(ctx context.Context, s bool)
+	//
 }
 
 type MetadataFace interface {

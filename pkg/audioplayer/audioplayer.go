@@ -48,7 +48,7 @@ func (a *AudioPlayer) RegisterErrorCallback(f func(context.Context, error)) {
 	a.errCallback = f
 }
 
-func (a *AudioPlayer) RegisterPlatContextChangeCallback(f func(PlayContext)) {
+func (a *AudioPlayer) RegisterPlayContextChangeCallback(f func(PlayContext)) {
 	a.currentPlayCtxChangeCallbacks = append(a.currentPlayCtxChangeCallbacks, f)
 }
 
