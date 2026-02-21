@@ -108,8 +108,6 @@ type JobManagerFace interface {
 	RunJob(ctx context.Context, jobType types.JobType) error
 }
 
-kolla pa en client o authclient. Chad
-
 type ClientSync struct {
 	*syncer.Syncer
 	authclient.AuthClient
