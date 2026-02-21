@@ -3,23 +3,17 @@ package mediamanager
 import (
 	"context"
 
-	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 
 func (m MediaManager) AddPlaylist(ctx context.Context, p types.Playlist, userID uuid.UUID) error {
-	user, err := auth.UserFromContext(ctx)
-	if err != nil {
-		return m.berr.Unauthenticated(err)
-	}
-
 	if p.Name == "" {
 		return m.berr.ParamMissing(nil, "name", types.EntityPlaylist.P(), types.ActionCreate.P())
 	}
 
-	p.Owner = user.ID
+	p.Owner = userID
 
 	if _, err := m.db.AddPlaylist(ctx, p, userID); err != nil {
 		return m.berr.DatabaseError(err, types.EntityPlaylist, nil)
@@ -72,13 +66,8 @@ func (m MediaManager) DeletePlaylist(ctx context.Context, playlistID, userID uui
 	return nil
 }
 
-func (m MediaManager) GetPlaylist(ctx context.Context, id uuid.UUID) (types.Playlist, error) {
-	user, err := auth.UserFromContext(ctx)
-	if err != nil {
-		return types.Playlist{}, m.berr.Unauthenticated(err)
-	}
-
-	plist, err := m.db.GetPlaylist(ctx, id, user.ID)
+func (m MediaManager) GetPlaylist(ctx context.Context, id, userID uuid.UUID) (types.Playlist, error) {
+	plist, err := m.db.GetPlaylist(ctx, id, userID)
 	if err != nil {
 		return types.Playlist{}, m.berr.DatabaseError(err, types.EntityPlaylist, &id)
 	}
@@ -86,13 +75,8 @@ func (m MediaManager) GetPlaylist(ctx context.Context, id uuid.UUID) (types.Play
 	return plist, nil
 }
 
-func (m MediaManager) ListPlaylists(ctx context.Context, includePublic bool, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Playlist, error) {
-	user, err := auth.UserFromContext(ctx)
-	if err != nil {
-		return nil, m.berr.Unauthenticated(err)
-	}
-
-	playlists, err := m.db.ListPlaylists(ctx, user.ID, includePublic, sortBy, sortOrder)
+func (m MediaManager) ListPlaylists(ctx context.Context, userID uuid.UUID, includePublic bool, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Playlist, error) {
+	playlists, err := m.db.ListPlaylists(ctx, userID, includePublic, sortBy, sortOrder)
 	if err != nil {
 		return nil, m.berr.DatabaseError(err, types.EntityPlaylist, nil)
 	}

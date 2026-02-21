@@ -21,6 +21,13 @@ var ErrItemAccessDenied = BragErr{
 	Status: http.StatusForbidden,
 }
 
+var ErrNoUserInContext = BragErr{
+	Code:    "NOUSERINCONTEXT",
+	Title:   "No user in context",
+	Message: "There is no user logged in",
+	Status:  http.StatusForbidden,
+}
+
 func (b BragErrFactory) Unauthenticated(err error) *BragErr {
 	e := ErrUnauthenticated
 	e.Service = b.service
@@ -33,5 +40,12 @@ func (b BragErrFactory) ItemAccessDenied(err error, entityType types.EntityType,
 	e.Service = b.service
 	e.Err = err
 	e.Message = fmt.Sprintf("User does not have access to the %s %s", entityType, id)
+	return &e
+}
+
+func (b BragErrFactory) NoUserInContext(err error) *BragErr {
+	e := ErrNoUserInContext
+	e.Service = b.service
+	e.Err = err
 	return &e
 }

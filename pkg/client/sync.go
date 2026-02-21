@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,6 +18,10 @@ import (
 )
 
 func (c *ClientSync) RegisterMsgCallback(f func(types.ClientMessage)) {
+}
+
+func (c *ClientSync) setUser(user *types.UserDetails) {
+	c.user = user
 }
 
 func (c *ClientSync) updatePlayCount(trackID uuid.UUID) {
@@ -90,8 +95,35 @@ func (c *ClientSync) LoginLocalUser(ctx context.Context, userID uuid.UUID) error
 	return nil
 }
 
-func (c ClientSync) GetArtistTopTracks(ctx context.Context, artistID, userID uuid.UUID) ([]types.TrackDetailed, error) {
-	tracks, err := c.ListTracksDetailedByArtist(ctx, artistID, userID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
+func (c *ClientSync) LoginCachedServerUser(ctx context.Context, password string, longLivedToken bool) error {
+	if c.user == nil {
+		return c.berr.NoUserInContext(errors.New("could not login cached user"))
+	}
+
+	return c.AuthClient.LoginCachedServerUser(ctx, *c.user, password, longLivedToken)
+}
+
+func (c *ClientSync) LogoutLocalUser(ctx context.Context) {
+	c.AuthClient.UserCallback(nil)
+}
+
+func (c *ClientSync) LogoutServerUser(ctx context.Context) error {
+	if c.user == nil {
+		return c.berr.NoUserInContext(errors.New("could not logout server user"))
+	}
+	return c.AuthClient.LogoutServerUser(ctx, c.user.ID)
+}
+
+func (c ClientSync) GetUser() *types.UserDetails {
+	return c.user
+}
+
+func (c ClientSync) GetArtistTopTracks(ctx context.Context, artistID uuid.UUID) ([]types.TrackDetailed, error) {
+	if c.user == nil {
+		return nil, c.berr.NoUserInContext(errors.New("could not get top tracks"))
+	}
+
+	tracks, err := c.ListTracksDetailedByArtist(ctx, artistID, c.user.ID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +142,13 @@ func (c ClientSync) UploadArtistImage(ctx context.Context, artistID uuid.UUID, i
 		return err
 	}
 	return c.Sync(ctx)
+}
+
+func (c ClientSync) ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.UUID) ([]types.TrackDetailed, error) {
+	if c.user == nil {
+		return nil, c.berr.NoUserInContext(errors.New("could not list tracks"))
+	}
+	return c.MediaManager.ListTracksDetailedByAlbum(ctx, albumID, c.user.ID)
 }
 
 func (c ClientSync) UpdateAlbum(ctx context.Context, id uuid.UUID, album types.AlbumUpdate) error {
@@ -154,6 +193,20 @@ func (c ClientSync) AddPlaylistTrack(ctx context.Context, playlistID, albumID, t
 	return c.Sync(ctx)
 }
 
+func (c ClientSync) CountPlaylists(ctx context.Context) (int, error) {
+	if c.user == nil {
+		return 0, c.berr.NoUserInContext(errors.New("could count playlists"))
+	}
+	return c.MediaManager.CountPlaylists(ctx, c.user.ID)
+}
+
+func (c ClientSync) CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error) {
+	if c.user == nil {
+		return 0, c.berr.NoUserInContext(errors.New("could count playlist tracks"))
+	}
+	return c.MediaManager.CountPlaylistTracks(ctx, playlistID, c.user.ID)
+}
+
 func (c ClientSync) DeletePlaylist(ctx context.Context, id uuid.UUID) error {
 	if err := c.sc.DeletePlaylist(ctx, id); err != nil {
 		return err
@@ -166,6 +219,27 @@ func (c ClientSync) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error
 		return err
 	}
 	return c.Sync(ctx)
+}
+
+func (c ClientSync) GetPlaylist(ctx context.Context, id uuid.UUID) (types.Playlist, error) {
+	if c.user == nil {
+		return types.Playlist{}, c.berr.NoUserInContext(errors.New("could get playlist"))
+	}
+	return c.MediaManager.GetPlaylist(ctx, id, c.user.ID)
+}
+
+func (c ClientSync) ListPlaylists(ctx context.Context, includePublic bool, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Playlist, error) {
+	if c.user == nil {
+		return nil, c.berr.NoUserInContext(errors.New("could list playlists"))
+	}
+	return c.MediaManager.ListPlaylists(ctx, c.user.ID, includePublic, sortBy, sortOrder)
+}
+
+func (c ClientSync) ListPlaylistTracks(ctx context.Context, playlistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.TrackDetailed, error) {
+	if c.user == nil {
+		return nil, c.berr.NoUserInContext(errors.New("could list playlist tracks"))
+	}
+	return c.MediaManager.ListPlaylistTracks(ctx, playlistID, c.user.ID, sortBy, sortOrder)
 }
 
 func (c ClientSync) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist) error {
@@ -199,8 +273,12 @@ func (c ClientSync) ImportAlbum(ctx context.Context, filename string, musicbrain
 	return c.sc.ImportAlbum(ctx, r, filename, musicbrainzID)
 }
 
-func (c *ClientSync) StartPlayerWithAlbum(ctx context.Context, userID, albumID uuid.UUID, trackNumber int) error {
-	tracks, err := c.MediaManager.ListTracksDetailedByAlbum(ctx, albumID, userID)
+func (c *ClientSync) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error {
+	if c.user == nil {
+		return c.berr.NoUserInContext(errors.New("could not start player"))
+	}
+
+	tracks, err := c.MediaManager.ListTracksDetailedByAlbum(ctx, albumID, c.user.ID)
 	if err != nil {
 		return err
 	}
@@ -225,8 +303,12 @@ func (c *ClientSync) StartPlayerWithAlbum(ctx context.Context, userID, albumID u
 	return nil
 }
 
-func (c *ClientSync) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) error {
-	tracks, err := c.MediaManager.ListPlaylistTracks(ctx, playlistID, userID, sortBy, sortOrder)
+func (c *ClientSync) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, sortBy database.SortBy, sortOrder database.SortOrder) error {
+	if c.user == nil {
+		return c.berr.NoUserInContext(errors.New("could not start player"))
+	}
+
+	tracks, err := c.MediaManager.ListPlaylistTracks(ctx, playlistID, c.user.ID, sortBy, sortOrder)
 	if err != nil {
 		return err
 	}
@@ -251,8 +333,12 @@ func (c *ClientSync) StartPlayerWithPlaylist(ctx context.Context, playlistID uui
 	return nil
 }
 
-func (c *ClientSync) AddTrackToQueue(ctx context.Context, trackID, albumID, userID uuid.UUID) error {
-	track, err := c.MediaManager.GetTrackDetailed(ctx, trackID, albumID, userID)
+func (c *ClientSync) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
+	if c.user == nil {
+		return c.berr.NoUserInContext(errors.New("could not start player"))
+	}
+
+	track, err := c.MediaManager.GetTrackDetailed(ctx, trackID, albumID, c.user.ID)
 	if err != nil {
 		return err
 	}

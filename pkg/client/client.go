@@ -7,6 +7,7 @@ import (
 	"github.com/bragemusic/core/pkg/audiointerface"
 	"github.com/bragemusic/core/pkg/audioplayer"
 	"github.com/bragemusic/core/pkg/authclient"
+	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
@@ -29,20 +30,22 @@ type SyncFace interface {
 type AuthFace interface {
 	RegisterUserCallback(f func(*types.UserDetails))
 	LoginLocalUser(ctx context.Context, userID uuid.UUID) error
+	LogoutLocalUser(ctx context.Context)
+	LoginCachedServerUser(ctx context.Context, password string, longLivedToken bool) error
+	GetUser() *types.UserDetails
 
 	RegisterServerAvailabilityCallback(f func(server.ServerApiInfo))
 	GetCachedUsers(ctx context.Context) (users []types.UserDetails, err error)
 	Login(ctx context.Context, username, password string, longLivedToken bool) (types.UserDetails, error)
-	LoginCachedServerUser(ctx context.Context, user types.UserDetails, password string, longLivedToken bool) error
-	LogoutServerUser(ctx context.Context, userID uuid.UUID) error
+	LogoutServerUser(ctx context.Context) error
 	ServerStatus(ctx context.Context) (server.ServerApiInfo, error)
 	//
 }
 
 type AudioPlayerFace interface {
-	StartPlayerWithAlbum(ctx context.Context, userID, albumID uuid.UUID, trackNumber int) error
-	StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) error
-	AddTrackToQueue(ctx context.Context, trackID, albumID, userID uuid.UUID) error
+	StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error
+	StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, sortBy database.SortBy, sortOrder database.SortOrder) error
+	AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error
 
 	RegisterPlayContextChangeCallback(f func(audioplayer.PlayContext))
 	RegisterPlayPauseCallback(f func(isPlaying bool))
@@ -60,7 +63,7 @@ type AudioPlayerFace interface {
 type MetadataFace interface {
 	CountArtists(ctx context.Context) (int, error)
 	GetArtist(ctx context.Context, artistID uuid.UUID) (types.Artist, error)
-	GetArtistTopTracks(ctx context.Context, artistID, userID uuid.UUID) ([]types.TrackDetailed, error) // CREATE FUNC
+	GetArtistTopTracks(ctx context.Context, artistID uuid.UUID) ([]types.TrackDetailed, error)
 	ListArtists(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.ArtistDetailed, error)
 	UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData types.Artist) error          // sc
 	UploadArtistImage(ctx context.Context, artistID uuid.UUID, img serverclient.FileUpload) error // sc
@@ -73,19 +76,19 @@ type MetadataFace interface {
 	UploadAlbumImage(ctx context.Context, id uuid.UUID, img serverclient.FileUpload) error // sc
 
 	CountTracks(ctx context.Context) (int, error)
-	ListTracksDetailedByAlbum(ctx context.Context, albumID, userID uuid.UUID) ([]types.TrackDetailed, error)
+	ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.UUID) ([]types.TrackDetailed, error)
 	RateTrack(ctx context.Context, trackID uuid.UUID, value int) error            // sc
 	UpdateTrack(ctx context.Context, id uuid.UUID, track types.TrackUpdate) error // sc
 
 	AddPlaylist(ctx context.Context, playlist types.Playlist) error                     // sc
 	AddPlaylistTrack(ctx context.Context, playlistID, albumID, trackID uuid.UUID) error // sc
-	CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error)
-	CountPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID) (int, error)
+	CountPlaylists(ctx context.Context) (int, error)
+	CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error)
 	DeletePlaylist(ctx context.Context, id uuid.UUID) error      // sc
 	DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error // sc
 	GetPlaylist(ctx context.Context, id uuid.UUID) (types.Playlist, error)
 	ListPlaylists(ctx context.Context, includePublic bool, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Playlist, error)
-	ListPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.TrackDetailed, error)
+	ListPlaylistTracks(ctx context.Context, playlistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.TrackDetailed, error)
 	UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist) error              // sc
 	UploadPlaylistImage(ctx context.Context, id uuid.UUID, img serverclient.FileUpload) error // sc
 
@@ -105,6 +108,8 @@ type JobManagerFace interface {
 	RunJob(ctx context.Context, jobType types.JobType) error
 }
 
+kolla pa en client o authclient. Chad
+
 type ClientSync struct {
 	*syncer.Syncer
 	authclient.AuthClient
@@ -116,6 +121,7 @@ type ClientSync struct {
 
 	config  Config
 	log     *slog.Logger
+	berr    bragerr.BragErrFactory
 	dbClose func() error
 
 	user *types.UserDetails
@@ -152,10 +158,12 @@ func NewSyncClient(ctx context.Context, config Config, slogHandler slog.Handler)
 		MediaManager: &mm,
 		JobManager:   &jm,
 		sc:           &sc,
+		berr:         bragerr.NewFactory("client"),
 	}
 
 	ap.RegisterPlayCountCallback(c.updatePlayCount)
 	c.RegisterUserCallback(sy.SetUser)
+	c.RegisterUserCallback(c.setUser)
 	c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
 
 	jm.RegisterJob(ctx, jobmanager.JobDefinition{
