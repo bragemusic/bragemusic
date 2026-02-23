@@ -59,7 +59,7 @@ func (m MediaManager) AddPlaylistImage(ctx context.Context, filename string, id,
 		return m.berr.DependencyMissing(nil, "imagemagick")
 	}
 
-	plist, err := m.GetPlaylist(ctx, id)
+	plist, err := m.GetPlaylist(ctx, id, userID)
 	if err != nil {
 		return err
 	}

@@ -32,21 +32,25 @@ func (s *Syncer) RegisterSyncInProgressCallback(f func(bool)) {
 	s.syncInProgressCallbacks = append(s.syncInProgressCallbacks, f)
 }
 
+func (s Syncer) SupportsSync() bool {
+	return true
+}
+
 func (s *Syncer) SetUser(user *types.UserDetails) {
 	s.user = user
 }
 
-func (s *Syncer) Daemon(ctx context.Context) error {
+func (s *Syncer) Sync(ctx context.Context) error {
 	if s.user == nil {
 		return errors.New("no user in context")
 	}
 
-	err := s.Sync(ctx, s.user.ID)
+	err := s.sync(ctx, s.user.ID)
 	if err != nil {
 		return err
 	}
 
-	err = s.SyncItems(ctx)
+	err = s.syncItems(ctx)
 	if err != nil {
 		return err
 	}
@@ -54,7 +58,7 @@ func (s *Syncer) Daemon(ctx context.Context) error {
 	return nil
 }
 
-func (s *Syncer) Sync(ctx context.Context, userID uuid.UUID) error {
+func (s *Syncer) sync(ctx context.Context, userID uuid.UUID) error {
 	// if !s.serverAvailable {
 	// 	return errors.New("server is not available")
 	// }
@@ -465,7 +469,7 @@ func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, userI
 	return nil
 }
 
-func (s *Syncer) SyncItems(ctx context.Context) error {
+func (s *Syncer) syncItems(ctx context.Context) error {
 	// if !s.serverAvailable {
 	// 	return errors.New("server is not available")
 	// }

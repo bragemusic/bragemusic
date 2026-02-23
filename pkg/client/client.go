@@ -1,26 +1,28 @@
+// Package client provides the main client-side API for interacting with
+// the system.
+//
+// It exposes a unified interface that combines authentication, synchronization,
+// audio playback control, metadata access, and background job management.
+// The client package acts as the primary entry point for applications that
+// need to communicate with and operate against the server and local storage.
 package client
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
-	"os"
-	"path/filepath"
 
 	"github.com/bragemusic/core/pkg/audiointerface"
 	"github.com/bragemusic/core/pkg/audioplayer"
 	"github.com/bragemusic/core/pkg/authclient"
+	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/jobmanager"
-	"github.com/bragemusic/core/pkg/jobs"
 	"github.com/bragemusic/core/pkg/mediamanager"
-	"github.com/bragemusic/core/pkg/migrations"
+	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/types"
-	"github.com/bragemusic/core/pkg/utils"
 	"github.com/gofrs/uuid/v5"
-	"github.com/jmoiron/sqlx"
 )
 
 type Config struct {
@@ -31,391 +33,257 @@ type Config struct {
 	ServerBaseURL string
 }
 
-type Client struct {
+// SyncFace defines functionality for synchronizing server data
+// with the local client storage.
+type SyncFace interface {
+	// RegisterSyncInProgressCallback registers a callback that is invoked
+	// whenever the sync state changes. The callback receives true when a
+	// sync starts and false when it completes.
+	RegisterSyncInProgressCallback(f func(bool))
+
+	// SupportsSync reports whether the current client configuration
+	// supports synchronization with a remote server.
+	SupportsSync() bool
+
+	// Sync synchronizes server data to the local client.
+	// It blocks until the operation completes or the context is canceled.
+	Sync(ctx context.Context) error
+}
+
+// AuthFace defines authentication and user session related functionality,
+// including local login, server login, and server availability tracking.
+type AuthFace interface {
+	// RegisterUserCallback registers a callback that is invoked whenever
+	// the active user changes. The callback receives nil if no user is logged in.
+	RegisterUserCallback(f func(*types.UserDetails))
+
+	// LoginLocalUser logs in a locally cached user by ID without contacting the server.
+	LoginLocalUser(ctx context.Context, userID uuid.UUID) error
+
+	// LogoutLocalUser logs out the currently active local user.
+	LogoutLocalUser(ctx context.Context)
+
+	// LoginCachedServerUser logs in a previously authenticated server user
+	// using a cached identity and password. If longLivedToken is true,
+	// a persistent authentication token is requested.
+	LoginCachedServerUser(ctx context.Context, password string, longLivedToken bool) error
+
+	// GetUser returns the currently authenticated user, or nil if no user is logged in.
+	GetUser() *types.UserDetails
+
+	// RegisterServerAvailabilityCallback registers a callback that is invoked
+	// whenever the server availability or API information changes.
+	RegisterServerAvailabilityCallback(f func(server.ServerApiInfo))
+
+	// GetCachedUsers returns users previously cached on this client.
+	GetCachedUsers(ctx context.Context) (users []types.UserDetails, err error)
+
+	// Login authenticates a user against the server using username and password.
+	// If longLivedToken is true, a persistent authentication token is requested.
+	Login(ctx context.Context, username, password string, longLivedToken bool) (types.UserDetails, error)
+
+	// LogoutServerUser logs out the currently authenticated server user
+	// and invalidates any associated server session.
+	LogoutServerUser(ctx context.Context) error
+
+	// ServerStatus retrieves the current server API information and availability state.
+	ServerStatus(ctx context.Context) (server.ServerApiInfo, error)
+}
+
+// AudioPlayerFace defines audio playback control and playback state
+// observation functionality.
+type AudioPlayerFace interface {
+	// StartPlayerWithAlbum starts playback of an album beginning at the given track number.
+	StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error
+
+	// StartPlayerWithPlaylist starts playback of a playlist beginning at the given track number.
+	// Tracks are ordered according to sortBy and sortOrder.
+	StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, sortBy database.SortBy, sortOrder database.SortOrder) error
+
+	// AddTrackToQueue adds a track to the current playback queue.
+	AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error
+
+	// RegisterPlayContextChangeCallback registers a callback that is invoked
+	// whenever the play context (album, playlist, queue, etc.) changes.
+	RegisterPlayContextChangeCallback(f func(audioplayer.PlayContext))
+
+	// RegisterPlayPauseCallback registers a callback that is invoked whenever
+	// playback transitions between playing and paused states.
+	RegisterPlayPauseCallback(f func(isPlaying bool))
+
+	// RegisterProgressCallback registers a callback that is invoked periodically
+	// with the current playback position in milliseconds.
+	RegisterProgressCallback(f func(ms int64))
+
+	// NextTrack skips to the next track in the current play context.
+	NextTrack(ctx context.Context) (err error)
+
+	// PlayContext returns the current playback context.
+	PlayContext() audioplayer.PlayContext
+
+	// PlayPause toggles playback between playing and paused states.
+	PlayPause(ctx context.Context)
+
+	// PreviousTrack skips to the previous track in the current play context.
+	PreviousTrack(ctx context.Context) (err error)
+
+	// SetRepeat sets the repeat mode for playback.
+	SetRepeat(ctx context.Context, r audioplayer.RepeatType)
+
+	// SetShuffle enables or disables shuffle mode for playback.
+	SetShuffle(ctx context.Context, s bool)
+}
+
+// MetadataFace defines access to and modification of music library metadata,
+// including artists, albums, tracks, playlists, users, and search functionality.
+type MetadataFace interface {
+	// CountArtists returns the total number of artists.
+	CountArtists(ctx context.Context) (int, error)
+
+	// GetArtist returns metadata for a specific artist.
+	GetArtist(ctx context.Context, artistID uuid.UUID) (types.Artist, error)
+
+	// GetArtistTopTracks returns the top tracks for a specific artist.
+	GetArtistTopTracks(ctx context.Context, artistID uuid.UUID) ([]types.TrackDetailed, error)
+
+	// ListArtists returns artists ordered by the provided sorting options.
+	ListArtists(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.ArtistDetailed, error)
+
+	// UpdateArtist updates metadata for an artist.
+	UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData types.Artist) error
+
+	// UploadArtistImage uploads or replaces the image associated with an artist.
+	UploadArtistImage(ctx context.Context, artistID uuid.UUID, img serverclient.FileUpload) error
+
+	// CountAlbums returns the total number of albums.
+	CountAlbums(ctx context.Context) (int, error)
+
+	// GetAlbumDetailed returns detailed metadata for a specific album.
+	GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (types.AlbumDetailed, error)
+
+	// ListAlbumsByArtist returns albums for a given artist ordered by the provided sorting options.
+	ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error)
+
+	// ListAlbums returns albums ordered by the provided sorting options.
+	ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error)
+
+	// UpdateAlbum updates metadata for an album.
+	UpdateAlbum(ctx context.Context, id uuid.UUID, album types.AlbumUpdate) error
+
+	// UploadAlbumImage uploads or replaces the image associated with an album.
+	UploadAlbumImage(ctx context.Context, id uuid.UUID, img serverclient.FileUpload) error
+
+	// CountTracks returns the total number of tracks.
+	CountTracks(ctx context.Context) (int, error)
+
+	// ListTracksDetailedByAlbum returns detailed track metadata for a given album.
+	ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.UUID) ([]types.TrackDetailed, error)
+
+	// RateTrack sets the rating value for a specific track.
+	RateTrack(ctx context.Context, trackID uuid.UUID, value int) error
+
+	// UpdateTrack updates metadata for a track.
+	UpdateTrack(ctx context.Context, id uuid.UUID, track types.TrackUpdate) error
+
+	// AddPlaylist creates a new playlist.
+	AddPlaylist(ctx context.Context, playlist types.Playlist) error
+
+	// AddPlaylistTrack adds a track to a playlist.
+	AddPlaylistTrack(ctx context.Context, playlistID, albumID, trackID uuid.UUID) error
+
+	// CountPlaylists returns the total number of playlists.
+	CountPlaylists(ctx context.Context) (int, error)
+
+	// CountPlaylistTracks returns the number of tracks in a playlist.
+	CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error)
+
+	// DeletePlaylist removes a playlist.
+	DeletePlaylist(ctx context.Context, id uuid.UUID) error
+
+	// DeletePlaylistTrack removes a track from a playlist.
+	DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error
+
+	// GetPlaylist returns metadata for a specific playlist.
+	GetPlaylist(ctx context.Context, id uuid.UUID) (types.Playlist, error)
+
+	// ListPlaylists returns playlists, optionally including public playlists,
+	// ordered by the provided sorting options.
+	ListPlaylists(ctx context.Context, includePublic bool, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Playlist, error)
+
+	// ListPlaylistTracks returns tracks in a playlist ordered by the provided sorting options.
+	ListPlaylistTracks(ctx context.Context, playlistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.TrackDetailed, error)
+
+	// UpdatePlaylist updates metadata for a playlist.
+	UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist) error
+
+	// UploadPlaylistImage uploads or replaces the image associated with a playlist.
+	UploadPlaylistImage(ctx context.Context, id uuid.UUID, img serverclient.FileUpload) error
+
+	// ListEntityEvents returns metadata-related entity events.
+	ListEntityEvents(ctx context.Context) ([]types.EntityEvent, error)
+
+	// ListUsers returns all users known to the system.
+	ListUsers(ctx context.Context) ([]types.User, error)
+
+	// SearchFull performs a full-text search across supported entities
+	// and returns matching search items.
+	SearchFull(ctx context.Context, searchTerm string) (si []types.SearchItem, err error)
+
+	// ImportAlbum imports an album from a file, optionally using a MusicBrainz ID
+	// to enrich metadata.
+	ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error
+
+	// AddPlayCount increments the play count for a track for a specific user.
+	AddPlayCount(ctx context.Context, trackID, userID uuid.UUID) error
+}
+
+// JobManagerFace defines background job execution and scheduling functionality.
+type JobManagerFace interface {
+	// StartScheduler starts the background job scheduler.
+	// It typically runs until the context is canceled.
+	StartScheduler(ctx context.Context)
+
+	// RunJob executes a specific job type immediately.
+	RunJob(ctx context.Context, jobType types.JobType) error
+}
+
+// ClientFace defines the high-level client interface that aggregates
+// synchronization, authentication, playback, metadata, and job management
+// functionality.
+//
+// It represents the main entry point for interacting with the system from
+// a client perspective.
+type ClientFace interface {
+	// RegisterMsgCallback registers a callback that is invoked whenever
+	// a client-level message is emitted. Messages may represent events,
+	// warnings, or informational notifications originating from the client.
+	RegisterMsgCallback(f func(types.ClientMessage))
+
+	SyncFace
+	AuthFace
+	AudioPlayerFace
+	MetadataFace
+	JobManagerFace
+}
+
+type ClientSync struct {
+	*syncer.Syncer
 	authclient.AuthClient
 	*audioplayer.AudioPlayer
+	*mediamanager.MediaManager
 	*jobmanager.JobManager
-	sc      *serverclient.ServerClient
-	mm      *mediamanager.MediaManager
-	sy      *syncer.Syncer
+
+	sc *serverclient.ServerClient
+
 	config  Config
 	log     *slog.Logger
+	berr    bragerr.BragErrFactory
 	dbClose func() error
-	// FIXME: This should not be here later. Just now for the search job. when the jobs is its own service it should hold the db
-	db database.DatabaseFace
 
-	// tracks []types.TrackEnhanced
+	user *types.UserDetails
 }
 
-func (c *Client) RegisterSyncInProgressCallback(f func(bool)) {
-	c.sy.RegisterSyncInProgressCallback(f)
-}
-
-func (c *Client) RegisterUserCallback(f func(*types.UserDetails)) {
-	c.AuthClient.RegisterUserCallback(f)
-}
-
-func (c *Client) updateServerStatusCallback(ctx context.Context) {
-	c.ServerStatus(ctx)
-}
-
-func (c Client) Sync(ctx context.Context, userID uuid.UUID) error {
-	if err := c.sy.Sync(ctx, userID); err != nil {
-		return err
-	}
-
-	if err := c.sy.SyncItems(ctx); err != nil {
-		return err
-	}
-
-	if err := jobs.UpdateSearchItems(ctx, c.db); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *Client) Close() error {
-	return c.dbClose()
-}
-
-func (c *Client) StartPlayerWithAlbum(ctx context.Context, userID, albumID uuid.UUID, trackNumber int) error {
-	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumID, userID)
-	if err != nil {
-		return err
-	}
-
-	pCtx := audioplayer.PlayContext{
-		Type:            audioplayer.PlayContextAlbum,
-		RefID:           albumID,
-		Tracks:          tracks,
-		Queue:           []types.TrackDetailed{},
-		CurrentTrackIdx: trackNumber,
-		Shuffle:         c.PlayContext().Shuffle,
-		Repeat:          c.PlayContext().Repeat,
-	}
-
-	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
-	if err != nil {
-		return err
-	}
-
-	c.log.InfoContext(ctx, "started player", "albumID", albumID.String(), "trackNumber", trackNumber)
-
-	return nil
-}
-
-func (c *Client) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) error {
-	tracks, err := c.mm.ListPlaylistTracks(ctx, playlistID, userID, sortBy, sortOrder)
-	if err != nil {
-		return err
-	}
-
-	pCtx := audioplayer.PlayContext{
-		Type:            audioplayer.PlayContextPlaylist,
-		RefID:           playlistID,
-		Tracks:          tracks,
-		Queue:           []types.TrackDetailed{},
-		CurrentTrackIdx: trackNumber,
-		Shuffle:         c.PlayContext().Shuffle,
-		Repeat:          c.PlayContext().Repeat,
-	}
-
-	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
-	if err != nil {
-		return err
-	}
-
-	c.log.InfoContext(ctx, "started player", "playlistID", playlistID.String(), "trackNumber", trackNumber)
-
-	return nil
-}
-
-func (c *Client) AddTrackToQueue(ctx context.Context, trackID, albumID, userID uuid.UUID) error {
-	track, err := c.mm.GetTrackDetailed(ctx, trackID, albumID, userID)
-	if err != nil {
-		return err
-	}
-
-	c.AudioPlayer.AddTrackToQueue(ctx, track)
-	return nil
-}
-
-func (c Client) ListArtists(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.ArtistDetailed, error) {
-	artists, err := c.mm.ListArtists(ctx, sortBy, sortOrder)
-	if err != nil {
-		return nil, err
-	}
-
-	return artists, nil
-}
-
-func (c Client) GetArtist(ctx context.Context, artistID uuid.UUID) (types.Artist, error) {
-	artist, err := c.mm.GetArtist(ctx, artistID)
-	if err != nil {
-		return types.Artist{}, err
-	}
-	return artist, nil
-}
-
-func (c Client) UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData types.Artist) error {
-	err := c.sc.UpdateArtist(ctx, artistID.String(), artistData)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c Client) ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error) {
-	albums, err := c.mm.ListAlbumsByArtist(ctx, artistID, sortBy, sortOrder)
-	if err != nil {
-		return nil, err
-	}
-	return albums, nil
-}
-
-func (c Client) ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error) {
-	albums, err := c.mm.ListAlbums(ctx, sortBy, sortOrder)
-	if err != nil {
-		return nil, err
-	}
-
-	return albums, nil
-}
-
-func (c Client) CountArtists(ctx context.Context) (int, error) {
-	return c.mm.CountArtists(ctx)
-}
-
-func (c Client) GetAlbum(ctx context.Context, albumID string) (types.AlbumDetailed, error) {
-	uid, err := uuid.FromString(albumID)
-	if err != nil {
-		return types.AlbumDetailed{}, err
-	}
-
-	album, err := c.mm.GetAlbumDetailed(ctx, uid)
-	if err != nil {
-		return types.AlbumDetailed{}, err
-	}
-
-	return album, nil
-}
-
-func (c Client) ListTracksByAlbum(ctx context.Context, albumID string, userID uuid.UUID) ([]types.TrackDetailed, error) {
-	albumUID, err := uuid.FromString(albumID)
-	if err != nil {
-		return nil, err
-	}
-
-	tracks, err := c.mm.ListTracksDetailedByAlbum(ctx, albumUID, userID)
-	if err != nil {
-		return nil, err
-	}
-	return tracks, nil
-}
-
-func (c Client) UpdateAlbum(ctx context.Context, id uuid.UUID, album types.AlbumUpdate) error {
-	err := c.sc.UpdateAlbum(ctx, id.String(), album)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c Client) CountAlbums(ctx context.Context) (int, error) {
-	return c.mm.CountAlbums(ctx)
-}
-
-func (c Client) UploadAlbumImage(ctx context.Context, id string, img serverclient.FileUpload) error {
-	return c.sc.UploadAlbumImage(ctx, id, img)
-}
-
-func (c Client) UpdateTrack(ctx context.Context, id uuid.UUID, track types.TrackUpdate) error {
-	err := c.sc.UpdateTrack(ctx, id.String(), track)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s Client) RateTrack(ctx context.Context, trackID uuid.UUID, value int) error {
-	return s.sc.RateTrack(ctx, trackID, value)
-}
-
-func (c Client) CountTracks(ctx context.Context) (int, error) {
-	return c.mm.CountTracks(ctx)
-}
-
-func (c Client) UploadArtistImage(ctx context.Context, artistID string, img serverclient.FileUpload) error {
-	return c.sc.UploadArtistImage(ctx, artistID, img)
-}
-
-func (c Client) GetArtistTopTracks(ctx context.Context, artistID, userID uuid.UUID) ([]types.TrackDetailed, error) {
-	tracks, err := c.mm.ListTracksDetailedByArtist(ctx, artistID, userID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
-	if err != nil {
-		return nil, err
-	}
-	return tracks, nil
-}
-
-func (c Client) AddPlaylist(ctx context.Context, playlist types.Playlist) error {
-	err := c.sc.AddPlaylist(ctx, playlist)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c Client) AddPlaylistTrack(ctx context.Context, playlistID, albumID, trackID uuid.UUID) error {
-	return c.sc.AddPlaylistTrack(ctx, playlistID, albumID, trackID)
-}
-
-func (c Client) CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error) {
-	return c.mm.CountPlaylists(ctx, userID)
-}
-
-func (c Client) CountPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID) (int, error) {
-	return c.mm.CountPlaylistTracks(ctx, playlistID, userID)
-}
-
-func (c Client) DeletePlaylist(ctx context.Context, id uuid.UUID) error {
-	return c.sc.DeletePlaylist(ctx, id)
-}
-
-func (c Client) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error {
-	return c.sc.DeletePlaylistTrack(ctx, id)
-}
-
-func (c Client) GetPlaylist(ctx context.Context, id string) (types.Playlist, error) {
-	uID, err := uuid.FromString(id)
-	if err != nil {
-		return types.Playlist{}, err
-	}
-
-	return c.mm.GetPlaylist(ctx, uID)
-}
-
-func (c Client) ListPlaylists(ctx context.Context, includePublic bool, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Playlist, error) {
-	return c.mm.ListPlaylists(ctx, includePublic, sortBy, sortOrder)
-}
-
-func (c Client) ListPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.TrackDetailed, error) {
-	return c.mm.ListPlaylistTracks(ctx, playlistID, userID, sortBy, sortOrder)
-}
-
-func (c Client) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist) error {
-	err := c.sc.UpdatePlaylist(ctx, id, data)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c Client) UploadPlaylistImage(ctx context.Context, id string, img serverclient.FileUpload) error {
-	return c.sc.UploadPlaylistImage(ctx, id, img)
-}
-
-func (c Client) ListEntityEvents(ctx context.Context) ([]types.EntityEvent, error) {
-	return c.sc.ListEntityEvents(ctx)
-}
-
-func (c Client) ListUsers(ctx context.Context) ([]types.User, error) {
-	return c.sc.ListUsers(ctx)
-}
-
-func (c Client) SearchFull(ctx context.Context, searchTerm string) (si []types.SearchItem, err error) {
-	return c.mm.SearchFull(ctx, searchTerm)
-}
-
-func (c Client) ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error {
-	r, err := os.Open(filename)
-	if err != nil {
-		return err
-	}
-	defer r.Close()
-
-	return c.sc.ImportAlbum(ctx, r, filename, musicbrainzID)
-}
-
-// func (c *Client) StartSyncDaemon(ctx context.Context, done func()) {
-// 	c.sy.StartSyncDaemon(ctx, done)
-// }
-
-// func (c *Client) StartStatusDaemon(ctx context.Context, done func()) {
-// 	c.sy.StartStatusDaemon(ctx, done)
-// }
-
-func (c *Client) updatePlayCount(trackID string) {
-	// FIXME: Do we need context here?
-	ctx := context.TODO()
-	// FIXME: Add proper UserID handling
-	userID := "00000000-0000-0000-0000-000000000000"
-	err := c.mm.AddPlayCount(ctx, trackID, userID)
-	if err != nil {
-		c.log.ErrorContext(ctx, "could not add play count", "error", err.Error())
-		return
-	}
-	c.log.DebugContext(ctx, "added play count", "track_id", trackID)
-}
-
-func (c *Client) setDatabase(ctx context.Context, dbPath string) error {
-	if c.dbClose != nil {
-		c.log.InfoContext(ctx, "closing database")
-		if err := c.dbClose(); err != nil {
-			return err
-		}
-	}
-
-	if err := migrations.Migrate(ctx, dbPath, c.log.Handler()); err != nil {
-		return err
-	}
-
-	c.log.InfoContext(ctx, "opening database", "path", dbPath)
-	dbSqlite, err := sqlx.Open("sqlite3", dbPath)
-	if err != nil {
-		return err
-	}
-
-	db, err := database.New(dbSqlite)
-	if err != nil {
-		return err
-	}
-
-	c.mm.SetDatabase(&db)
-	c.sy.SetDatabase(&db)
-
-	c.db = db
-	c.dbClose = dbSqlite.Close
-
-	return nil
-}
-
-func (c *Client) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
-	c.log.InfoContext(ctx, "logging in local user", "id", userID.String())
-
-	user, err := c.AuthClient.LoginLocalUser(ctx, userID, false)
-	if err != nil {
-		return err
-	}
-
-	dbPath := filepath.Join(c.config.ConfigPath, fmt.Sprintf("%s.db", userID.String()))
-
-	if err := c.setDatabase(ctx, dbPath); err != nil {
-		return err
-	}
-
-	c.AuthClient.UserCallback(&user)
-	c.ServerStatus(ctx)
-
-	return nil
-}
-
-// func (c Client) PlayPause(ctx context.Context) {
-// 	c.ap.PlayPause(ctx)
-// }
-
-func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c *Client, err error) {
+func NewSyncClient(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
 	sc := serverclient.New(config.ServerBaseURL, slogHandler)
 	mm := mediamanager.New(slogHandler, nil, nil, config.MusicDirPath, config.ImagePath)
 	sy := syncer.New(&sc, nil, config.MusicDirPath, config.ImagePath, slogHandler)
@@ -437,19 +305,21 @@ func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c 
 
 	jm := jobmanager.New(slogHandler)
 
-	c = &Client{
-		AuthClient:  authclient.New(&sc, slogHandler),
-		sc:          &sc,
-		mm:          &mm,
-		sy:          &sy,
-		JobManager:  &jm,
-		AudioPlayer: ap,
-		config:      config,
-		log:         slog.New(slogHandler).With("service", "client"),
+	c := &ClientSync{
+		config:       config,
+		log:          slog.New(slogHandler).With("service", "client"),
+		Syncer:       &sy,
+		AuthClient:   authclient.New(&sc, slogHandler),
+		AudioPlayer:  ap,
+		MediaManager: &mm,
+		JobManager:   &jm,
+		sc:           &sc,
+		berr:         bragerr.NewFactory("client"),
 	}
 
 	ap.RegisterPlayCountCallback(c.updatePlayCount)
 	c.RegisterUserCallback(sy.SetUser)
+	c.RegisterUserCallback(c.setUser)
 	c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
 
 	jm.RegisterJob(ctx, jobmanager.JobDefinition{
@@ -461,7 +331,7 @@ func NewSyncer(ctx context.Context, config Config, slogHandler slog.Handler) (c 
 	jm.RegisterJob(ctx, jobmanager.JobDefinition{
 		Type:     types.JobSyncerDaemon,
 		CronExpr: "*/10 * * * *",
-		Run:      c.sy.Daemon,
+		Run:      c.Syncer.Sync,
 	})
 
 	return c, nil

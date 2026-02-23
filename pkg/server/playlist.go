@@ -91,7 +91,12 @@ func (s *Server) getPlaylist() http.HandlerFunc {
 			return Response{}, err
 		}
 
-		plist, err := s.mediamgr.GetPlaylist(ctx, plistID)
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+
+		plist, err := s.mediamgr.GetPlaylist(ctx, plistID, user.ID)
 		if err != nil {
 			return Response{}, err
 		}

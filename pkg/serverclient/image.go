@@ -7,10 +7,12 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+
+	"github.com/gofrs/uuid/v5"
 )
 
-func (s ServerClient) UploadArtistImage(ctx context.Context, artistID string, img FileUpload) error {
-	u, err := url.JoinPath(s.baseUrl, "api", "img", "artists", artistID)
+func (s ServerClient) UploadArtistImage(ctx context.Context, artistID uuid.UUID, img FileUpload) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "img", "artists", artistID.String())
 	if err != nil {
 		return err
 	}
@@ -18,8 +20,8 @@ func (s ServerClient) UploadArtistImage(ctx context.Context, artistID string, im
 	return s.uploadImage(ctx, u, img)
 }
 
-func (s ServerClient) UploadAlbumImage(ctx context.Context, id string, img FileUpload) error {
-	u, err := url.JoinPath(s.baseUrl, "api", "img", "albums", id)
+func (s ServerClient) UploadAlbumImage(ctx context.Context, id uuid.UUID, img FileUpload) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "img", "albums", id.String())
 	if err != nil {
 		return err
 	}
@@ -27,8 +29,8 @@ func (s ServerClient) UploadAlbumImage(ctx context.Context, id string, img FileU
 	return s.uploadImage(ctx, u, img)
 }
 
-func (s ServerClient) UploadPlaylistImage(ctx context.Context, id string, img FileUpload) error {
-	u, err := url.JoinPath(s.baseUrl, "api", "img", "playlists", id)
+func (s ServerClient) UploadPlaylistImage(ctx context.Context, id uuid.UUID, img FileUpload) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "img", "playlists", id.String())
 	if err != nil {
 		return err
 	}

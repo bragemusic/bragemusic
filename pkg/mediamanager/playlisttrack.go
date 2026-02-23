@@ -46,7 +46,7 @@ func (m MediaManager) DeletePlaylistTrack(ctx context.Context, id, userID uuid.U
 		return err
 	}
 
-	plist, err := m.GetPlaylist(ctx, pt.PlaylistID)
+	plist, err := m.GetPlaylist(ctx, pt.PlaylistID, userID)
 	if err != nil {
 		return err
 	}
@@ -68,7 +68,7 @@ func (m MediaManager) GetPlaylistTrack(ctx context.Context, id, userID uuid.UUID
 		return types.PlaylistTrack{}, m.berr.DatabaseError(err, types.EntityPlaylistTrack, &id)
 	}
 
-	plist, err := m.GetPlaylist(ctx, pt.PlaylistID)
+	plist, err := m.GetPlaylist(ctx, pt.PlaylistID, userID)
 	if err != nil {
 		return types.PlaylistTrack{}, err
 	}
