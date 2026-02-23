@@ -32,12 +32,21 @@ func (s *Server) listArtists() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
+		cnt, err := s.mediamgr.CountArtists(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+
+		if r.URL.Query().Get("count") == "true" {
+			return Response{Status: http.StatusOK, Payload: ListPayload[types.ArtistDetailed]{Count: cnt}}, nil
+		}
+
 		artists, err := s.mediamgr.ListArtists(ctx, database.SortByName, database.SortAsc)
 		if err != nil {
 			return Response{}, err
 		}
 
-		return Response{Status: http.StatusOK, Payload: artists}, nil
+		return Response{Status: http.StatusOK, Payload: ListPayload[types.ArtistDetailed]{Count: cnt, Items: artists}}, nil
 	})
 }
 

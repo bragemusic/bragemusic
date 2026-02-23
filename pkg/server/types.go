@@ -24,6 +24,11 @@ type Response struct {
 	Status  int `json:"-"`
 }
 
+type ListPayload[T any] struct {
+	Items []T `json:"items,omitempty"`
+	Count int `json:"count"`
+}
+
 type ServerInfo struct {
 	Application string        `json:"application"`
 	ID          uuid.UUID     `json:"id" ts_type:"string"`

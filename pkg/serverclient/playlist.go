@@ -43,6 +43,56 @@ func (s ServerClient) AddPlaylistTrack(ctx context.Context, playlistID, albumID,
 	return nil
 }
 
+func (s ServerClient) CountPlaylists(ctx context.Context) (int, error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "playlists")
+	if err != nil {
+		return 0, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return 0, err
+	}
+
+	q := ur.Query()
+	q.Set("count", "true")
+
+	ur.RawQuery = q.Encode()
+
+	resp := server.ListPayload[types.Playlist]{}
+
+	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
+		return 0, err
+	}
+
+	return resp.Count, nil
+}
+
+func (s ServerClient) CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "playlists", playlistID.String(), "tracks")
+	if err != nil {
+		return 0, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return 0, err
+	}
+
+	q := ur.Query()
+	q.Set("count", "true")
+
+	ur.RawQuery = q.Encode()
+
+	resp := server.ListPayload[types.TrackDetailed]{}
+
+	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
+		return 0, err
+	}
+
+	return resp.Count, nil
+}
+
 func (s ServerClient) DeletePlaylist(ctx context.Context, id uuid.UUID) error {
 	u, err := url.JoinPath(s.baseUrl, "api", "playlists", id.String())
 	if err != nil {

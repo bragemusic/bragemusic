@@ -7,9 +7,35 @@ import (
 	"net/url"
 
 	"github.com/bragemusic/core/pkg/imagemagick"
+	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
+
+func (s ServerClient) CountAlbums(ctx context.Context) (cnt int, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums")
+	if err != nil {
+		return 0, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return 0, err
+	}
+
+	q := ur.Query()
+	q.Set("count", "true")
+
+	ur.RawQuery = q.Encode()
+
+	resp := server.ListPayload[types.AlbumDetailed]{}
+
+	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
+		return 0, err
+	}
+
+	return resp.Count, nil
+}
 
 func (s ServerClient) DownloadAlbumCover(ctx context.Context, albumID uuid.UUID, size imagemagick.ImageSize, w io.Writer) error {
 	u, err := url.JoinPath(s.baseUrl, "api", "img", "albums", albumID.String(), fmt.Sprintf("%d.jpg", size))
@@ -28,6 +54,19 @@ func (s ServerClient) GetAlbum(ctx context.Context, albumID uuid.UUID) (album ty
 
 	if err := s.doGetJson(ctx, u, &album); err != nil {
 		return types.Album{}, err
+	}
+
+	return album, nil
+}
+
+func (s ServerClient) GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (album types.AlbumDetailed, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID.String(), "detailed")
+	if err != nil {
+		return types.AlbumDetailed{}, err
+	}
+
+	if err := s.doGetJson(ctx, u, &album); err != nil {
+		return types.AlbumDetailed{}, err
 	}
 
 	return album, nil

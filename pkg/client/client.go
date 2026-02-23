@@ -283,6 +283,20 @@ type ClientSync struct {
 	user *types.UserDetails
 }
 
+type ClientStreaming struct {
+	authclient.AuthClient
+	*audioplayer.AudioPlayer
+	*jobmanager.JobManager
+
+	*serverclient.ServerClient
+
+	config Config
+	log    *slog.Logger
+	berr   bragerr.BragErrFactory
+
+	user *types.UserDetails
+}
+
 func NewSyncClient(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
 	sc := serverclient.New(config.ServerBaseURL, slogHandler)
 	mm := mediamanager.New(slogHandler, nil, nil, config.MusicDirPath, config.ImagePath)
@@ -332,6 +346,49 @@ func NewSyncClient(ctx context.Context, config Config, slogHandler slog.Handler)
 		Type:     types.JobSyncerDaemon,
 		CronExpr: "*/10 * * * *",
 		Run:      c.Syncer.Sync,
+	})
+
+	return c, nil
+}
+
+func NewStreamingClient(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
+	sc := serverclient.New(config.ServerBaseURL, slogHandler)
+
+	pa, err := audiointerface.NewPortAudio(slogHandler)
+	if err != nil {
+		return nil, err
+	}
+
+	apCfg := audioplayer.Config{
+		PlayerName:   config.PlayerName,
+		MusicDirPath: config.MusicDirPath,
+	}
+
+	ap, err := audioplayer.New(apCfg, pa, slogHandler)
+	if err != nil {
+		return nil, err
+	}
+
+	jm := jobmanager.New(slogHandler)
+
+	c := &ClientStreaming{
+		config:       config,
+		log:          slog.New(slogHandler).With("service", "client"),
+		AuthClient:   authclient.New(&sc, slogHandler),
+		AudioPlayer:  ap,
+		JobManager:   &jm,
+		ServerClient: &sc,
+		berr:         bragerr.NewFactory("client"),
+	}
+
+	// ap.RegisterPlayCountCallback(c.updatePlayCount)
+	// c.RegisterUserCallback(c.setUser)
+	// c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
+
+	jm.RegisterJob(ctx, jobmanager.JobDefinition{
+		Type:     types.JobAuthClientServerStatus,
+		CronExpr: "*/10 * * * * *",
+		Run:      c.AuthClient.UpdateServerStatus,
 	})
 
 	return c, nil
