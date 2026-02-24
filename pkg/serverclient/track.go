@@ -99,6 +99,19 @@ func (s ServerClient) ListTracksByAlbum(ctx context.Context, albumID string) (tr
 	return tracks, nil
 }
 
+func (s ServerClient) ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.UUID) (tracks []types.TrackDetailed, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID.String(), "tracks-detailed")
+	if err != nil {
+		return nil, err
+	}
+
+	if err := s.doGetJson(ctx, u, &tracks); err != nil {
+		return nil, err
+	}
+
+	return tracks, nil
+}
+
 func (s ServerClient) RateTrack(ctx context.Context, trackID uuid.UUID, value int) error {
 	u, err := url.JoinPath(s.baseUrl, "api", "tracks", trackID.String(), "ratings")
 	if err != nil {

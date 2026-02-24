@@ -120,6 +120,11 @@ func main() {
 		CronExpr: scfg.Jobs.MetaSyncer,
 		Run:      ms.Sync,
 	})
+	jmgr.RegisterJob(ctx, jobmanager.JobDefinition{
+		Type:     types.JobMediaManagerUpdateSyncItems,
+		CronExpr: scfg.Jobs.SearchItems,
+		Run:      m.UpdateSearchItems,
+	})
 
 	s := server.New(slogHandler, &m, &a, &imp, &jmgr, scfg)
 

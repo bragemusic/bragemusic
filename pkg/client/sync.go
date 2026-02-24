@@ -17,7 +17,14 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (c *ClientSync) RegisterMsgCallback(f func(types.ClientMessage)) {
+func (c *ClientSync) RegisterEventCallback(f func(types.ClientEvent, any)) {
+	c.eventCallbacks = append(c.eventCallbacks, f)
+}
+
+func (c *ClientSync) emitEvent(event types.ClientEvent, payload any) {
+	for _, f := range c.eventCallbacks {
+		f(event, payload)
+	}
 }
 
 func (c *ClientSync) setUser(user *types.UserDetails) {
@@ -72,6 +79,15 @@ func (c *ClientSync) setDatabase(ctx context.Context, dbPath string) error {
 
 	c.dbClose = dbSqlite.Close
 
+	return nil
+}
+
+func (c *ClientSync) Sync(ctx context.Context) error {
+	if err := c.Syncer.Sync(ctx); err != nil {
+		return err
+	}
+
+	c.emitEvent(types.ClientEventEntitiesUpdated, nil)
 	return nil
 }
 

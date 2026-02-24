@@ -31,8 +31,9 @@ type Wikipedia struct {
 }
 
 type Jobs struct {
-	Importer   string `toml:"importer" desc:"How often the importer will look for new media files. Cron expression. Defaults to '*/3 * * * *'"`
-	MetaSyncer string `toml:"meta_syncer" desc:"How often the meta-syncer will sync the needed metadata. Cron expression. Defaults to '*/3 * * * *'"`
+	Importer    string `toml:"importer" desc:"How often the importer will look for new media files. Cron expression. Defaults to '*/3 * * * *'"`
+	MetaSyncer  string `toml:"meta_syncer" desc:"How often the meta-syncer will sync the needed metadata. Cron expression. Defaults to '*/3 * * * *'"`
+	SearchItems string `toml:"search_items" desc:"How often the search items will be updated. Cron expression. Defaults to '*/3 * * * *'"`
 }
 
 type Config struct {
@@ -53,8 +54,9 @@ var defaultConfig = Config{
 	},
 	Paths: Paths{},
 	Jobs: Jobs{
-		Importer:   "*/3 * * * *",
-		MetaSyncer: "*/3 * * * *",
+		Importer:    "*/3 * * * *",
+		MetaSyncer:  "*/3 * * * *",
+		SearchItems: "*/3 * * * *",
 	},
 	Name: "Brage Music Server",
 	Port: 3000,
@@ -97,6 +99,10 @@ func verify(cfg Config) error {
 
 	if !gronx.IsValid(cfg.Jobs.MetaSyncer) {
 		errs = append(errs, errors.New("Jobs.MetaSyncer is not a valid Cron Expression"))
+	}
+
+	if !gronx.IsValid(cfg.Jobs.SearchItems) {
+		errs = append(errs, errors.New("Jobs.SearchItems is not a valid Cron Expression"))
 	}
 
 	if cfg.Port < 1024 || cfg.Port > 49151 {

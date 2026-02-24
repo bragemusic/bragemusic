@@ -26,12 +26,14 @@ func (s *Server) api() http.Handler {
 	r.Get("/artists/{artistID}", s.getArtist())
 	r.Put("/artists/{artistID}", s.updateArtist())
 	r.Get("/artists/{artistID}/albums", s.listAlbumsByArtist())
+	r.Get("/artists/{artistID}/top-tracks", s.getArtistTopTracks())
 
-	r.Get("/albums/{albumID}", s.listAlbums())
+	r.Get("/albums", s.listAlbums())
 	r.Get("/albums/{albumID}", s.getAlbum())
 	r.Put("/albums/{albumID}", s.updateAlbum())
 	r.Get("/albums/{albumID}/detailed", s.getAlbumDetailed())
 	r.Get("/albums/{albumID}/tracks", s.listAlbumTracks())
+	r.Get("/albums/{albumID}/tracks-detailed", s.listAlbumTracksDetailed())
 	r.Get("/albums/{albumID}/tracks/{trackID}", s.getTrackDetailed())
 	r.Get("/albums/{albumID}/artists/{artistID}/roles/{role}", s.getAlbumArtist())
 	r.Get("/albums/{albumID}/disc/{discNumber}/track/{trackNumber}", s.getAlbumTrack())
@@ -65,6 +67,8 @@ func (s *Server) api() http.Handler {
 	r.Post("/sync/play-history", s.syncPlayHistory())
 
 	r.Get("/ratings/{ratingID}", s.getRating())
+
+	r.Get("/search", s.search())
 
 	r.With(s.authPkg.RoleCheckMiddleware(types.UserRoleAdmin, types.UserRoleImporterWrite)).Post("/import/album", s.importAlbum())
 

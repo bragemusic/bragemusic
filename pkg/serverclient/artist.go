@@ -2,11 +2,11 @@ package serverclient
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
 
+	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/types"
@@ -29,18 +29,13 @@ func (s ServerClient) CountArtists(ctx context.Context) (cnt int, err error) {
 
 	ur.RawQuery = q.Encode()
 
-	resp := server.Response{}
+	resp := server.ListPayload[types.ArtistDetailed]{}
 
 	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
 		return 0, err
 	}
 
-	pl, ok := resp.Payload.(server.ListPayload[types.ArtistDetailed])
-	if !ok {
-		return 0, errors.New("wrong payload response type")
-	}
-
-	return pl.Count, nil
+	return resp.Count, nil
 }
 
 func (s ServerClient) DownloadArtistImage(ctx context.Context, artistID string, size imagemagick.ImageSize, w io.Writer) error {
@@ -65,7 +60,21 @@ func (s ServerClient) GetArtist(ctx context.Context, artistID uuid.UUID) (artist
 	return artist, nil
 }
 
-func (s ServerClient) ListArtists(ctx context.Context) (artists []types.ArtistDetailed, err error) {
+func (s ServerClient) GetArtistTopTracks(ctx context.Context, artistID uuid.UUID) ([]types.TrackDetailed, error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "artists", artistID.String(), "top-tracks")
+	if err != nil {
+		return nil, err
+	}
+
+	resp := server.ListPayload[types.TrackDetailed]{}
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Items, nil
+}
+
+func (s ServerClient) ListArtists(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) (artists []types.ArtistDetailed, err error) {
 	u, err := url.JoinPath(s.baseUrl, "api", "artists")
 	if err != nil {
 		return nil, err

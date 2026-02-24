@@ -254,10 +254,10 @@ type JobManagerFace interface {
 // It represents the main entry point for interacting with the system from
 // a client perspective.
 type ClientFace interface {
-	// RegisterMsgCallback registers a callback that is invoked whenever
-	// a client-level message is emitted. Messages may represent events,
+	// RegisterEventCallback registers a callback that is invoked whenever
+	// a client-level evant is emitted. Messages may represent events,
 	// warnings, or informational notifications originating from the client.
-	RegisterMsgCallback(f func(types.ClientMessage))
+	RegisterEventCallback(f func(types.ClientEvent, any))
 
 	SyncFace
 	AuthFace
@@ -280,13 +280,15 @@ type ClientSync struct {
 	berr    bragerr.BragErrFactory
 	dbClose func() error
 
-	user *types.UserDetails
+	eventCallbacks []func(types.ClientEvent, any)
+	user           *types.UserDetails
 }
 
 type ClientStreaming struct {
 	authclient.AuthClient
 	*audioplayer.AudioPlayer
 	*jobmanager.JobManager
+	*syncer.NoSync
 
 	*serverclient.ServerClient
 
@@ -294,7 +296,8 @@ type ClientStreaming struct {
 	log    *slog.Logger
 	berr   bragerr.BragErrFactory
 
-	user *types.UserDetails
+	eventCallbacks []func(types.ClientEvent, any)
+	user           *types.UserDetails
 }
 
 func NewSyncClient(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {

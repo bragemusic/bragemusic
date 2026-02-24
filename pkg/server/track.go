@@ -137,6 +137,29 @@ func (s *Server) listAlbumTracks() http.HandlerFunc {
 	})
 }
 
+func (s *Server) listAlbumTracksDetailed() http.HandlerFunc {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
+		ctx := r.Context()
+
+		albumID, err := getParameter[uuid.UUID](ctx, "albumID")
+		if err != nil {
+			return Response{}, err
+		}
+
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+
+		tracks, err := s.mediamgr.ListTracksDetailedByAlbum(ctx, albumID, user.ID)
+		if err != nil {
+			return Response{}, err
+		}
+
+		return Response{Status: http.StatusOK, Payload: tracks}, nil
+	})
+}
+
 func (s *Server) updateTrack() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
