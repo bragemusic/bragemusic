@@ -381,11 +381,12 @@ func NewStreamingClient(ctx context.Context, config Config, slogHandler slog.Han
 		AudioPlayer:  ap,
 		JobManager:   &jm,
 		ServerClient: &sc,
+		NoSync:       &syncer.NoSync{},
 		berr:         bragerr.NewFactory("client"),
 	}
 
 	// ap.RegisterPlayCountCallback(c.updatePlayCount)
-	// c.RegisterUserCallback(c.setUser)
+	c.RegisterUserCallback(c.setUser)
 	// c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
 
 	jm.RegisterJob(ctx, jobmanager.JobDefinition{

@@ -21,6 +21,10 @@ func (c *ClientStreaming) emitEvent(event types.ClientEvent, payload any) {
 	}
 }
 
+func (c *ClientStreaming) setUser(user *types.UserDetails) {
+	c.user = user
+}
+
 func (c *ClientStreaming) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
 	return nil
 }
