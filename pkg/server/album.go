@@ -28,7 +28,47 @@ func (s *Server) getAlbum() http.HandlerFunc {
 	})
 }
 
+func (s *Server) getAlbumDetailed() http.HandlerFunc {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
+		ctx := r.Context()
+
+		albumID, err := getParameter[uuid.UUID](ctx, "albumID")
+		if err != nil {
+			return Response{}, err
+		}
+
+		album, err := s.mediamgr.GetAlbumDetailed(ctx, albumID)
+		if err != nil {
+			return Response{}, err
+		}
+
+		return Response{Status: http.StatusOK, Payload: album}, nil
+	})
+}
+
 func (s *Server) listAlbums() http.HandlerFunc {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
+		ctx := r.Context()
+
+		cnt, err := s.mediamgr.CountAlbums(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+
+		if r.URL.Query().Get("count") == "true" {
+			return Response{Status: http.StatusOK, Payload: types.ListPayload[types.AlbumDetailed]{Count: cnt}}, nil
+		}
+
+		albums, err := s.mediamgr.ListAlbums(ctx, database.SortByName, database.SortAsc)
+		if err != nil {
+			return Response{}, err
+		}
+
+		return Response{Status: http.StatusOK, Payload: types.ListPayload[types.AlbumDetailed]{Count: cnt, Items: albums}}, nil
+	})
+}
+
+func (s *Server) listAlbumsByArtist() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 

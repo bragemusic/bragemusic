@@ -2,6 +2,10 @@ package types
 
 import "log/slog"
 
+type (
+	ClientEvent string
+)
+
 type ClientConfig struct {
 	ConfigPath    string
 	ImagePath     string
@@ -15,3 +19,20 @@ type ClientMessage struct {
 	Message string     `json:"message"`
 	Level   slog.Level `json:"level"`
 }
+
+const (
+	ClientEventMsgErr     ClientEvent = "msg.error"
+	ClientEventMsgSuccess ClientEvent = "msg.success"
+	ClientEventMsgInfo    ClientEvent = "msg.info"
+	ClientEventMsgWarn    ClientEvent = "msg.warn"
+
+	ClientEventServerOnline ClientEvent = "server.status"
+
+	ClientEventSyncInProgress ClientEvent = "sync.inprogress"
+
+	ClientEventEntitiesUpdated ClientEvent = "entities.updated"
+
+	ClientEventPlayerContextChange ClientEvent = "player.contextchange"
+
+	ClientEventUserUpdated ClientEvent = "user.updated"
+)

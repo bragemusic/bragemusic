@@ -13,12 +13,12 @@ import (
 
 	"github.com/bragemusic/core/pkg/audiointerface"
 	"github.com/bragemusic/core/pkg/audioplayer"
+	"github.com/bragemusic/core/pkg/audioreader"
 	"github.com/bragemusic/core/pkg/authclient"
 	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
-	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/types"
@@ -73,7 +73,7 @@ type AuthFace interface {
 
 	// RegisterServerAvailabilityCallback registers a callback that is invoked
 	// whenever the server availability or API information changes.
-	RegisterServerAvailabilityCallback(f func(server.ServerApiInfo))
+	RegisterServerAvailabilityCallback(f func(types.ServerApiInfo))
 
 	// GetCachedUsers returns users previously cached on this client.
 	GetCachedUsers(ctx context.Context) (users []types.UserDetails, err error)
@@ -87,7 +87,7 @@ type AuthFace interface {
 	LogoutServerUser(ctx context.Context) error
 
 	// ServerStatus retrieves the current server API information and availability state.
-	ServerStatus(ctx context.Context) (server.ServerApiInfo, error)
+	ServerStatus(ctx context.Context) (types.ServerApiInfo, error)
 }
 
 // AudioPlayerFace defines audio playback control and playback state
@@ -234,7 +234,7 @@ type MetadataFace interface {
 	ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error
 
 	// AddPlayCount increments the play count for a track for a specific user.
-	AddPlayCount(ctx context.Context, trackID, userID uuid.UUID) error
+	AddPlayCount(ctx context.Context, trackID uuid.UUID) error
 }
 
 // JobManagerFace defines background job execution and scheduling functionality.
@@ -254,10 +254,10 @@ type JobManagerFace interface {
 // It represents the main entry point for interacting with the system from
 // a client perspective.
 type ClientFace interface {
-	// RegisterMsgCallback registers a callback that is invoked whenever
-	// a client-level message is emitted. Messages may represent events,
+	// RegisterEventCallback registers a callback that is invoked whenever
+	// a client-level evant is emitted. Messages may represent events,
 	// warnings, or informational notifications originating from the client.
-	RegisterMsgCallback(f func(types.ClientMessage))
+	RegisterEventCallback(f func(types.ClientEvent, any))
 
 	SyncFace
 	AuthFace
@@ -280,7 +280,24 @@ type ClientSync struct {
 	berr    bragerr.BragErrFactory
 	dbClose func() error
 
-	user *types.UserDetails
+	eventCallbacks []func(types.ClientEvent, any)
+	user           *types.UserDetails
+}
+
+type ClientStreaming struct {
+	authclient.AuthClient
+	*audioplayer.AudioPlayer
+	*jobmanager.JobManager
+	*syncer.NoSync
+
+	*serverclient.ServerClient
+
+	config Config
+	log    *slog.Logger
+	berr   bragerr.BragErrFactory
+
+	eventCallbacks []func(types.ClientEvent, any)
+	user           *types.UserDetails
 }
 
 func NewSyncClient(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
@@ -293,12 +310,14 @@ func NewSyncClient(ctx context.Context, config Config, slogHandler slog.Handler)
 		return nil, err
 	}
 
+	ar := audioreader.NewLocalReader(config.MusicDirPath)
+
 	apCfg := audioplayer.Config{
 		PlayerName:   config.PlayerName,
 		MusicDirPath: config.MusicDirPath,
 	}
 
-	ap, err := audioplayer.New(apCfg, pa, slogHandler)
+	ap, err := audioplayer.New(apCfg, pa, ar, slogHandler)
 	if err != nil {
 		return nil, err
 	}
@@ -332,6 +351,52 @@ func NewSyncClient(ctx context.Context, config Config, slogHandler slog.Handler)
 		Type:     types.JobSyncerDaemon,
 		CronExpr: "*/10 * * * *",
 		Run:      c.Syncer.Sync,
+	})
+
+	return c, nil
+}
+
+func NewStreamingClient(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
+	sc := serverclient.New(config.ServerBaseURL, slogHandler)
+
+	pa, err := audiointerface.NewPortAudio(slogHandler)
+	if err != nil {
+		return nil, err
+	}
+
+	apCfg := audioplayer.Config{
+		PlayerName:   config.PlayerName,
+		MusicDirPath: config.MusicDirPath,
+	}
+
+	ar := audioreader.NewServerReader(&sc, slogHandler)
+
+	ap, err := audioplayer.New(apCfg, pa, ar, slogHandler)
+	if err != nil {
+		return nil, err
+	}
+
+	jm := jobmanager.New(slogHandler)
+
+	c := &ClientStreaming{
+		config:       config,
+		log:          slog.New(slogHandler).With("service", "client"),
+		AuthClient:   authclient.New(&sc, slogHandler),
+		AudioPlayer:  ap,
+		JobManager:   &jm,
+		ServerClient: &sc,
+		NoSync:       &syncer.NoSync{},
+		berr:         bragerr.NewFactory("client"),
+	}
+
+	ap.RegisterPlayCountCallback(c.updatePlayCount)
+	c.RegisterUserCallback(c.setUser)
+	// c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
+
+	jm.RegisterJob(ctx, jobmanager.JobDefinition{
+		Type:     types.JobAuthClientServerStatus,
+		CronExpr: "*/10 * * * * *",
+		Run:      c.AuthClient.UpdateServerStatus,
 	})
 
 	return c, nil

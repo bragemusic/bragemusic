@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 	"math/rand"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/bragemusic/core/pkg/audiointerface"
+	"github.com/bragemusic/core/pkg/audioreader"
 	"github.com/bragemusic/core/pkg/files"
 	"github.com/bragemusic/core/pkg/mpris"
 	"github.com/bragemusic/core/pkg/types"
@@ -30,9 +29,10 @@ type CallbackType string
 
 type AudioPlayer struct {
 	ai                            audiointerface.AudioInterface
+	ar                            audioreader.AudioReader
 	mp                            mpris.Mpris
 	playCtx                       PlayContext
-	currentFile                   *os.File
+	currentFile                   types.MediaStream
 	progressTicker                *time.Ticker
 	currentPlayCtxChangeCallbacks []func(PlayContext)
 	pausePlayCallbacks            []func(isPlaying bool)
@@ -338,9 +338,10 @@ func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
 		return ErrFileNotFound
 	}
 
-	trackFilePath := filepath.Join(a.musicDirPath, a.currentTrack().MediaFile.Filename())
+	// trackFilePath := filepath.Join(a.musicDirPath, a.currentTrack().MediaFile.Filename())
 
-	a.currentFile, err = os.Open(trackFilePath)
+	a.currentFile, err = a.ar.ReadMediafile(ctx, *a.currentTrack().MediaFile)
+	// a.currentFile, err = a.ar.
 	if err != nil {
 		return err
 	}
@@ -368,7 +369,7 @@ func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
 
 func (a *AudioPlayer) closeCurrentFile(ctx context.Context) error {
 	if a.currentFile != nil {
-		a.log.DebugContext(ctx, "closing file", "file", a.currentFile.Name())
+		a.log.DebugContext(ctx, "closing file")
 		err := a.currentFile.Close()
 		if err != nil {
 			fmt.Println("FIXME err", err)
@@ -386,9 +387,10 @@ func (a *AudioPlayer) handleError(ctx context.Context, err error) {
 	}
 }
 
-func New(cfg Config, ai audiointerface.AudioInterface, slogHandler slog.Handler) (ap *AudioPlayer, err error) {
+func New(cfg Config, ai audiointerface.AudioInterface, ar audioreader.AudioReader, slogHandler slog.Handler) (ap *AudioPlayer, err error) {
 	ap = &AudioPlayer{
 		ai:           ai,
+		ar:           ar,
 		currentFile:  nil,
 		musicDirPath: cfg.MusicDirPath,
 		log:          slog.New(slogHandler).With("service", "audioplayer"),

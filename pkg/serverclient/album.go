@@ -6,10 +6,36 @@ import (
 	"io"
 	"net/url"
 
+	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
+
+func (s ServerClient) CountAlbums(ctx context.Context) (cnt int, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums")
+	if err != nil {
+		return 0, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return 0, err
+	}
+
+	q := ur.Query()
+	q.Set("count", "true")
+
+	ur.RawQuery = q.Encode()
+
+	resp := types.ListPayload[types.AlbumDetailed]{}
+
+	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
+		return 0, err
+	}
+
+	return resp.Count, nil
+}
 
 func (s ServerClient) DownloadAlbumCover(ctx context.Context, albumID uuid.UUID, size imagemagick.ImageSize, w io.Writer) error {
 	u, err := url.JoinPath(s.baseUrl, "api", "img", "albums", albumID.String(), fmt.Sprintf("%d.jpg", size))
@@ -33,8 +59,47 @@ func (s ServerClient) GetAlbum(ctx context.Context, albumID uuid.UUID) (album ty
 	return album, nil
 }
 
-func (s ServerClient) ListAlbumsByArtist(ctx context.Context, artistID string) (albums []types.Album, err error) {
-	u, err := url.JoinPath(s.baseUrl, "api", "artists", artistID, "albums")
+func (s ServerClient) GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (album types.AlbumDetailed, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID.String(), "detailed")
+	if err != nil {
+		return types.AlbumDetailed{}, err
+	}
+
+	if err := s.doGetJson(ctx, u, &album); err != nil {
+		return types.AlbumDetailed{}, err
+	}
+
+	return album, nil
+}
+
+func (s ServerClient) ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) (albums []types.AlbumDetailed, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums")
+	if err != nil {
+		return nil, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return nil, err
+	}
+
+	q := ur.Query()
+	q.Set("sortBy", string(sortBy))
+	q.Set("sortOrder", string(sortOrder))
+
+	ur.RawQuery = q.Encode()
+
+	resp := types.ListPayload[types.AlbumDetailed]{}
+
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Items, nil
+}
+
+func (s ServerClient) ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) (albums []types.AlbumDetailed, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "artists", artistID.String(), "albums")
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/core/pkg/utils"
 	"github.com/gofrs/uuid/v5"
 )
 
@@ -28,16 +29,48 @@ func (s *Server) getArtist() http.HandlerFunc {
 	})
 }
 
+func (s *Server) getArtistTopTracks() http.HandlerFunc {
+	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
+		ctx := r.Context()
+
+		artistID, err := getParameter[uuid.UUID](ctx, "artistID")
+		if err != nil {
+			return Response{}, err
+		}
+
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+
+		tracks, err := s.mediamgr.ListTracksDetailedByArtist(ctx, artistID, user.ID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
+		if err != nil {
+			return Response{}, err
+		}
+
+		return Response{Status: http.StatusOK, Payload: types.ListPayload[types.TrackDetailed]{Count: 10, Items: tracks}}, nil
+	})
+}
+
 func (s *Server) listArtists() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
+
+		cnt, err := s.mediamgr.CountArtists(ctx)
+		if err != nil {
+			return Response{}, err
+		}
+
+		if r.URL.Query().Get("count") == "true" {
+			return Response{Status: http.StatusOK, Payload: types.ListPayload[types.ArtistDetailed]{Count: cnt}}, nil
+		}
 
 		artists, err := s.mediamgr.ListArtists(ctx, database.SortByName, database.SortAsc)
 		if err != nil {
 			return Response{}, err
 		}
 
-		return Response{Status: http.StatusOK, Payload: artists}, nil
+		return Response{Status: http.StatusOK, Payload: types.ListPayload[types.ArtistDetailed]{Count: cnt, Items: artists}}, nil
 	})
 }
 

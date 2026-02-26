@@ -6,8 +6,8 @@ import (
 	"io"
 	"net/url"
 
+	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/imagemagick"
-	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
@@ -31,7 +31,7 @@ func (s ServerClient) AddPlaylistTrack(ctx context.Context, playlistID, albumID,
 		return err
 	}
 
-	pt := server.PlaylistTrackReq{
+	pt := types.PlaylistTrackReq{
 		AlbumID: albumID,
 		TrackID: trackID,
 	}
@@ -41,6 +41,56 @@ func (s ServerClient) AddPlaylistTrack(ctx context.Context, playlistID, albumID,
 	}
 
 	return nil
+}
+
+func (s ServerClient) CountPlaylists(ctx context.Context) (int, error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "playlists")
+	if err != nil {
+		return 0, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return 0, err
+	}
+
+	q := ur.Query()
+	q.Set("count", "true")
+
+	ur.RawQuery = q.Encode()
+
+	resp := types.ListPayload[types.Playlist]{}
+
+	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
+		return 0, err
+	}
+
+	return resp.Count, nil
+}
+
+func (s ServerClient) CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "playlists", playlistID.String(), "tracks")
+	if err != nil {
+		return 0, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return 0, err
+	}
+
+	q := ur.Query()
+	q.Set("count", "true")
+
+	ur.RawQuery = q.Encode()
+
+	resp := types.ListPayload[types.TrackDetailed]{}
+
+	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
+		return 0, err
+	}
+
+	return resp.Count, nil
 }
 
 func (s ServerClient) DeletePlaylist(ctx context.Context, id uuid.UUID) error {
@@ -102,6 +152,57 @@ func (s ServerClient) DownloadPlaylistImage(ctx context.Context, id uuid.UUID, s
 	}
 
 	return s.downloadFile(ctx, u, w)
+}
+
+func (s ServerClient) ListPlaylists(ctx context.Context, includePublic bool, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Playlist, error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "playlists")
+	if err != nil {
+		return nil, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return nil, err
+	}
+
+	q := ur.Query()
+	q.Set("includePublic", string("true"))
+	q.Set("sortBy", string(sortBy))
+	q.Set("sortOrder", string(sortOrder))
+
+	ur.RawQuery = q.Encode()
+	resp := types.ListPayload[types.Playlist]{}
+
+	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Items, nil
+}
+
+func (s ServerClient) ListPlaylistTracks(ctx context.Context, playlistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.TrackDetailed, error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "playlists", playlistID.String(), "tracks")
+	if err != nil {
+		return nil, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return nil, err
+	}
+
+	q := ur.Query()
+	q.Set("sortBy", string(sortBy))
+	q.Set("sortOrder", string(sortOrder))
+
+	ur.RawQuery = q.Encode()
+	resp := types.ListPayload[types.TrackDetailed]{}
+
+	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Items, nil
 }
 
 func (s ServerClient) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist) error {

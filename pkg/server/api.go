@@ -25,11 +25,16 @@ func (s *Server) api() http.Handler {
 	r.Get("/artists", s.listArtists())
 	r.Get("/artists/{artistID}", s.getArtist())
 	r.Put("/artists/{artistID}", s.updateArtist())
-	r.Get("/artists/{artistID}/albums", s.listAlbums())
+	r.Get("/artists/{artistID}/albums", s.listAlbumsByArtist())
+	r.Get("/artists/{artistID}/top-tracks", s.getArtistTopTracks())
 
+	r.Get("/albums", s.listAlbums())
 	r.Get("/albums/{albumID}", s.getAlbum())
 	r.Put("/albums/{albumID}", s.updateAlbum())
+	r.Get("/albums/{albumID}/detailed", s.getAlbumDetailed())
 	r.Get("/albums/{albumID}/tracks", s.listAlbumTracks())
+	r.Get("/albums/{albumID}/tracks-detailed", s.listAlbumTracksDetailed())
+	r.Get("/albums/{albumID}/tracks/{trackID}", s.getTrackDetailed())
 	r.Get("/albums/{albumID}/artists/{artistID}/roles/{role}", s.getAlbumArtist())
 	r.Get("/albums/{albumID}/disc/{discNumber}/track/{trackNumber}", s.getAlbumTrack())
 
@@ -37,19 +42,23 @@ func (s *Server) api() http.Handler {
 
 	r.Get("/album-tracks/{albumTrackID}", s.getAlbumTrackByID())
 
+	r.Get("/tracks", s.listTracks())
 	r.Get("/tracks/{trackID}", s.getTrack())
 	r.Put("/tracks/{trackID}", s.updateTrack())
 	r.Post("/tracks/{trackID}/ratings", s.addTrackRating())
 	r.Get("/tracks/{trackID}/ratings", s.getTrackRatings())
+	r.Post("/tracks/{trackID}/play-history", s.addPlayHistory())
 
 	r.Get("/mediafiles/{mediafileID}", s.getMediaFile())
 	r.Get("/mediafiles/{mediafileID}/file", s.getMediaFileFile())
 
+	r.Get("/playlists", s.listPlaylists())
 	r.Post("/playlists", s.addPlaylist())
 	r.Get("/playlists/{playlistID}", s.getPlaylist())
 	r.Put("/playlists/{playlistID}", s.updatePlaylist())
 	r.Delete("/playlists/{playlistID}", s.deletePlaylist())
 	r.Post("/playlists/{playlistID}/track", s.addPlaylistTrack())
+	r.Get("/playlists/{playlistID}/tracks", s.listPlaylistTracks())
 
 	r.Get("/playlist-tracks/{playlistTrackID}", s.getPlaylistTrack())
 	r.Delete("/playlist-tracks/{playlistTrackID}", s.deletePlaylistTrack())
@@ -58,6 +67,8 @@ func (s *Server) api() http.Handler {
 	r.Post("/sync/play-history", s.syncPlayHistory())
 
 	r.Get("/ratings/{ratingID}", s.getRating())
+
+	r.Get("/search", s.search())
 
 	r.With(s.authPkg.RoleCheckMiddleware(types.UserRoleAdmin, types.UserRoleImporterWrite)).Post("/import/album", s.importAlbum())
 
@@ -71,12 +82,12 @@ func (s *Server) api() http.Handler {
 func (s *Server) apiInfo() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		return Response{
-			Payload: ServerApiInfo{
+			Payload: types.ServerApiInfo{
 				Name:    s.config.Name,
 				Version: config.VERSION,
-				ServerInfo: ServerInfo{
+				ServerInfo: types.ServerInfo{
 					Application: config.SERVER_APP_NAME,
-					Status:      HealthzRunning,
+					Status:      types.HealthzRunning,
 					ID:          uuid.Nil,
 				},
 			},

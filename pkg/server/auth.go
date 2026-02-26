@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/bragemusic/core/pkg/types"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -19,7 +20,7 @@ func (s *Server) login() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()
 
-		req := LoginReq{}
+		req := types.LoginReq{}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			return Response{}, err
 		}
@@ -29,7 +30,7 @@ func (s *Server) login() http.HandlerFunc {
 			return Response{}, err
 		}
 
-		resp := LoginResp{
+		resp := types.LoginResp{
 			Token:     token,
 			TokenType: "Bearer",
 			ExpiresIn: expiresIn,
