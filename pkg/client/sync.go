@@ -82,6 +82,14 @@ func (c *ClientSync) setDatabase(ctx context.Context, dbPath string) error {
 	return nil
 }
 
+func (c *ClientSync) AddPlayCount(ctx context.Context, trackID uuid.UUID) error {
+	if c.user == nil {
+		return c.berr.NoUserInContext(errors.New("could not get top tracks"))
+	}
+
+	return c.MediaManager.AddPlayCount(ctx, trackID, c.user.ID)
+}
+
 func (c *ClientSync) Sync(ctx context.Context) error {
 	if err := c.Syncer.Sync(ctx); err != nil {
 		return err

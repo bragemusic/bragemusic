@@ -8,7 +8,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s ServerClient) AddPlayCount(ctx context.Context, trackID, userID uuid.UUID) error {
+func (s ServerClient) AddPlayCount(ctx context.Context, trackID uuid.UUID) error {
 	u, err := url.JoinPath(s.baseUrl, "api", "tracks", trackID.String(), "play-history")
 	if err != nil {
 		return err

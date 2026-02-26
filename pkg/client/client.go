@@ -234,7 +234,7 @@ type MetadataFace interface {
 	ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error
 
 	// AddPlayCount increments the play count for a track for a specific user.
-	AddPlayCount(ctx context.Context, trackID, userID uuid.UUID) error
+	AddPlayCount(ctx context.Context, trackID uuid.UUID) error
 }
 
 // JobManagerFace defines background job execution and scheduling functionality.
@@ -389,7 +389,7 @@ func NewStreamingClient(ctx context.Context, config Config, slogHandler slog.Han
 		berr:         bragerr.NewFactory("client"),
 	}
 
-	// ap.RegisterPlayCountCallback(c.updatePlayCount)
+	ap.RegisterPlayCountCallback(c.updatePlayCount)
 	c.RegisterUserCallback(c.setUser)
 	// c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
 

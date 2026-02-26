@@ -26,11 +26,19 @@ func (c *ClientStreaming) setUser(user *types.UserDetails) {
 	c.user = user
 }
 
-func (c *ClientStreaming) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
-	return nil
+func (c *ClientStreaming) updatePlayCount(trackID uuid.UUID) {
+	// FIXME: Do we need context here?
+	ctx := context.TODO()
+
+	err := c.AddPlayCount(ctx, trackID)
+	if err != nil {
+		c.log.ErrorContext(ctx, "could not add play count", "error", err.Error())
+		return
+	}
+	c.log.DebugContext(ctx, "added play count", "track_id", trackID)
 }
 
-func (c *ClientStreaming) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, sortBy database.SortBy, sortOrder database.SortOrder) error {
+func (c *ClientStreaming) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
 	return nil
 }
 
@@ -195,10 +203,6 @@ func (c ClientStreaming) UploadPlaylistImage(ctx context.Context, id uuid.UUID, 
 }
 
 func (c *ClientStreaming) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error {
-	if c.user == nil {
-		return c.berr.NoUserInContext(errors.New("could not start player"))
-	}
-
 	tracks, err := c.ListTracksDetailedByAlbum(ctx, albumID)
 	if err != nil {
 		return err
@@ -220,6 +224,32 @@ func (c *ClientStreaming) StartPlayerWithAlbum(ctx context.Context, albumID uuid
 	}
 
 	c.log.InfoContext(ctx, "started player", "albumID", albumID.String(), "trackNumber", trackNumber)
+
+	return nil
+}
+
+func (c *ClientStreaming) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, sortBy database.SortBy, sortOrder database.SortOrder) error {
+	tracks, err := c.ListPlaylistTracks(ctx, playlistID, sortBy, sortOrder)
+	if err != nil {
+		return err
+	}
+
+	pCtx := audioplayer.PlayContext{
+		Type:            audioplayer.PlayContextPlaylist,
+		RefID:           playlistID,
+		Tracks:          tracks,
+		Queue:           []types.TrackDetailed{},
+		CurrentTrackIdx: trackNumber,
+		Shuffle:         c.PlayContext().Shuffle,
+		Repeat:          c.PlayContext().Repeat,
+	}
+
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
+	if err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "started player", "playlistID", playlistID.String(), "trackNumber", trackNumber)
 
 	return nil
 }
