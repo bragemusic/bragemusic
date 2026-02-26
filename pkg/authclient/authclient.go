@@ -12,7 +12,6 @@ import (
 
 	"github.com/adrg/xdg"
 	"github.com/bragemusic/core/internal/config"
-	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
@@ -21,8 +20,8 @@ import (
 type AuthClient struct {
 	sc                          *serverclient.ServerClient
 	log                         *slog.Logger
-	serverStatus                server.ServerApiInfo
-	serverAvailableCallbacks    []func(server.ServerApiInfo)
+	serverStatus                types.ServerApiInfo
+	serverAvailableCallbacks    []func(types.ServerApiInfo)
 	userCallbacks               []func(*types.UserDetails)
 	updateServerStatusCallbacks []func(context.Context)
 }
@@ -35,7 +34,7 @@ func (ac *AuthClient) RegisterUpdateServerStatusCallback(f func(context.Context)
 	ac.updateServerStatusCallbacks = append(ac.updateServerStatusCallbacks, f)
 }
 
-func (ac *AuthClient) RegisterServerAvailabilityCallback(f func(server.ServerApiInfo)) {
+func (ac *AuthClient) RegisterServerAvailabilityCallback(f func(types.ServerApiInfo)) {
 	ac.serverAvailableCallbacks = append(ac.serverAvailableCallbacks, f)
 }
 
@@ -54,9 +53,9 @@ func (ac *AuthClient) UpdateServerStatusCallbacks(ctx context.Context) {
 func (ac *AuthClient) UpdateServerStatus(ctx context.Context) error {
 	h, err := ac.sc.CheckStatus(ctx)
 	if err != nil {
-		h = server.ServerApiInfo{
-			ServerInfo: server.ServerInfo{
-				Status: server.HealthzUnavailable,
+		h = types.ServerApiInfo{
+			ServerInfo: types.ServerInfo{
+				Status: types.HealthzUnavailable,
 			},
 		}
 	}
@@ -74,15 +73,15 @@ func (ac *AuthClient) UpdateServerStatus(ctx context.Context) error {
 		return fmt.Errorf("expected server application name differs. '%s' != expected '%s'", h.Application, config.SERVER_APP_NAME)
 	}
 
-	if h.Status == server.HealthzUnavailable {
+	if h.Status == types.HealthzUnavailable {
 		return fmt.Errorf("server status is not running. '%s'", h.Status)
 	}
 	return nil
 }
 
-func (ac *AuthClient) ServerStatus(ctx context.Context) (server.ServerApiInfo, error) {
+func (ac *AuthClient) ServerStatus(ctx context.Context) (types.ServerApiInfo, error) {
 	if err := ac.UpdateServerStatus(ctx); err != nil {
-		return server.ServerApiInfo{}, err
+		return types.ServerApiInfo{}, err
 	}
 	return ac.serverStatus, nil
 }

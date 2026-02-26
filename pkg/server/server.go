@@ -16,6 +16,7 @@ import (
 	"github.com/bragemusic/core/pkg/importer"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
+	"github.com/bragemusic/core/pkg/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
 	"golang.org/x/sync/errgroup"
@@ -53,18 +54,18 @@ func (s *Server) Handler() http.Handler {
 
 func (s *Server) healthz() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		return Response{Status: http.StatusOK, Payload: Healthz{
-			Status: HealthzRunning,
+		return Response{Status: http.StatusOK, Payload: types.Healthz{
+			Status: types.HealthzRunning,
 		}}, nil
 	})
 }
 
 func (s *Server) info() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		return Response{Status: http.StatusOK, Payload: ServerInfo{
+		return Response{Status: http.StatusOK, Payload: types.ServerInfo{
 			Application: config.SERVER_APP_NAME,
 			ID:          uuid.Nil,
-			Status:      HealthzRunning,
+			Status:      types.HealthzRunning,
 		}}, nil
 	})
 }

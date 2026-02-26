@@ -17,6 +17,6 @@ func (s *Server) search() http.HandlerFunc {
 			return Response{}, err
 		}
 
-		return Response{Status: http.StatusOK, Payload: ListPayload[types.SearchItem]{Count: len(searchItems), Items: searchItems}}, nil
+		return Response{Status: http.StatusOK, Payload: types.ListPayload[types.SearchItem]{Count: len(searchItems), Items: searchItems}}, nil
 	})
 }

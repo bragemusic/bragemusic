@@ -56,7 +56,7 @@ func (s *Server) listAlbums() http.HandlerFunc {
 		}
 
 		if r.URL.Query().Get("count") == "true" {
-			return Response{Status: http.StatusOK, Payload: ListPayload[types.AlbumDetailed]{Count: cnt}}, nil
+			return Response{Status: http.StatusOK, Payload: types.ListPayload[types.AlbumDetailed]{Count: cnt}}, nil
 		}
 
 		albums, err := s.mediamgr.ListAlbums(ctx, database.SortByName, database.SortAsc)
@@ -64,7 +64,7 @@ func (s *Server) listAlbums() http.HandlerFunc {
 			return Response{}, err
 		}
 
-		return Response{Status: http.StatusOK, Payload: ListPayload[types.AlbumDetailed]{Count: cnt, Items: albums}}, nil
+		return Response{Status: http.StatusOK, Payload: types.ListPayload[types.AlbumDetailed]{Count: cnt, Items: albums}}, nil
 	})
 }
 

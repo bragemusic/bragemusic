@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/url"
 
-	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/types"
 )
 
@@ -24,7 +23,7 @@ func (s ServerClient) SearchFull(ctx context.Context, searchTerm string) (si []t
 
 	ur.RawQuery = q.Encode()
 
-	resp := server.ListPayload[types.SearchItem]{}
+	resp := types.ListPayload[types.SearchItem]{}
 
 	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
 		return nil, err

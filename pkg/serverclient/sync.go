@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/types"
 )
 
@@ -15,7 +14,7 @@ func (s ServerClient) GetSyncState(ctx context.Context, changesSince time.Time) 
 		return types.SyncState{}, err
 	}
 
-	payload := server.SyncReq{ChangesSince: changesSince}
+	payload := types.SyncReq{ChangesSince: changesSince}
 
 	if err := s.doPostJson(ctx, u, payload, &syncState); err != nil {
 		return types.SyncState{}, err
@@ -30,7 +29,7 @@ func (s ServerClient) SyncPlayHistory(ctx context.Context, changesSince time.Tim
 		return types.PlayHistorySyncState{}, err
 	}
 
-	payload := server.SyncPlayHistoryReq{
+	payload := types.SyncPlayHistoryReq{
 		ChangesSince:       changesSince,
 		UpdatedClientItems: newItems,
 	}

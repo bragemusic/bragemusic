@@ -48,7 +48,7 @@ func (s *Server) getArtistTopTracks() http.HandlerFunc {
 			return Response{}, err
 		}
 
-		return Response{Status: http.StatusOK, Payload: ListPayload[types.TrackDetailed]{Count: 10, Items: tracks}}, nil
+		return Response{Status: http.StatusOK, Payload: types.ListPayload[types.TrackDetailed]{Count: 10, Items: tracks}}, nil
 	})
 }
 
@@ -62,7 +62,7 @@ func (s *Server) listArtists() http.HandlerFunc {
 		}
 
 		if r.URL.Query().Get("count") == "true" {
-			return Response{Status: http.StatusOK, Payload: ListPayload[types.ArtistDetailed]{Count: cnt}}, nil
+			return Response{Status: http.StatusOK, Payload: types.ListPayload[types.ArtistDetailed]{Count: cnt}}, nil
 		}
 
 		artists, err := s.mediamgr.ListArtists(ctx, database.SortByName, database.SortAsc)
@@ -70,7 +70,7 @@ func (s *Server) listArtists() http.HandlerFunc {
 			return Response{}, err
 		}
 
-		return Response{Status: http.StatusOK, Payload: ListPayload[types.ArtistDetailed]{Count: cnt, Items: artists}}, nil
+		return Response{Status: http.StatusOK, Payload: types.ListPayload[types.ArtistDetailed]{Count: cnt, Items: artists}}, nil
 	})
 }
 

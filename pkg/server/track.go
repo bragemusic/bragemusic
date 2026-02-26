@@ -23,7 +23,7 @@ func (s *Server) addTrackRating() http.HandlerFunc {
 			return Response{}, err
 		}
 
-		rating := RatingReq{}
+		rating := types.RatingReq{}
 		if err := json.NewDecoder(r.Body).Decode(&rating); err != nil {
 			return Response{}, err
 		}
@@ -112,10 +112,10 @@ func (s *Server) listTracks() http.HandlerFunc {
 		}
 
 		if r.URL.Query().Get("count") == "true" {
-			return Response{Status: http.StatusOK, Payload: ListPayload[types.TrackDetailed]{Count: cnt}}, nil
+			return Response{Status: http.StatusOK, Payload: types.ListPayload[types.TrackDetailed]{Count: cnt}}, nil
 		}
 
-		return Response{Status: http.StatusOK, Payload: ListPayload[types.TrackDetailed]{Count: cnt}}, nil
+		return Response{Status: http.StatusOK, Payload: types.ListPayload[types.TrackDetailed]{Count: cnt}}, nil
 	})
 }
 

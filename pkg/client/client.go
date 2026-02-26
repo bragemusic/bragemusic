@@ -13,12 +13,12 @@ import (
 
 	"github.com/bragemusic/core/pkg/audiointerface"
 	"github.com/bragemusic/core/pkg/audioplayer"
+	"github.com/bragemusic/core/pkg/audioreader"
 	"github.com/bragemusic/core/pkg/authclient"
 	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
-	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/types"
@@ -73,7 +73,7 @@ type AuthFace interface {
 
 	// RegisterServerAvailabilityCallback registers a callback that is invoked
 	// whenever the server availability or API information changes.
-	RegisterServerAvailabilityCallback(f func(server.ServerApiInfo))
+	RegisterServerAvailabilityCallback(f func(types.ServerApiInfo))
 
 	// GetCachedUsers returns users previously cached on this client.
 	GetCachedUsers(ctx context.Context) (users []types.UserDetails, err error)
@@ -87,7 +87,7 @@ type AuthFace interface {
 	LogoutServerUser(ctx context.Context) error
 
 	// ServerStatus retrieves the current server API information and availability state.
-	ServerStatus(ctx context.Context) (server.ServerApiInfo, error)
+	ServerStatus(ctx context.Context) (types.ServerApiInfo, error)
 }
 
 // AudioPlayerFace defines audio playback control and playback state
@@ -310,12 +310,14 @@ func NewSyncClient(ctx context.Context, config Config, slogHandler slog.Handler)
 		return nil, err
 	}
 
+	ar := audioreader.NewLocalReader(config.MusicDirPath)
+
 	apCfg := audioplayer.Config{
 		PlayerName:   config.PlayerName,
 		MusicDirPath: config.MusicDirPath,
 	}
 
-	ap, err := audioplayer.New(apCfg, pa, slogHandler)
+	ap, err := audioplayer.New(apCfg, pa, ar, slogHandler)
 	if err != nil {
 		return nil, err
 	}
@@ -367,7 +369,9 @@ func NewStreamingClient(ctx context.Context, config Config, slogHandler slog.Han
 		MusicDirPath: config.MusicDirPath,
 	}
 
-	ap, err := audioplayer.New(apCfg, pa, slogHandler)
+	ar := audioreader.NewServerReader(&sc, slogHandler)
+
+	ap, err := audioplayer.New(apCfg, pa, ar, slogHandler)
 	if err != nil {
 		return nil, err
 	}

@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/types"
 )
 
@@ -157,25 +156,25 @@ func (s ServerClient) downloadFile(ctx context.Context, u string, w io.Writer) e
 	return nil
 }
 
-func (s ServerClient) CheckStatus(ctx context.Context) (h server.ServerApiInfo, err error) {
+func (s ServerClient) CheckStatus(ctx context.Context) (h types.ServerApiInfo, err error) {
 	u, err := url.JoinPath(s.baseUrl, "info")
 	if err != nil {
-		return server.ServerApiInfo{}, err
+		return types.ServerApiInfo{}, err
 	}
 
 	if err = s.doGetJson(ctx, u, &h); err != nil {
-		return server.ServerApiInfo{}, err
+		return types.ServerApiInfo{}, err
 	}
 
 	u, err = url.JoinPath(s.baseUrl, "api", "info")
 	if err != nil {
-		return server.ServerApiInfo{}, err
+		return types.ServerApiInfo{}, err
 	}
 
-	hAuthed := server.ServerApiInfo{}
+	hAuthed := types.ServerApiInfo{}
 
 	if err := s.doGetJson(ctx, u, &hAuthed); err != nil {
-		h.Status = server.HealthzNoAuth
+		h.Status = types.HealthzNoAuth
 		return h, nil
 	}
 

@@ -82,12 +82,12 @@ func (s *Server) api() http.Handler {
 func (s *Server) apiInfo() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		return Response{
-			Payload: ServerApiInfo{
+			Payload: types.ServerApiInfo{
 				Name:    s.config.Name,
 				Version: config.VERSION,
-				ServerInfo: ServerInfo{
+				ServerInfo: types.ServerInfo{
 					Application: config.SERVER_APP_NAME,
-					Status:      HealthzRunning,
+					Status:      types.HealthzRunning,
 					ID:          uuid.Nil,
 				},
 			},

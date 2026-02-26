@@ -8,7 +8,6 @@ import (
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/imagemagick"
-	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
@@ -29,7 +28,7 @@ func (s ServerClient) CountArtists(ctx context.Context) (cnt int, err error) {
 
 	ur.RawQuery = q.Encode()
 
-	resp := server.ListPayload[types.ArtistDetailed]{}
+	resp := types.ListPayload[types.ArtistDetailed]{}
 
 	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
 		return 0, err
@@ -66,7 +65,7 @@ func (s ServerClient) GetArtistTopTracks(ctx context.Context, artistID uuid.UUID
 		return nil, err
 	}
 
-	resp := server.ListPayload[types.TrackDetailed]{}
+	resp := types.ListPayload[types.TrackDetailed]{}
 	if err := s.doGetJson(ctx, u, &resp); err != nil {
 		return nil, err
 	}
@@ -80,7 +79,7 @@ func (s ServerClient) ListArtists(ctx context.Context, sortBy database.SortBy, s
 		return nil, err
 	}
 
-	resp := server.ListPayload[types.ArtistDetailed]{}
+	resp := types.ListPayload[types.ArtistDetailed]{}
 
 	if err := s.doGetJson(ctx, u, &resp); err != nil {
 		return nil, err

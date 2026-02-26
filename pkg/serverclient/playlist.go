@@ -8,7 +8,6 @@ import (
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/imagemagick"
-	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
@@ -32,7 +31,7 @@ func (s ServerClient) AddPlaylistTrack(ctx context.Context, playlistID, albumID,
 		return err
 	}
 
-	pt := server.PlaylistTrackReq{
+	pt := types.PlaylistTrackReq{
 		AlbumID: albumID,
 		TrackID: trackID,
 	}
@@ -60,7 +59,7 @@ func (s ServerClient) CountPlaylists(ctx context.Context) (int, error) {
 
 	ur.RawQuery = q.Encode()
 
-	resp := server.ListPayload[types.Playlist]{}
+	resp := types.ListPayload[types.Playlist]{}
 
 	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
 		return 0, err
@@ -85,7 +84,7 @@ func (s ServerClient) CountPlaylistTracks(ctx context.Context, playlistID uuid.U
 
 	ur.RawQuery = q.Encode()
 
-	resp := server.ListPayload[types.TrackDetailed]{}
+	resp := types.ListPayload[types.TrackDetailed]{}
 
 	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
 		return 0, err
@@ -172,7 +171,7 @@ func (s ServerClient) ListPlaylists(ctx context.Context, includePublic bool, sor
 	q.Set("sortOrder", string(sortOrder))
 
 	ur.RawQuery = q.Encode()
-	resp := server.ListPayload[types.Playlist]{}
+	resp := types.ListPayload[types.Playlist]{}
 
 	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
 		return nil, err
@@ -197,7 +196,7 @@ func (s ServerClient) ListPlaylistTracks(ctx context.Context, playlistID uuid.UU
 	q.Set("sortOrder", string(sortOrder))
 
 	ur.RawQuery = q.Encode()
-	resp := server.ListPayload[types.TrackDetailed]{}
+	resp := types.ListPayload[types.TrackDetailed]{}
 
 	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
 		return nil, err

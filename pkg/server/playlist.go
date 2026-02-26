@@ -46,7 +46,7 @@ func (s *Server) addPlaylistTrack() http.HandlerFunc {
 			return Response{}, err
 		}
 
-		pt := PlaylistTrackReq{}
+		pt := types.PlaylistTrackReq{}
 		if err := json.NewDecoder(r.Body).Decode(&pt); err != nil {
 			return Response{}, err
 		}
@@ -125,7 +125,7 @@ func (s *Server) listPlaylists() http.HandlerFunc {
 		}
 
 		if r.URL.Query().Get("count") == "true" {
-			return Response{Status: http.StatusOK, Payload: ListPayload[types.Playlist]{Count: cnt}}, nil
+			return Response{Status: http.StatusOK, Payload: types.ListPayload[types.Playlist]{Count: cnt}}, nil
 		}
 
 		sB := database.SortBy(r.URL.Query().Get("sortBy"))
@@ -138,7 +138,7 @@ func (s *Server) listPlaylists() http.HandlerFunc {
 		}
 
 		return Response{
-			Payload: ListPayload[types.Playlist]{Count: cnt, Items: plists},
+			Payload: types.ListPayload[types.Playlist]{Count: cnt, Items: plists},
 			Status:  http.StatusOK,
 		}, nil
 	},
@@ -165,7 +165,7 @@ func (s *Server) listPlaylistTracks() http.HandlerFunc {
 		}
 
 		if r.URL.Query().Get("count") == "true" {
-			return Response{Status: http.StatusOK, Payload: ListPayload[types.TrackDetailed]{Count: cnt}}, nil
+			return Response{Status: http.StatusOK, Payload: types.ListPayload[types.TrackDetailed]{Count: cnt}}, nil
 		}
 
 		sB := database.SortBy(r.URL.Query().Get("sortBy"))
@@ -176,7 +176,7 @@ func (s *Server) listPlaylistTracks() http.HandlerFunc {
 			return Response{}, err
 		}
 
-		return Response{Status: http.StatusOK, Payload: ListPayload[types.TrackDetailed]{Count: cnt, Items: tracks}}, nil
+		return Response{Status: http.StatusOK, Payload: types.ListPayload[types.TrackDetailed]{Count: cnt, Items: tracks}}, nil
 	})
 }
 

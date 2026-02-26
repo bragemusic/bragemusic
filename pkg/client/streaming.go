@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 
+	"github.com/bragemusic/core/pkg/audioplayer"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
@@ -26,10 +27,6 @@ func (c *ClientStreaming) setUser(user *types.UserDetails) {
 }
 
 func (c *ClientStreaming) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
-	return nil
-}
-
-func (c *ClientStreaming) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error {
 	return nil
 }
 
@@ -194,5 +191,35 @@ func (c ClientStreaming) UploadPlaylistImage(ctx context.Context, id uuid.UUID, 
 	}
 
 	c.emitEvent(types.ClientEventEntitiesUpdated, nil)
+	return nil
+}
+
+func (c *ClientStreaming) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error {
+	if c.user == nil {
+		return c.berr.NoUserInContext(errors.New("could not start player"))
+	}
+
+	tracks, err := c.ListTracksDetailedByAlbum(ctx, albumID)
+	if err != nil {
+		return err
+	}
+
+	pCtx := audioplayer.PlayContext{
+		Type:            audioplayer.PlayContextAlbum,
+		RefID:           albumID,
+		Tracks:          tracks,
+		Queue:           []types.TrackDetailed{},
+		CurrentTrackIdx: trackNumber,
+		Shuffle:         c.PlayContext().Shuffle,
+		Repeat:          c.PlayContext().Repeat,
+	}
+
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
+	if err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "started player", "albumID", albumID.String(), "trackNumber", trackNumber)
+
 	return nil
 }
