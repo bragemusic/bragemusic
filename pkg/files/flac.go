@@ -3,7 +3,6 @@ package files
 import (
 	"io"
 	"math"
-	"os"
 
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/mewkiz/flac"
@@ -83,10 +82,11 @@ func (f *FileFlac) Read(p []byte) (int, error) {
 	return n, nil
 }
 
-func ParseFlac(f *os.File) (types.AudioFile, error) {
+func ParseFlac(f types.MediaStream) (types.AudioFile, error) {
+	var err error
 	ff := FileFlac{}
 
-	fstat, err := f.Stat()
+	ff.filesize, err = f.Size()
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,6 @@ func ParseFlac(f *os.File) (types.AudioFile, error) {
 		return nil, err
 	}
 
-	ff.filesize = fstat.Size()
 	ff.stream = flacFile
 
 	// _, err = f.Seek(0, 0)

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/bragemusic/core/pkg/audioreader"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/files"
 	"github.com/bragemusic/core/pkg/filetx"
@@ -36,7 +37,12 @@ func (i Importer) importMediaFiles(ctx context.Context, tx database.DatabaseFace
 			}
 			i.log.InfoContext(ctx, "creating new media file")
 
-			f, err := os.OpenFile(filename, os.O_RDONLY, os.ModePerm)
+			// f, err := os.OpenFile(filename, os.O_RDONLY, os.ModePerm)
+			// if err != nil {
+			// 	return nil, err
+			// }
+
+			f, err := audioreader.ReadOsFile(ctx, filename)
 			if err != nil {
 				return nil, err
 			}

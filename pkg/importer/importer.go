@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/bragemusic/core/pkg/acoustid"
+	"github.com/bragemusic/core/pkg/audioreader"
 	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/filetx"
@@ -41,6 +42,7 @@ type Importer struct {
 	mb              musicbrainz.MusicBrainz
 	aid             acoustid.AcoustID
 	im              imagemagick.ImageMagick
+	ar              audioreader.AudioReader
 	log             *slog.Logger
 	berr            bragerr.BragErrFactory
 }
@@ -419,6 +421,7 @@ func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid a
 		mb:              mb,
 		aid:             aid,
 		im:              im,
+		ar:              audioreader.NewLocalReader(cfg.MusicDirPath),
 		log:             slog.New(slogHandler).With("service", "importer"),
 		postImportDir:   cfg.FinishedImportsDirPath,
 		deleteOnSuccess: cfg.DeleteImportsOnSuccess,

@@ -180,6 +180,7 @@ func (p *PortAudio) handleError(ctx context.Context, err error) {
 	if p.errCallback != nil {
 		p.errCallback(ctx, err)
 	}
+	p.killStream()
 }
 
 func NewPortAudio(slogHandler slog.Handler) (*PortAudio, error) {
