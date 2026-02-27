@@ -34,6 +34,7 @@ type Server struct {
 	importer *importer.Importer
 	jobmgr   *jobmanager.JobManager
 	config   Config
+	berr     bragerr.BragErrFactory
 	httpSrv  *http.Server
 	ready    atomic.Bool
 }
@@ -175,5 +176,6 @@ func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i
 		authPkg:  a,
 		importer: i,
 		jobmgr:   j,
+		berr:     bragerr.NewFactory("server"),
 	}
 }

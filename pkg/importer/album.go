@@ -156,9 +156,11 @@ func (i Importer) generateArtistFromAlbumMbID(ctx context.Context, mbID string) 
 	}
 
 	artist := types.Artist{
-		MusicBrainzID: &mbArtist.ID,
-		Name:          mbArtist.Name,
-		SortName:      mbArtist.SortName,
+		ArtistBase: types.ArtistBase{
+			MusicBrainzID: &mbArtist.ID,
+			Name:          mbArtist.Name,
+			SortName:      mbArtist.SortName,
+		},
 	}
 
 	if mbArtist.Country != "" {
@@ -184,8 +186,10 @@ func (i Importer) generateArtistFromAlbumMbID(ctx context.Context, mbID string) 
 
 func (i Importer) generateArtistFromID3(ctx context.Context, analysis AlbumAnalysisResults) types.Artist {
 	artist := types.Artist{
-		Name:     analysis.Id3Artist,
-		SortName: analysis.Id3Artist,
+		ArtistBase: types.ArtistBase{
+			Name:     analysis.Id3Artist,
+			SortName: analysis.Id3Artist,
+		},
 	}
 
 	return artist

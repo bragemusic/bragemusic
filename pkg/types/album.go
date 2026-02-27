@@ -8,7 +8,7 @@ import (
 
 type Album struct {
 	ID            uuid.UUID  `db:"id" json:"id"`
-	MusicBrainzID *string    `db:"musicbrainz_id" json:"musicbrainz_id"`
+	MusicBrainzID *string    `db:"musicbrainz_id" json:"musicbrainz_id" description:"ID and stuff"`
 	Name          string     `db:"name" json:"name"`
 	SortName      string     `db:"sort_name" json:"sort_name"`
 	ReleaseDate   *time.Time `db:"release_date" json:"release_date,omitempty"`

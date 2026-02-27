@@ -104,11 +104,12 @@ func (s ServerClient) ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID
 		return nil, err
 	}
 
-	if err := s.doGetJson(ctx, u, &albums); err != nil {
+	resp := types.ListPayload[types.AlbumDetailed]{}
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
 		return nil, err
 	}
 
-	return albums, nil
+	return resp.Items, nil
 }
 
 func (s ServerClient) GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role types.ArtistRole) (albumArtist types.AlbumArtist, err error) {

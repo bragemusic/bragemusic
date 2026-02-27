@@ -1,13 +1,36 @@
 package server
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/bragemusic/core/internal/config"
+	"github.com/bragemusic/core/pkg/routes"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
 )
+
+func (s *Server) apiInfoR() routes.RouteFunc[Request1, types.Album] {
+	return func(ctx context.Context, req Request1, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.Album], err error) {
+		fmt.Println(req)
+		fmt.Println("apa")
+		resp.Status = 200
+		resp.Payload = types.Album{
+			ID:            uuid.UUID{},
+			MusicBrainzID: new(string),
+			Name:          "luuucas",
+			SortName:      "",
+			Tracks:        new(int),
+			Discs:         new(int),
+			Description:   new(string),
+			Owner:         "",
+			Public:        new(bool),
+		}
+		return resp, nil
+	}
+}
 
 func (s *Server) api() http.Handler {
 	r := chi.NewRouter()
@@ -22,11 +45,7 @@ func (s *Server) api() http.Handler {
 	r.Post("/img/albums/{albumID}", s.addImage(AlbumImage))
 	r.Post("/img/playlists/{playlistID}", s.addImage(PlaylistImage))
 
-	r.Get("/artists", s.listArtists())
-	r.Get("/artists/{artistID}", s.getArtist())
-	r.Put("/artists/{artistID}", s.updateArtist())
-	r.Get("/artists/{artistID}/albums", s.listAlbumsByArtist())
-	r.Get("/artists/{artistID}/top-tracks", s.getArtistTopTracks())
+	r.Mount("/artists", s.apiArtists())
 
 	r.Get("/albums", s.listAlbums())
 	r.Get("/albums/{albumID}", s.getAlbum())

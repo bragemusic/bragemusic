@@ -13,3 +13,6 @@ import:
 
 migrate:
     dbmate -d ./db/migrations up
+
+generate-docs:
+    go run cmd/docs/main.go
