@@ -1,8 +1,6 @@
 package server
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/bragemusic/core/internal/config"
@@ -12,24 +10,18 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s *Server) apiInfoR() routes.RouteFunc[Request1, types.Album] {
-	return func(ctx context.Context, req Request1, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.Album], err error) {
-		fmt.Println(req)
-		fmt.Println("apa")
-		resp.Status = 200
-		resp.Payload = types.Album{
-			ID:            uuid.UUID{},
-			MusicBrainzID: new(string),
-			Name:          "luuucas",
-			SortName:      "",
-			Tracks:        new(int),
-			Discs:         new(int),
-			Description:   new(string),
-			Owner:         "",
-			Public:        new(bool),
+func (s *Server) buildMount(ro []routes.RouteHandler) http.Handler {
+	r := chi.NewRouter()
+
+	for _, route := range ro {
+		if len(route.Roles()) > 0 {
+			r.With(s.authPkg.RoleCheckMiddleware(route.Roles()...)).Method(route.Method(), route.Path(), route.Handler(s.log, s.errLog, &s.berr))
+		} else {
+			r.Method(route.Method(), route.Path(), route.Handler(s.log, s.errLog, &s.berr))
 		}
-		return resp, nil
 	}
+
+	return r
 }
 
 func (s *Server) api() http.Handler {
@@ -45,17 +37,8 @@ func (s *Server) api() http.Handler {
 	r.Post("/img/albums/{albumID}", s.addImage(AlbumImage))
 	r.Post("/img/playlists/{playlistID}", s.addImage(PlaylistImage))
 
-	r.Mount("/artists", s.apiArtists())
-
-	r.Get("/albums", s.listAlbums())
-	r.Get("/albums/{albumID}", s.getAlbum())
-	r.Put("/albums/{albumID}", s.updateAlbum())
-	r.Get("/albums/{albumID}/detailed", s.getAlbumDetailed())
-	r.Get("/albums/{albumID}/tracks", s.listAlbumTracks())
-	r.Get("/albums/{albumID}/tracks-detailed", s.listAlbumTracksDetailed())
-	r.Get("/albums/{albumID}/tracks/{trackID}", s.getTrackDetailed())
-	r.Get("/albums/{albumID}/artists/{artistID}/roles/{role}", s.getAlbumArtist())
-	r.Get("/albums/{albumID}/disc/{discNumber}/track/{trackNumber}", s.getAlbumTrack())
+	r.Mount("/artists", s.buildMount(s.artistRoutes()))
+	r.Mount("/albums", s.buildMount(s.albumRoutes()))
 
 	r.Get("/album-artists/{albumArtistID}", s.getAlbumArtistByID())
 

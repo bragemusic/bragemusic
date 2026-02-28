@@ -45,6 +45,7 @@ type RouteMeta struct {
 	Tags                []string
 	Errors              []RouteErrorMeta
 	ExpectedStatus      int
+	Deprecated          bool
 }
 
 type RouteErrorMeta struct {
@@ -154,6 +155,10 @@ func (ro RouteObject[Req, Resp]) Docs(refl *openapi31.Reflector, basePath string
 		op.SetDescription(ro.meta.Description)
 	}
 
+	if ro.meta.Deprecated {
+		op.SetIsDeprecated(true)
+	}
+
 	op.AddReqStructure(new(Req))
 	op.AddRespStructure(new(Resp), func(cu *openapi.ContentUnit) {
 		cu.HTTPStatus = ro.meta.ExpectedStatus
@@ -237,8 +242,6 @@ func ParsePaths[T Validator](ctx context.Context, berr *bragerr.BragErrFactory, 
 			}
 			rv.Field(fidx).SetInt(int64(intVal))
 		default:
-
-			fmt.Println(fieldType)
 			if fieldType == uuidType {
 				parsed, err := uuid.FromString(v)
 				if err != nil {
@@ -300,7 +303,6 @@ func ParseQueries[T Validator](q url.Values, v *T) error {
 			}
 
 		default:
-			fmt.Println(fieldType)
 			if fieldType == uuidType {
 				if len(vs) > 0 {
 					parsed, err := uuid.FromString(vs[0])

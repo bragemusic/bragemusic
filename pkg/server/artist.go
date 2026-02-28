@@ -8,7 +8,6 @@ import (
 	"github.com/bragemusic/core/pkg/routes"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
-	"github.com/go-chi/chi/v5"
 )
 
 func (s *Server) artistRoutes() []routes.RouteHandler {
@@ -54,20 +53,6 @@ func (s *Server) artistRoutes() []routes.RouteHandler {
 			ExpectedStatus:      http.StatusNoContent,
 		}),
 	}
-}
-
-func (s *Server) apiArtists() http.Handler {
-	r := chi.NewRouter()
-
-	for _, route := range s.artistRoutes() {
-		if len(route.Roles()) > 0 {
-			r.With(s.authPkg.RoleCheckMiddleware(route.Roles()...)).Method(route.Method(), route.Path(), route.Handler(s.log, s.errLog, &s.berr))
-		} else {
-			r.Method(route.Method(), route.Path(), route.Handler(s.log, s.errLog, &s.berr))
-		}
-	}
-
-	return r
 }
 
 func (s *Server) getArtist() routes.RouteFunc[ReqArtistsGet, types.Artist] {
