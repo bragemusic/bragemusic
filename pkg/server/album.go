@@ -257,24 +257,6 @@ func (s *Server) updateAlbum() routes.RouteFunc[ReqAlbumsUpdate, types.NoRespons
 
 ////
 
-func (s *Server) getAlbumArtistByID() http.HandlerFunc {
-	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		ctx := r.Context()
-
-		albumArtistID, err := getParameter[uuid.UUID](ctx, "albumArtistID")
-		if err != nil {
-			return Response{}, err
-		}
-
-		albumArtist, err := s.mediamgr.GetAlbumArtistByID(ctx, albumArtistID)
-		if err != nil {
-			return Response{}, err
-		}
-
-		return Response{Status: http.StatusOK, Payload: albumArtist}, nil
-	})
-}
-
 func (s *Server) getAlbumTrackByID() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		ctx := r.Context()

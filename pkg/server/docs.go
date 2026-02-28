@@ -17,5 +17,11 @@ func (s *Server) APIDocs(refl *openapi31.Reflector) error {
 		}
 	}
 
+	for _, r := range s.albumArtistRoutes() {
+		if err := r.Docs(refl, basePath+"/album-artists"); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
