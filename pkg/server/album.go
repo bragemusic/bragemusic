@@ -7,7 +7,6 @@ import (
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/routes"
 	"github.com/bragemusic/core/pkg/types"
-	"github.com/gofrs/uuid/v5"
 )
 
 func (s *Server) albumRoutes() []routes.RouteHandler {
@@ -253,24 +252,4 @@ func (s *Server) updateAlbum() routes.RouteFunc[ReqAlbumsUpdate, types.NoRespons
 			Status:  http.StatusNoContent,
 		}, nil
 	}
-}
-
-////
-
-func (s *Server) getAlbumTrackByID() http.HandlerFunc {
-	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		ctx := r.Context()
-
-		albumTrackID, err := getParameter[uuid.UUID](ctx, "albumTrackID")
-		if err != nil {
-			return Response{}, err
-		}
-
-		albumTrack, err := s.mediamgr.GetAlbumTrackByID(ctx, albumTrackID)
-		if err != nil {
-			return Response{}, err
-		}
-
-		return Response{Status: http.StatusOK, Payload: albumTrack}, nil
-	})
 }

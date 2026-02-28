@@ -23,5 +23,11 @@ func (s *Server) APIDocs(refl *openapi31.Reflector) error {
 		}
 	}
 
+	for _, r := range s.albumTrackRoutes() {
+		if err := r.Docs(refl, basePath+"/album-tracks"); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

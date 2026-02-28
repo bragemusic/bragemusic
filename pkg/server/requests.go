@@ -76,6 +76,14 @@ func (r ReqAlbumArtistsGet) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqAlbumTracksGet struct {
+	AlbumTrackID uuid.UUID `path:"albumTrackID" description:"ID of the wanted album track"`
+}
+
+func (r ReqAlbumTracksGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count bool `query:"count" description:"Only return the count, not the payload."`
 }

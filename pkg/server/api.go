@@ -40,8 +40,7 @@ func (s *Server) api() http.Handler {
 	r.Mount("/artists", s.buildMount(s.artistRoutes()))
 	r.Mount("/albums", s.buildMount(s.albumRoutes()))
 	r.Mount("/album-artists", s.buildMount(s.albumArtistRoutes()))
-
-	r.Get("/album-tracks/{albumTrackID}", s.getAlbumTrackByID())
+	r.Mount("/album-tracks", s.buildMount(s.albumTrackRoutes()))
 
 	r.Get("/tracks", s.listTracks())
 	r.Get("/tracks/{trackID}", s.getTrack())
