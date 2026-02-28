@@ -11,6 +11,7 @@ import (
 	"path"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/bragerr"
@@ -32,6 +33,7 @@ type Validator interface {
 type RouteHandler interface {
 	Method() string
 	Path() string
+	Roles() []types.UserRole
 	Handler(log, errLog *slog.Logger, berr *bragerr.BragErrFactory) http.Handler
 	Docs(refl *openapi31.Reflector, basePath string) error
 }
@@ -54,7 +56,12 @@ type RouteObject[Req Validator, Resp any] struct {
 	handlerFunc RouteFunc[Req, Resp]
 	method      string
 	path        string
+	roles       []types.UserRole
 	meta        RouteMeta
+}
+
+func (ro RouteObject[Req, Resp]) Roles() []types.UserRole {
+	return ro.roles
 }
 
 func (ro RouteObject[Req, Resp]) Handler(log, errLog *slog.Logger, berr *bragerr.BragErrFactory) http.Handler {
@@ -135,7 +142,18 @@ func (ro RouteObject[Req, Resp]) Docs(refl *openapi31.Reflector, basePath string
 	}
 	op.SetTags(ro.meta.Tags...)
 	op.SetSummary(ro.meta.Summary)
-	op.SetDescription(ro.meta.Description)
+
+	if len(ro.roles) > 0 {
+		var rFormatted strings.Builder
+		for _, r := range ro.roles {
+			fmt.Fprintf(&rFormatted, "\n - `%s`", r)
+		}
+		desc := fmt.Sprintf("%s<br><br>Requires at least one of the following user roles:%s", ro.meta.Description, rFormatted.String())
+		op.SetDescription(desc)
+	} else {
+		op.SetDescription(ro.meta.Description)
+	}
+
 	op.AddReqStructure(new(Req))
 	op.AddRespStructure(new(Resp), func(cu *openapi.ContentUnit) {
 		cu.HTTPStatus = ro.meta.ExpectedStatus
@@ -163,11 +181,12 @@ func (ro RouteObject[Req, Resp]) Path() string {
 	return ro.path
 }
 
-func New[Req Validator, T any](method, path string, f RouteFunc[Req, T], m RouteMeta) RouteObject[Req, T] {
+func New[Req Validator, T any](method, path string, f RouteFunc[Req, T], r []types.UserRole, m RouteMeta) RouteObject[Req, T] {
 	return RouteObject[Req, T]{
 		handlerFunc: f,
 		method:      method,
 		path:        path,
+		roles:       r,
 		meta:        m,
 	}
 }

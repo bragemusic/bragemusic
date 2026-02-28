@@ -15,7 +15,7 @@ func main() {
 	refl := openapi31.NewReflector()
 	refl.Spec.Info.
 		WithTitle("Brage Music API").
-		WithVersion(config.VERSION).
+		WithVersion(">=" + config.VERSION).
 		WithDescription("Put something here")
 
 	refl.SpecEns().ComponentsEns().WithSecuritySchemes(map[string]openapi31.SecuritySchemeOrReference{
@@ -34,7 +34,7 @@ func main() {
 	)
 	refl.SpecEns().WithTags(
 		openapi31.Tag{Name: "Artists", Description: utils.Ptr("Artist management")},
-		// openapi3.Tag{Name: "Albums", Description: "Album management"},
+		openapi31.Tag{Name: "Albums", Description: utils.Ptr("Album management")},
 		// openapi3.Tag{Name: "Tracks", Description: "Track management"},
 		// openapi3.Tag{Name: "Auth", Description: "Authentication endpoints"},
 	)

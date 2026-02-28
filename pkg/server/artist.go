@@ -13,7 +13,7 @@ import (
 
 func (s *Server) artistRoutes() []routes.RouteHandler {
 	return []routes.RouteHandler{
-		routes.New("GET", "/", s.listArtists(), routes.RouteMeta{
+		routes.New("GET", "/", s.listArtists(), nil, routes.RouteMeta{
 			Summary:             "List all artists.",
 			Description:         "Returns metadata about all artists.",
 			ExpectedDescription: "Metadata about the artists",
@@ -21,7 +21,7 @@ func (s *Server) artistRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
-		routes.New("GET", "/{artistID}", s.getArtist(), routes.RouteMeta{
+		routes.New("GET", "/{artistID}", s.getArtist(), nil, routes.RouteMeta{
 			Summary:             "Retrieve an artist by ID.",
 			Description:         "Returns metadata about the specified artist.",
 			ExpectedDescription: "Metadata about the artist",
@@ -29,7 +29,7 @@ func (s *Server) artistRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
-		routes.New("GET", "/{artistID}/albums", s.listAlbumsByArtist(), routes.RouteMeta{
+		routes.New("GET", "/{artistID}/albums", s.listAlbumsByArtist(), nil, routes.RouteMeta{
 			Summary:             "List an artist's albums.",
 			Description:         "Returns all albums the selected artist takes part of.",
 			ExpectedDescription: "Artist's albums",
@@ -37,7 +37,7 @@ func (s *Server) artistRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
-		routes.New("GET", "/{artistID}/top-tracks", s.getArtistTopTracks(), routes.RouteMeta{
+		routes.New("GET", "/{artistID}/top-tracks", s.getArtistTopTracks(), nil, routes.RouteMeta{
 			Summary:             "Retrieve artist top tracks by ID.",
 			Description:         "Returns the 10 most played tracks by the logged in user of the specified artist.",
 			ExpectedDescription: "Top tracks",
@@ -45,7 +45,7 @@ func (s *Server) artistRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
-		routes.New("PUT", "/{artistID}", s.updateArtist(), routes.RouteMeta{
+		routes.New("PUT", "/{artistID}", s.updateArtist(), nil, routes.RouteMeta{
 			Summary:             "Update an artist by ID.",
 			Description:         "Updates metadata about the specified artist.",
 			ExpectedDescription: "Update succeded",
@@ -60,7 +60,11 @@ func (s *Server) apiArtists() http.Handler {
 	r := chi.NewRouter()
 
 	for _, route := range s.artistRoutes() {
-		r.Method(route.Method(), route.Path(), route.Handler(s.log, s.errLog, &s.berr))
+		if len(route.Roles()) > 0 {
+			r.With(s.authPkg.RoleCheckMiddleware(route.Roles()...)).Method(route.Method(), route.Path(), route.Handler(s.log, s.errLog, &s.berr))
+		} else {
+			r.Method(route.Method(), route.Path(), route.Handler(s.log, s.errLog, &s.berr))
+		}
 	}
 
 	return r
