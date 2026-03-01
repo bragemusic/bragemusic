@@ -44,7 +44,7 @@ func (s *Server) albumRoutes() []routes.RouteHandler {
 			ExpectedStatus:      http.StatusOK,
 		}),
 		routes.New("GET", "/{albumID}/tracks", s.listAlbumTracks(), nil, routes.RouteMeta{
-			Summary:             "List tracks of analbums.",
+			Summary:             "List tracks of an album.",
 			Description:         "Returns metadata about all the tracks on an album.",
 			ExpectedDescription: "Metadata about the tracks",
 			Tags:                []string{"Albums"},

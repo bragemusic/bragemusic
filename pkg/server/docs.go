@@ -29,5 +29,11 @@ func (s *Server) APIDocs(refl *openapi31.Reflector) error {
 		}
 	}
 
+	for _, r := range s.trackRoutes() {
+		if err := r.Docs(refl, basePath+"/tracks"); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

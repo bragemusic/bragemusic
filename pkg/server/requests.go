@@ -84,6 +84,32 @@ func (r ReqAlbumTracksGet) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqTracksGet struct {
+	TrackID uuid.UUID `path:"trackID" description:"ID of the wanted track"`
+}
+
+func (r ReqTracksGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqTracksUpdate struct {
+	TrackID uuid.UUID `path:"trackID" description:"ID of the wanted track"`
+	types.TrackUpdate
+}
+
+func (r ReqTracksUpdate) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqTracksAddRating struct {
+	TrackID uuid.UUID `path:"trackID" description:"ID of the wanted track"`
+	types.RatingReq
+}
+
+func (r ReqTracksAddRating) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count bool `query:"count" description:"Only return the count, not the payload."`
 }

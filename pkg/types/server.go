@@ -45,7 +45,7 @@ type PlaylistTrackReq struct {
 }
 
 type RatingReq struct {
-	Value int `json:"Value"`
+	Value int `json:"value"`
 }
 
 type ListPayload[T any] struct {
