@@ -110,6 +110,23 @@ func (r ReqTracksAddRating) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqMediaFilesGet struct {
+	MediafileID uuid.UUID `path:"mediafileID" description:"ID of the wanted media file"`
+}
+
+func (r ReqMediaFilesGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqMediaFilesGetFile struct {
+	MediafileID uuid.UUID `path:"mediafileID" description:"ID of the wanted media file"`
+	Range       string    `header:"Range" description:"Optional HTTP Range header for partial content retrieval." example:"bytes=0-1023"`
+}
+
+func (r ReqMediaFilesGetFile) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count bool `query:"count" description:"Only return the count, not the payload."`
 }
