@@ -15,6 +15,7 @@ import (
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
+	"github.com/mattn/go-sqlite3"
 )
 
 type Syncer struct {
@@ -423,6 +424,11 @@ func (s *Syncer) syncPlaylistTrack(ctx context.Context, tx database.DatabaseFace
 	switch event.Type {
 	case types.EntityEventCreate:
 		if _, err = tx.AddPlaylistTrack(ctx, p, userID); err != nil {
+			var sqliteErr sqlite3.Error
+			if errors.As(err, &sqliteErr) && sqliteErr.ExtendedCode == sqlite3.ErrConstraintForeignKey {
+				s.log.WarnContext(ctx, "playlist that playlist track references does not exists, has probably been cascade deleted. Skipping", "id", event.ItemID)
+				return nil
+			}
 			return err
 		}
 	case types.EntityEventUpdate:

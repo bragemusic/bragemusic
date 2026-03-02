@@ -166,6 +166,10 @@ type ReqPlaylistTracksGet struct {
 	PlaylistTrackID uuid.UUID `path:"playlistTrackID" description:"ID of the wanted playlist track"`
 }
 
+func (r ReqPlaylistTracksGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqSyncSync struct {
 	types.SyncReq
 }
@@ -182,7 +186,11 @@ func (r ReqSyncPlayHistory) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
-func (r ReqPlaylistTracksGet) Validate() (validationMessages string, err error) {
+type ReqRatingsGet struct {
+	RatingID uuid.UUID `path:"ratingID" description:"ID of the wanted rating"`
+}
+
+func (r ReqRatingsGet) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 

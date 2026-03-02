@@ -44,10 +44,9 @@ func (s *Server) api() http.Handler {
 	r.Mount("/mediafiles", s.buildMount(s.mediafileRoutes()))
 	r.Mount("/playlists", s.buildMount(s.playlistRoutes()))
 	r.Mount("/playlist-tracks", s.buildMount(s.playlistTrackRoutes()))
+	r.Mount("/ratings", s.buildMount(s.ratingRoutes()))
 	r.Mount("/sync", s.buildMount(s.syncRoutes()))
 	r.Mount("/tracks", s.buildMount(s.trackRoutes()))
-
-	r.Get("/ratings/{ratingID}", s.getRating())
 
 	r.Get("/search", s.search())
 

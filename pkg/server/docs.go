@@ -59,5 +59,11 @@ func (s *Server) APIDocs(refl *openapi31.Reflector) error {
 		}
 	}
 
+	for _, r := range s.ratingRoutes() {
+		if err := r.Docs(refl, basePath+"/ratings"); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
