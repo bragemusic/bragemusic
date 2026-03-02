@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
@@ -127,8 +128,44 @@ func (r ReqMediaFilesGetFile) Validate() (validationMessages string, err error) 
 	return "", nil
 }
 
+type ReqPlaylistsAdd struct {
+	types.PlaylistBase
+}
+
+func (r ReqPlaylistsAdd) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqPlaylistsGet struct {
+	PlaylistID uuid.UUID `path:"playlistID" description:"ID of the wanted playlist"`
+}
+
+func (r ReqPlaylistsGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqPlaylistsUpdate struct {
+	PlaylistID uuid.UUID `path:"playlistID" description:"ID of the wanted playlist"`
+	types.PlaylistBase
+}
+
+func (r ReqPlaylistsUpdate) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqPlaylistsAddTrack struct {
+	PlaylistID uuid.UUID `path:"playlistID" description:"ID of the wanted playlist"`
+	types.PlaylistTrackReq
+}
+
+func (r ReqPlaylistsAddTrack) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
-	Count bool `query:"count" description:"Only return the count, not the payload."`
+	Count     bool               `query:"count" description:"Only return the count, not the payload."`
+	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`
+	SortBy    database.SortBy    `query:"sortBy" description:"Sort by key."`
 }
 
 func (r ReqList) Validate() (validationMessages string, err error) {
@@ -141,5 +178,27 @@ type ReqListTracksOfAlbum struct {
 }
 
 func (r ReqListTracksOfAlbum) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqListPlaylists struct {
+	Count         bool               `query:"count" description:"Only return the count, not the payload."`
+	SortOrder     database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`
+	SortBy        database.SortBy    `query:"sortBy" description:"Sort by key."`
+	IncludePublic bool               `query:"includePublic" description:"Include public playlists"`
+}
+
+func (r ReqListPlaylists) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqListPlaylistTracks struct {
+	PlaylistID uuid.UUID          `path:"playlistID" description:"ID of the wanted playlist"`
+	Count      bool               `query:"count" description:"Only return the count, not the payload."`
+	SortOrder  database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`
+	SortBy     database.SortBy    `query:"sortBy" description:"Sort by key."`
+}
+
+func (r ReqListPlaylistTracks) Validate() (validationMessages string, err error) {
 	return "", nil
 }

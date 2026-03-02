@@ -41,5 +41,11 @@ func (s *Server) APIDocs(refl *openapi31.Reflector) error {
 		}
 	}
 
+	for _, r := range s.playlistRoutes() {
+		if err := r.Docs(refl, basePath+"/playlists"); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

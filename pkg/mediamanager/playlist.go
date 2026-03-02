@@ -8,14 +8,17 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (m MediaManager) AddPlaylist(ctx context.Context, p types.Playlist, userID uuid.UUID) error {
+func (m MediaManager) AddPlaylist(ctx context.Context, p types.PlaylistBase, userID uuid.UUID) error {
 	if p.Name == "" {
 		return m.berr.ParamMissing(nil, "name", types.EntityPlaylist.P(), types.ActionCreate.P())
 	}
 
-	p.Owner = userID
+	pl := types.Playlist{
+		PlaylistBase: p,
+		Owner:        userID,
+	}
 
-	if _, err := m.db.AddPlaylist(ctx, p, userID); err != nil {
+	if _, err := m.db.AddPlaylist(ctx, pl, userID); err != nil {
 		return m.berr.DatabaseError(err, types.EntityPlaylist, nil)
 	}
 
@@ -102,7 +105,7 @@ func (m MediaManager) ListPlaylistTracks(ctx context.Context, playlistID, userID
 	return tracks, nil
 }
 
-func (m MediaManager) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist, userID uuid.UUID) error {
+func (m MediaManager) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.PlaylistBase, userID uuid.UUID) error {
 	tx, err := m.db.Begin(ctx)
 	if err != nil {
 		return m.berr.DatabaseError(err, types.EntityPlaylist, &id)
@@ -118,10 +121,9 @@ func (m MediaManager) UpdatePlaylist(ctx context.Context, id uuid.UUID, data typ
 		return m.berr.ItemAccessDenied(nil, types.EntityPlaylist, id)
 	}
 
-	data.ID = id
-	data.Owner = existingPlist.Owner
+	existingPlist.PlaylistBase = data
 
-	err = tx.UpdatePlaylist(ctx, data, userID)
+	err = tx.UpdatePlaylist(ctx, existingPlist, userID)
 	if err != nil {
 		return m.berr.DatabaseError(err, types.EntityPlaylist, &id)
 	}
