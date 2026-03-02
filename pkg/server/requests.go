@@ -162,6 +162,14 @@ func (r ReqPlaylistsAddTrack) Validate() (validationMessages string, err error) 
 	return "", nil
 }
 
+type ReqPlaylistTracksGet struct {
+	PlaylistTrackID uuid.UUID `path:"playlistTrackID" description:"ID of the wanted playlist track"`
+}
+
+func (r ReqPlaylistTracksGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`

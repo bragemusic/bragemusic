@@ -44,9 +44,7 @@ func (s *Server) api() http.Handler {
 	r.Mount("/mediafiles", s.buildMount(s.mediafileRoutes()))
 	r.Mount("/tracks", s.buildMount(s.trackRoutes()))
 	r.Mount("/playlists", s.buildMount(s.playlistRoutes()))
-
-	r.Get("/playlist-tracks/{playlistTrackID}", s.getPlaylistTrack())
-	r.Delete("/playlist-tracks/{playlistTrackID}", s.deletePlaylistTrack())
+	r.Mount("/playlist-tracks", s.buildMount(s.playlistTrackRoutes()))
 
 	r.Post("/sync", s.sync())
 	r.Post("/sync/play-history", s.syncPlayHistory())

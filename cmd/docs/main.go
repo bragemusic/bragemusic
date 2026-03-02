@@ -100,6 +100,7 @@ func main() {
 		openapi31.Tag{Name: "Artists", Description: utils.Ptr("Artists contains all information about an artist. This entity is then linked with albums to create full set of metadata for tracks.")},
 		openapi31.Tag{Name: "Media Files", Description: utils.Ptr("Media Files accounts for the actual music file data. It knows where to find the file and have infromation about what's in it. The media file entries are linked to tracks.")},
 		openapi31.Tag{Name: "Playlists", Description: utils.Ptr("Playlists contains the main metadata of a playlist. A Playlist Track entity is used to link an album track to a playlist.")},
+		openapi31.Tag{Name: "Playlist Tracks", Description: utils.Ptr("Playlist Tracks are the links between playlists and album tracks. These are the entities that builds the track content of a playlist.")},
 		openapi31.Tag{Name: "Tracks", Description: utils.Ptr("Tracks holds the metadata for the actual track. It references one or zero media files. Used together with album tracks and album artists we can build the entire track metadata. That can be retireved by the detailed endpoints.")},
 	)
 
