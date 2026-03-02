@@ -166,6 +166,22 @@ type ReqPlaylistTracksGet struct {
 	PlaylistTrackID uuid.UUID `path:"playlistTrackID" description:"ID of the wanted playlist track"`
 }
 
+type ReqSyncSync struct {
+	types.SyncReq
+}
+
+func (r ReqSyncSync) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqSyncPlayHistory struct {
+	types.SyncPlayHistoryReq
+}
+
+func (r ReqSyncPlayHistory) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 func (r ReqPlaylistTracksGet) Validate() (validationMessages string, err error) {
 	return "", nil
 }

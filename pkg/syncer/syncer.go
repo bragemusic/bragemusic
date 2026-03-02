@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"time"
@@ -410,6 +411,11 @@ func (s *Syncer) syncPlaylistTrack(ctx context.Context, tx database.DatabaseFace
 	if event.Type != types.EntityEventDelete {
 		p, err = s.sc.GetPlaylistTrack(ctx, event.ItemID)
 		if err != nil {
+			serr, ok := err.(serverclient.ErrStatus)
+			if ok && serr.Status == http.StatusNotFound {
+				s.log.WarnContext(ctx, "playlist track does not exists on server, has probably been cascade deleted. Skipping", "id", event.ItemID)
+				return nil
+			}
 			return err
 		}
 	}

@@ -53,5 +53,11 @@ func (s *Server) APIDocs(refl *openapi31.Reflector) error {
 		}
 	}
 
+	for _, r := range s.syncRoutes() {
+		if err := r.Docs(refl, basePath+"/sync"); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

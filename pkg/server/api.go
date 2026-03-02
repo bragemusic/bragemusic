@@ -42,12 +42,10 @@ func (s *Server) api() http.Handler {
 	r.Mount("/album-tracks", s.buildMount(s.albumTrackRoutes()))
 	r.Mount("/artists", s.buildMount(s.artistRoutes()))
 	r.Mount("/mediafiles", s.buildMount(s.mediafileRoutes()))
-	r.Mount("/tracks", s.buildMount(s.trackRoutes()))
 	r.Mount("/playlists", s.buildMount(s.playlistRoutes()))
 	r.Mount("/playlist-tracks", s.buildMount(s.playlistTrackRoutes()))
-
-	r.Post("/sync", s.sync())
-	r.Post("/sync/play-history", s.syncPlayHistory())
+	r.Mount("/sync", s.buildMount(s.syncRoutes()))
+	r.Mount("/tracks", s.buildMount(s.trackRoutes()))
 
 	r.Get("/ratings/{ratingID}", s.getRating())
 
