@@ -8,7 +8,7 @@ import (
 )
 
 func (s ServerClient) SearchFull(ctx context.Context, searchTerm string) (si []types.SearchItem, err error) {
-	u, err := url.JoinPath(s.baseUrl, "api", "search")
+	u, err := url.JoinPath(s.baseUrl, "api", "search", "media")
 	if err != nil {
 		return nil, err
 	}

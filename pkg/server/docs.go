@@ -65,5 +65,11 @@ func (s *Server) APIDocs(refl *openapi31.Reflector) error {
 		}
 	}
 
+	for _, r := range s.searchRoutes() {
+		if err := r.Docs(refl, basePath+"/search"); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

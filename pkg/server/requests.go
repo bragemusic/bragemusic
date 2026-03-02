@@ -194,6 +194,14 @@ func (r ReqRatingsGet) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqSearch struct {
+	SearchTerm string `query:"q" description:"Free text search string"`
+}
+
+func (r ReqSearch) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`

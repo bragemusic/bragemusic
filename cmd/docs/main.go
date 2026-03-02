@@ -83,7 +83,8 @@ func main() {
 		"BearerAuth": {
 			SecurityScheme: &openapi31.SecurityScheme{
 				HTTPBearer: &openapi31.SecuritySchemeHTTPBearer{
-					Scheme: "bearer",
+					Scheme:       "bearer",
+					BearerFormat: utils.Ptr("brg_v1_bNEjO8cs4s8P5rWhH6X4kSMZ2O_g0KnzzW1F4aeyVbw"),
 				},
 			},
 		},

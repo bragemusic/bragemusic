@@ -46,9 +46,8 @@ func (s *Server) api() http.Handler {
 	r.Mount("/playlist-tracks", s.buildMount(s.playlistTrackRoutes()))
 	r.Mount("/ratings", s.buildMount(s.ratingRoutes()))
 	r.Mount("/sync", s.buildMount(s.syncRoutes()))
+	r.Mount("/search", s.buildMount(s.searchRoutes()))
 	r.Mount("/tracks", s.buildMount(s.trackRoutes()))
-
-	r.Get("/search", s.search())
 
 	r.With(s.authPkg.RoleCheckMiddleware(types.UserRoleAdmin, types.UserRoleImporterWrite)).Post("/import/album", s.importAlbum())
 
