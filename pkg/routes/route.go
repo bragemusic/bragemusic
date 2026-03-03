@@ -97,10 +97,13 @@ func (ro RouteObject[Req, Resp]) Handler(log, errLog *slog.Logger, berr *bragerr
 			return
 		}
 
+		ct := r.Header.Get("Content-Type")
 		if r.Method == "POST" || r.Method == "PUT" || r.Method == "PATCH" {
-			if err = json.NewDecoder(r.Body).Decode(&reqStruct); err != nil {
-				bragerr.HandleHttpResponse(ctx, err, w, errLog)
-				return
+			if !strings.Contains(ct, "multipart/form-data") {
+				if err = json.NewDecoder(r.Body).Decode(&reqStruct); err != nil {
+					bragerr.HandleHttpResponse(ctx, err, w, errLog)
+					return
+				}
 			}
 		}
 
@@ -289,6 +292,7 @@ func ParseQueries[T Validator](q url.Values, v *T) error {
 				rv.Field(fidx).SetString(vs[0])
 			}
 		case reflect.Int:
+			fmt.Println("hehe")
 			if len(vs) > 0 {
 				intVal, err := strconv.Atoi(vs[0])
 				if err != nil {

@@ -202,6 +202,15 @@ func (r ReqSearch) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqImportAlbum struct {
+	File     []byte            `form:"file" required:"true" description:"Zip file content" json:"-"`
+	Metadata types.ImportAlbum `form:"metadata" required:"true" description:"Additional metadata" json:"-"`
+}
+
+func (r ReqImportAlbum) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`

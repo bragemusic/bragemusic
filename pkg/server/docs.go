@@ -71,5 +71,11 @@ func (s *Server) APIDocs(refl *openapi31.Reflector) error {
 		}
 	}
 
+	for _, r := range s.importRoutes() {
+		if err := r.Docs(refl, basePath+"/import"); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
