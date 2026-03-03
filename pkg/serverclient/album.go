@@ -104,11 +104,40 @@ func (s ServerClient) ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID
 		return nil, err
 	}
 
-	if err := s.doGetJson(ctx, u, &albums); err != nil {
+	resp := types.ListPayload[types.AlbumDetailed]{}
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
 		return nil, err
 	}
 
-	return albums, nil
+	return resp.Items, nil
+}
+
+func (s ServerClient) ListTracksByAlbum(ctx context.Context, albumID string) (tracks []types.Track, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID, "tracks")
+	if err != nil {
+		return nil, err
+	}
+
+	resp := types.ListPayload[types.Track]{}
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Items, nil
+}
+
+func (s ServerClient) ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.UUID) (tracks []types.TrackDetailed, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID.String(), "tracks-detailed")
+	if err != nil {
+		return nil, err
+	}
+
+	resp := types.ListPayload[types.TrackDetailed]{}
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Items, nil
 }
 
 func (s ServerClient) GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role types.ArtistRole) (albumArtist types.AlbumArtist, err error) {

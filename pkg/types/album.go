@@ -6,9 +6,8 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-type Album struct {
-	ID            uuid.UUID  `db:"id" json:"id"`
-	MusicBrainzID *string    `db:"musicbrainz_id" json:"musicbrainz_id"`
+type AlbumBase struct {
+	MusicBrainzID *string    `db:"musicbrainz_id" json:"musicbrainz_id" description:"ID and stuff"`
 	Name          string     `db:"name" json:"name"`
 	SortName      string     `db:"sort_name" json:"sort_name"`
 	ReleaseDate   *time.Time `db:"release_date" json:"release_date,omitempty"`
@@ -17,12 +16,17 @@ type Album struct {
 	Description   *string    `db:"description" json:"description,omitempty"`
 	Owner         string     `db:"owner" json:"owner"`
 	Public        *bool      `db:"public" json:"public,omitempty"`
-	CreatedAt     time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt     time.Time  `db:"updated_at" json:"updated_at"`
+}
+
+type Album struct {
+	ID uuid.UUID `db:"id" json:"id"`
+	AlbumBase
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
 type AlbumUpdate struct {
-	Album
+	AlbumBase
 	Artists []uuid.UUID `json:"artists"`
 }
 

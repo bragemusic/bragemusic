@@ -1,102 +1,144 @@
 package server
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
 
-	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/routes"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
-	"github.com/gofrs/uuid/v5"
 )
 
-func (s *Server) getArtist() http.HandlerFunc {
-	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		ctx := r.Context()
-
-		artistID, err := getParameter[uuid.UUID](ctx, "artistID")
-		if err != nil {
-			return Response{}, err
-		}
-
-		artist, err := s.mediamgr.GetArtist(ctx, artistID)
-		if err != nil {
-			return Response{}, err
-		}
-
-		return Response{Status: http.StatusOK, Payload: artist}, nil
-	})
+func (s *Server) artistRoutes() []routes.RouteHandler {
+	return []routes.RouteHandler{
+		routes.New("GET", "/", s.listArtists(), nil, routes.RouteMeta{
+			Summary:             "List all artists.",
+			Description:         "Returns metadata about all artists.",
+			ExpectedDescription: "Metadata about the artists",
+			Tags:                []string{"Artists"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+		routes.New("GET", "/{artistID}", s.getArtist(), nil, routes.RouteMeta{
+			Summary:             "Retrieve an artist by ID.",
+			Description:         "Returns metadata about the specified artist.",
+			ExpectedDescription: "Metadata about the artist",
+			Tags:                []string{"Artists"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+		routes.New("GET", "/{artistID}/albums", s.listAlbumsByArtist(), nil, routes.RouteMeta{
+			Summary:             "List an artist's albums.",
+			Description:         "Returns all albums the selected artist takes part of.",
+			ExpectedDescription: "Artist's albums",
+			Tags:                []string{"Artists"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+		routes.New("GET", "/{artistID}/top-tracks", s.getArtistTopTracks(), nil, routes.RouteMeta{
+			Summary:             "Retrieve artist top tracks by ID.",
+			Description:         "Returns the 10 most played tracks by the logged in user of the specified artist.",
+			ExpectedDescription: "Top tracks",
+			Tags:                []string{"Artists"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+		routes.New("PUT", "/{artistID}", s.updateArtist(), nil, routes.RouteMeta{
+			Summary:             "Update an artist by ID.",
+			Description:         "Updates metadata about the specified artist.",
+			ExpectedDescription: "Update succeded",
+			Tags:                []string{"Artists"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusNoContent,
+		}),
+	}
 }
 
-func (s *Server) getArtistTopTracks() http.HandlerFunc {
-	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		ctx := r.Context()
-
-		artistID, err := getParameter[uuid.UUID](ctx, "artistID")
+func (s *Server) getArtist() routes.RouteFunc[ReqArtistsGet, types.Artist] {
+	return func(ctx context.Context, req ReqArtistsGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.Artist], err error) {
+		artist, err := s.mediamgr.GetArtist(ctx, req.ArtistID)
 		if err != nil {
-			return Response{}, err
+			return resp, err
 		}
 
-		user, err := auth.UserFromContext(ctx)
-		if err != nil {
-			return Response{}, err
-		}
-
-		tracks, err := s.mediamgr.ListTracksDetailedByArtist(ctx, artistID, user.ID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
-		if err != nil {
-			return Response{}, err
-		}
-
-		return Response{Status: http.StatusOK, Payload: types.ListPayload[types.TrackDetailed]{Count: 10, Items: tracks}}, nil
-	})
+		return types.Response[types.Artist]{Status: http.StatusOK, Payload: artist}, nil
+	}
 }
 
-func (s *Server) listArtists() http.HandlerFunc {
-	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		ctx := r.Context()
+func (s *Server) getArtistTopTracks() routes.RouteFunc[ReqArtistsGet, types.ListPayload[types.TrackDetailed]] {
+	return func(ctx context.Context, req ReqArtistsGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[types.TrackDetailed]], err error) {
+		tracks, err := s.mediamgr.ListTracksDetailedByArtist(ctx, req.ArtistID, user.ID, database.SortByPlayCount, database.SortDesc, utils.Ptr(10), false)
+		if err != nil {
+			return types.Response[types.ListPayload[types.TrackDetailed]]{}, err
+		}
 
+		return types.Response[types.ListPayload[types.TrackDetailed]]{
+			Status: http.StatusOK,
+			Payload: types.ListPayload[types.TrackDetailed]{
+				Count: 10,
+				Items: tracks,
+			},
+		}, nil
+	}
+}
+
+func (s *Server) listAlbumsByArtist() routes.RouteFunc[ReqArtistsGet, types.ListPayload[types.AlbumDetailed]] {
+	return func(ctx context.Context, req ReqArtistsGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[types.AlbumDetailed]], err error) {
+		albums, err := s.mediamgr.ListAlbumsByArtist(ctx, req.ArtistID, database.SortByDate, database.SortAsc)
+		if err != nil {
+			return resp, err
+		}
+
+		return types.Response[types.ListPayload[types.AlbumDetailed]]{
+			Status: http.StatusOK,
+			Payload: types.ListPayload[types.AlbumDetailed]{
+				Count: len(albums),
+				Items: albums,
+			},
+		}, nil
+	}
+}
+
+func (s *Server) listArtists() routes.RouteFunc[ReqList, types.ListPayload[types.ArtistDetailed]] {
+	return func(ctx context.Context, req ReqList, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[types.ArtistDetailed]], err error) {
 		cnt, err := s.mediamgr.CountArtists(ctx)
 		if err != nil {
-			return Response{}, err
+			return resp, err
 		}
 
-		if r.URL.Query().Get("count") == "true" {
-			return Response{Status: http.StatusOK, Payload: types.ListPayload[types.ArtistDetailed]{Count: cnt}}, nil
+		if req.Count {
+			return types.Response[types.ListPayload[types.ArtistDetailed]]{
+				Status: http.StatusOK,
+				Payload: types.ListPayload[types.ArtistDetailed]{
+					Count: cnt,
+				},
+			}, nil
 		}
 
 		artists, err := s.mediamgr.ListArtists(ctx, database.SortByName, database.SortAsc)
 		if err != nil {
-			return Response{}, err
+			return resp, err
 		}
 
-		return Response{Status: http.StatusOK, Payload: types.ListPayload[types.ArtistDetailed]{Count: cnt, Items: artists}}, nil
-	})
+		return types.Response[types.ListPayload[types.ArtistDetailed]]{
+			Status: http.StatusOK,
+			Payload: types.ListPayload[types.ArtistDetailed]{
+				Count: cnt,
+				Items: artists,
+			},
+		}, nil
+	}
 }
 
-func (s *Server) updateArtist() http.HandlerFunc {
-	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		ctx := r.Context()
+func (s *Server) updateArtist() routes.RouteFunc[ReqArtistsUpdate, types.NoResponse] {
+	return func(ctx context.Context, req ReqArtistsUpdate, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		artist := types.Artist{ArtistBase: req.ArtistBase}
 
-		artistID, err := getParameter[uuid.UUID](ctx, "artistID")
-		if err != nil {
-			return Response{}, err
+		if err := s.mediamgr.UpdateArtist(ctx, req.ArtistID, artist, user.ID); err != nil {
+			return resp, err
 		}
 
-		user, err := auth.UserFromContext(ctx)
-		if err != nil {
-			return Response{}, err
-		}
-
-		artist := types.Artist{}
-		if err := json.NewDecoder(r.Body).Decode(&artist); err != nil {
-			return Response{}, err
-		}
-
-		if err := s.mediamgr.UpdateArtist(ctx, artistID, artist, user.ID); err != nil {
-			return Response{}, err
-		}
-
-		return Response{Status: http.StatusNoContent}, nil
-	})
+		return types.Response[types.NoResponse]{Status: http.StatusNoContent, Payload: types.NoResponse{}}, nil
+	}
 }

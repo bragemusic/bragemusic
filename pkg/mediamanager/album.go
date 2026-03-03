@@ -70,7 +70,7 @@ func (m MediaManager) ListAlbums(ctx context.Context, sortBy database.SortBy, so
 	return albums, nil
 }
 
-func (m MediaManager) GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role string) (types.AlbumArtist, error) {
+func (m MediaManager) GetAlbumArtist(ctx context.Context, albumID, artistID uuid.UUID, role types.ArtistRole) (types.AlbumArtist, error) {
 	albumArtist, err := m.db.GetAlbumArtist(ctx, albumID, artistID, types.ArtistRole(role))
 	if err != nil {
 		return types.AlbumArtist{}, m.berr.DatabaseError(err, types.EntityAlbumArtist, &albumID)
@@ -118,10 +118,16 @@ func (m MediaManager) UpdateAlbum(ctx context.Context, albumID uuid.UUID, albumD
 		return m.berr.DatabaseError(err, types.EntityAlbum, &albumID)
 	}
 
-	albumData.ID = albumID
 	albumData.Owner = existingAlbum.Owner
 
-	err = tx.UpdateAlbum(ctx, albumData.Album, userID)
+	album := types.Album{
+		ID:        albumID,
+		AlbumBase: albumData.AlbumBase,
+		CreatedAt: existingAlbum.CreatedAt,
+		UpdatedAt: existingAlbum.UpdatedAt,
+	}
+
+	err = tx.UpdateAlbum(ctx, album, userID)
 	if err != nil {
 		return m.berr.DatabaseError(err, types.EntityAlbum, &albumID)
 	}

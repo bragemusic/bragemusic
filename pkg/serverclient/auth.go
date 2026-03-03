@@ -8,16 +8,18 @@ import (
 )
 
 func (s ServerClient) ListUsers(ctx context.Context) (users []types.User, err error) {
-	u, err := url.JoinPath(s.baseUrl, "api", "users")
+	u, err := url.JoinPath(s.baseUrl, "api", "admin", "users")
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.doGetJson(ctx, u, &users); err != nil {
+	resp := types.ListPayload[types.User]{}
+
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
 		return nil, err
 	}
 
-	return users, nil
+	return resp.Items, nil
 }
 
 func (s ServerClient) Login(ctx context.Context, email, password string, longLivedToken bool) (resp types.LoginResp, err error) {

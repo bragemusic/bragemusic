@@ -1,56 +1,58 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
-	"github.com/bragemusic/core/pkg/auth"
-	"github.com/gofrs/uuid/v5"
+	"github.com/bragemusic/core/pkg/routes"
+	"github.com/bragemusic/core/pkg/types"
 )
 
-func (s *Server) getPlaylistTrack() http.HandlerFunc {
-	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		ctx := r.Context()
-
-		ptID, err := getParameter[uuid.UUID](ctx, "playlistTrackID")
-		if err != nil {
-			return Response{}, err
-		}
-
-		user, err := auth.UserFromContext(ctx)
-		if err != nil {
-			return Response{}, err
-		}
-
-		pt, err := s.mediamgr.GetPlaylistTrack(ctx, ptID, user.ID)
-		if err != nil {
-			return Response{}, err
-		}
-
-		return Response{Status: http.StatusOK, Payload: pt}, nil
-	},
-	)
+func (s *Server) playlistTrackRoutes() []routes.RouteHandler {
+	return []routes.RouteHandler{
+		routes.New("GET", "/{playlistTrackID}", s.getPlaylistTrack(), nil, routes.RouteMeta{
+			Summary:             "Get a playlist track by ID",
+			Description:         "Returns metadata for the specified playlist track.",
+			ExpectedDescription: "Playlist track metadata",
+			Tags:                []string{"Playlist Tracks"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+		routes.New("DELETE", "/{playlistTrackID}", s.deletePlaylistTrack(), nil, routes.RouteMeta{
+			Summary:             "Delete a playlist track by ID",
+			Description:         "Deletes the specified playlist track.",
+			ExpectedDescription: "Playlist track successfully deleted",
+			Tags:                []string{"Playlist Tracks"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusNoContent,
+		}),
+	}
 }
 
-func (s *Server) deletePlaylistTrack() http.HandlerFunc {
-	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
-		ctx := r.Context()
-
-		ptID, err := getParameter[uuid.UUID](ctx, "playlistTrackID")
+func (s *Server) getPlaylistTrack() routes.RouteFunc[ReqPlaylistTracksGet, types.PlaylistTrack] {
+	return func(ctx context.Context, req ReqPlaylistTracksGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.PlaylistTrack], err error) {
+		pt, err := s.mediamgr.GetPlaylistTrack(ctx, req.PlaylistTrackID, user.ID)
 		if err != nil {
-			return Response{}, err
+			return resp, err
 		}
 
-		user, err := auth.UserFromContext(ctx)
+		return types.Response[types.PlaylistTrack]{
+			Payload: pt,
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) deletePlaylistTrack() routes.RouteFunc[ReqPlaylistTracksGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqPlaylistTracksGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		err = s.mediamgr.DeletePlaylistTrack(ctx, req.PlaylistTrackID, user.ID)
 		if err != nil {
-			return Response{}, err
+			return resp, err
 		}
 
-		err = s.mediamgr.DeletePlaylistTrack(ctx, ptID, user.ID)
-		if err != nil {
-			return Response{}, err
-		}
-
-		return Response{Status: http.StatusNoContent}, nil
-	},
-	)
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusNoContent,
+		}, nil
+	}
 }
