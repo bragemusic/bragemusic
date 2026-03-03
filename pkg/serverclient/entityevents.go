@@ -13,9 +13,11 @@ func (s ServerClient) ListEntityEvents(ctx context.Context) (events []types.Enti
 		return nil, err
 	}
 
-	if err := s.doGetJson(ctx, u, &events); err != nil {
+	resp := types.ListPayload[types.EntityEvent]{}
+
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
 		return nil, err
 	}
 
-	return events, nil
+	return resp.Items, nil
 }

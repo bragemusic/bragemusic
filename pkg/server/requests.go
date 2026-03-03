@@ -6,6 +6,12 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
+type ReqNoContent struct{}
+
+func (r ReqNoContent) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqArtistsGet struct {
 	ArtistID uuid.UUID `path:"artistID" description:"ID of the wanted artist"`
 }

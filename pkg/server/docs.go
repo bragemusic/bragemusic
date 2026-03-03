@@ -77,5 +77,11 @@ func (s *Server) APIDocs(refl *openapi31.Reflector) error {
 		}
 	}
 
+	for _, r := range s.adminRoutes() {
+		if err := r.Docs(refl, basePath+"/admin"); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }

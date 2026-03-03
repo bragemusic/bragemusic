@@ -37,6 +37,7 @@ func (s *Server) api() http.Handler {
 	r.Post("/img/albums/{albumID}", s.addImage(AlbumImage))
 	r.Post("/img/playlists/{playlistID}", s.addImage(PlaylistImage))
 
+	r.Mount("/admin", s.buildMount(s.adminRoutes()))
 	r.Mount("/albums", s.buildMount(s.albumRoutes()))
 	r.Mount("/album-artists", s.buildMount(s.albumArtistRoutes()))
 	r.Mount("/album-tracks", s.buildMount(s.albumTrackRoutes()))
@@ -49,12 +50,6 @@ func (s *Server) api() http.Handler {
 	r.Mount("/sync", s.buildMount(s.syncRoutes()))
 	r.Mount("/search", s.buildMount(s.searchRoutes()))
 	r.Mount("/tracks", s.buildMount(s.trackRoutes()))
-
-	// r.With(s.authPkg.RoleCheckMiddleware(types.UserRoleAdmin, types.UserRoleImporterWrite)).Post("/import/album", s.importAlbum())
-
-	r.With(s.authPkg.RoleCheckMiddleware(types.UserRoleAdmin)).Get("/admin/entity-events", s.getEntityEvents())
-
-	r.With(s.authPkg.RoleCheckMiddleware(types.UserRoleAdmin, types.UserRoleUsersGet)).Get("/users", s.listUsers())
 
 	return r
 }
