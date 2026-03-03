@@ -1,0 +1,53 @@
+package mediamanager
+
+import (
+	"context"
+	"errors"
+
+	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
+)
+
+func (m MediaManager) AddLike(ctx context.Context, trackID, userID uuid.UUID) error {
+	hasLike, err := m.db.HasLike(ctx, trackID, userID)
+	if err != nil {
+		return m.berr.DatabaseError(err, types.EntityLike, nil)
+	}
+
+	if hasLike {
+		return m.berr.EntityAlreadyExists(errors.New("user cannot like an already liked track"), types.EntityLike)
+	}
+
+	l := types.Like{
+		TrackID: trackID,
+		Owner:   userID,
+	}
+
+	if _, err := m.db.AddLike(ctx, l); err != nil {
+		return m.berr.DatabaseError(err, types.EntityLike, nil)
+	}
+
+	return nil
+}
+
+func (m MediaManager) RemoveLike(ctx context.Context, trackID, userID uuid.UUID) error {
+	hasLike, err := m.db.HasLike(ctx, trackID, userID)
+	if err != nil {
+		return m.berr.DatabaseError(err, types.EntityLike, nil)
+	}
+
+	if !hasLike {
+		return m.berr.EntityDoNotExist(errors.New("user cannot remove an unliked track"), types.EntityLike)
+	}
+
+	id, err := m.db.GetLikeID(ctx, trackID, userID)
+	if err != nil {
+		return m.berr.DatabaseError(err, types.EntityLike, nil)
+	}
+
+	if err := m.db.DeleteLike(ctx, id, userID); err != nil {
+		return m.berr.DatabaseError(err, types.EntityLike, &id)
+	}
+
+	return nil
+}

@@ -34,6 +34,22 @@ func (s *Server) trackRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusNoContent,
 		}),
+		routes.New("POST", "/{trackID}/like", s.addTrackLike(), nil, routes.RouteMeta{
+			Summary:             "Like a track by ID",
+			Description:         "Add a like to the selected track for the authed user.",
+			ExpectedDescription: "Like accepted",
+			Tags:                []string{"Tracks"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusNoContent,
+		}),
+		routes.New("DELETE", "/{trackID}/like", s.deleteTrackLike(), nil, routes.RouteMeta{
+			Summary:             "Remove a track like by ID",
+			Description:         "Remove a like to the selected track for the authed user.",
+			ExpectedDescription: "Like removed",
+			Tags:                []string{"Tracks"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusNoContent,
+		}),
 		routes.New("POST", "/{trackID}/play-history", s.addPlayHistory(), nil, routes.RouteMeta{
 			Summary:             "Add play history entry to a track",
 			Description:         "Adds one play history event for a track.",
@@ -74,9 +90,37 @@ func (s *Server) addPlayHistory() routes.RouteFunc[ReqTracksGet, types.NoRespons
 	}
 }
 
+func (s *Server) addTrackLike() routes.RouteFunc[ReqTracksGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqTracksGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		err = s.mediamgr.AddLike(ctx, req.TrackID, user.ID)
+		if err != nil {
+			return resp, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusNoContent,
+		}, nil
+	}
+}
+
 func (s *Server) addTrackRating() routes.RouteFunc[ReqTracksAddRating, types.NoResponse] {
 	return func(ctx context.Context, req ReqTracksAddRating, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
 		if err := s.mediamgr.RateTrack(ctx, req.TrackID, user.ID, req.RatingReq.Value); err != nil {
+			return resp, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusNoContent,
+		}, nil
+	}
+}
+
+func (s *Server) deleteTrackLike() routes.RouteFunc[ReqTracksGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqTracksGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		err = s.mediamgr.RemoveLike(ctx, req.TrackID, user.ID)
+		if err != nil {
 			return resp, err
 		}
 
