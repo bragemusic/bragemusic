@@ -110,3 +110,29 @@ func (s ServerClient) UpdateTrack(ctx context.Context, id uuid.UUID, data types.
 
 	return nil
 }
+
+func (s ServerClient) LikeTrack(ctx context.Context, trackID uuid.UUID) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "tracks", trackID.String(), "like")
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPostJson(ctx, u, nil, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s ServerClient) UnlikeTrack(ctx context.Context, trackID uuid.UUID) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "tracks", trackID.String(), "like")
+	if err != nil {
+		return err
+	}
+
+	if err := s.doDelete(ctx, u); err != nil {
+		return err
+	}
+
+	return nil
+}

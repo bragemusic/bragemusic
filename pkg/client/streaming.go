@@ -36,6 +36,8 @@ func (c *ClientStreaming) updatePlayCount(trackID uuid.UUID) {
 		return
 	}
 	c.log.DebugContext(ctx, "added play count", "track_id", trackID)
+
+	c.emitEvent(types.ClientEventEntitiesUpdated, nil)
 }
 
 func (c *ClientStreaming) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
@@ -132,6 +134,24 @@ func (c ClientStreaming) UploadAlbumImage(ctx context.Context, id uuid.UUID, img
 
 func (c ClientStreaming) RateTrack(ctx context.Context, trackID uuid.UUID, value int) error {
 	if err := c.ServerClient.RateTrack(ctx, trackID, value); err != nil {
+		return err
+	}
+
+	c.emitEvent(types.ClientEventEntitiesUpdated, nil)
+	return nil
+}
+
+func (c ClientStreaming) LikeTrack(ctx context.Context, trackID uuid.UUID) error {
+	if err := c.ServerClient.LikeTrack(ctx, trackID); err != nil {
+		return err
+	}
+
+	c.emitEvent(types.ClientEventEntitiesUpdated, nil)
+	return nil
+}
+
+func (c ClientStreaming) UnlikeTrack(ctx context.Context, trackID uuid.UUID) error {
+	if err := c.ServerClient.UnlikeTrack(ctx, trackID); err != nil {
 		return err
 	}
 

@@ -370,3 +370,17 @@ func (c *ClientSync) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.
 	c.AudioPlayer.AddTrackToQueue(ctx, track)
 	return nil
 }
+
+func (c ClientSync) LikeTrack(ctx context.Context, trackID uuid.UUID) error {
+	if err := c.sc.LikeTrack(ctx, trackID); err != nil {
+		return err
+	}
+	return c.Sync(ctx)
+}
+
+func (c ClientSync) UnlikeTrack(ctx context.Context, trackID uuid.UUID) error {
+	if err := c.sc.UnlikeTrack(ctx, trackID); err != nil {
+		return err
+	}
+	return c.Sync(ctx)
+}

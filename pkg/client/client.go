@@ -235,6 +235,11 @@ type MetadataFace interface {
 
 	// AddPlayCount increments the play count for a track for a specific user.
 	AddPlayCount(ctx context.Context, trackID uuid.UUID) error
+
+	// LikeTrack adds a like to a track for a specific user. If the track already has a like an error is returned.
+	LikeTrack(ctx context.Context, trackID uuid.UUID) error
+	// UnlikeTrack removes a like to a track for a specific user. If the track does not have a like an error is returned.
+	UnlikeTrack(ctx context.Context, trackID uuid.UUID) error
 }
 
 // JobManagerFace defines background job execution and scheduling functionality.

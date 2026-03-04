@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/bragemusic/core/pkg/types"
@@ -116,4 +117,51 @@ func (d Database) HasLike(ctx context.Context, trackID, userID uuid.UUID) (bool,
 	}
 
 	return count > 0, nil
+}
+
+func (d Database) attachTrackLike(ctx context.Context, tracks []types.TrackDetailed, userID uuid.UUID) error {
+	if len(tracks) == 0 {
+		return nil
+	}
+
+	args := make([]any, 0, len(tracks)+1)
+	args = append(args, userID.String())
+
+	placeholders := make([]string, len(tracks))
+	for i, t := range tracks {
+		placeholders[i] = "?"
+		args = append(args, t.ID.String())
+	}
+
+	query := `
+		SELECT track_id
+		FROM likes
+		WHERE owner = ?
+		AND track_id IN (` + strings.Join(placeholders, ",") + `)
+	`
+
+	rows, err := d.ext.QueryContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	liked := make(map[string]struct{}, len(tracks))
+
+	for rows.Next() {
+		var trackID string
+		if err := rows.Scan(&trackID); err != nil {
+			return err
+		}
+		liked[trackID] = struct{}{}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for i := range tracks {
+		_, tracks[i].Liked = liked[tracks[i].ID.String()]
+	}
+
+	return nil
 }
