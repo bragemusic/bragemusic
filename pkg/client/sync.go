@@ -384,3 +384,23 @@ func (c ClientSync) UnlikeTrack(ctx context.Context, trackID uuid.UUID) error {
 	}
 	return c.Sync(ctx)
 }
+
+func (c ClientSync) ListLikedTracks(ctx context.Context) ([]types.TrackDetailed, error) {
+	if c.user == nil {
+		return nil, c.berr.NoUserInContext(errors.New("could not list liked tracks"))
+	}
+	return c.MediaManager.ListLikedTracksDetailed(ctx, c.user.ID)
+}
+
+func (c ClientSync) CountLikedTracks(ctx context.Context) (cnt int, err error) {
+	if c.user == nil {
+		return 0, c.berr.NoUserInContext(errors.New("could not count liked tracks"))
+	}
+
+	tracks, err := c.MediaManager.ListLikedTracksDetailed(ctx, c.user.ID)
+	if err != nil {
+		return 0, err
+	}
+
+	return len(tracks), nil
+}

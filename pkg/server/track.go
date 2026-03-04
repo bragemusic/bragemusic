@@ -18,6 +18,14 @@ func (s *Server) trackRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
+		routes.New("GET", "/liked", s.listLikedTracks(), nil, routes.RouteMeta{
+			Summary:             "List liked tracks.",
+			Description:         "Returns metadata about all tracks liked by the authenticated user, ordered by when they were liked.",
+			ExpectedDescription: "Metadata about the liked tracks",
+			Tags:                []string{"Tracks"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
 		routes.New("GET", "/{trackID}", s.getTrack(), nil, routes.RouteMeta{
 			Summary:             "Retrieve a track by ID.",
 			Description:         "Returns metadata about the specified track.",
@@ -155,6 +163,33 @@ func (s *Server) getTrackRatings() routes.RouteFunc[ReqTracksGet, []types.Rating
 		return types.Response[[]types.Rating]{
 			Payload: ratings,
 			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) listLikedTracks() routes.RouteFunc[ReqList, types.ListPayload[types.TrackDetailed]] {
+	return func(ctx context.Context, req ReqList, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[types.TrackDetailed]], err error) {
+		tracks, err := s.mediamgr.ListLikedTracksDetailed(ctx, user.ID)
+		if err != nil {
+			return resp, err
+		}
+
+		if req.Count {
+			return types.Response[types.ListPayload[types.TrackDetailed]]{
+				Payload: types.ListPayload[types.TrackDetailed]{
+					Items: nil,
+					Count: len(tracks),
+				},
+				Status: http.StatusOK,
+			}, nil
+		}
+
+		return types.Response[types.ListPayload[types.TrackDetailed]]{
+			Payload: types.ListPayload[types.TrackDetailed]{
+				Items: tracks,
+				Count: len(tracks),
+			},
+			Status: http.StatusOK,
 		}, nil
 	}
 }

@@ -238,8 +238,15 @@ type MetadataFace interface {
 
 	// LikeTrack adds a like to a track for a specific user. If the track already has a like an error is returned.
 	LikeTrack(ctx context.Context, trackID uuid.UUID) error
+
 	// UnlikeTrack removes a like to a track for a specific user. If the track does not have a like an error is returned.
 	UnlikeTrack(ctx context.Context, trackID uuid.UUID) error
+
+	// ListLikedTracks returns the tracks liked by the authenticated user.
+	ListLikedTracks(ctx context.Context) ([]types.TrackDetailed, error)
+
+	// CountLikedTracks returns the total number of tracks liked by the authenticated user.
+	CountLikedTracks(ctx context.Context) (cnt int, err error)
 }
 
 // JobManagerFace defines background job execution and scheduling functionality.

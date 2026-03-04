@@ -119,6 +119,57 @@ func (d Database) HasLike(ctx context.Context, trackID, userID uuid.UUID) (bool,
 	return count > 0, nil
 }
 
+func (d Database) ListLikedTracksDetailed(ctx context.Context, userID uuid.UUID) (tracks []types.TrackDetailed, err error) {
+	tracksQuery := `
+   	   SELECT
+   	   	t.id,
+   	   	t.title,
+   	   	at.album_id,
+   	   	al.name AS album_name,
+   	   	t.musicbrainz_id,
+   	   	at.track_number,
+   	   	at.disc_number,
+   	   	t.genre,
+   	   	t.comment,
+   	   	t.created_at,
+   	   	t.updated_at,
+   	   	COALESCE(tp.play_count, 0) AS play_count
+   	   FROM likes l
+   	   JOIN tracks t ON t.id = l.track_id
+   	   LEFT JOIN album_tracks at ON at.track_id = t.id
+   	   LEFT JOIN albums al ON al.id = at.album_id
+   	   LEFT JOIN (
+   	   	SELECT track_id, COUNT(*) AS play_count
+   	   	FROM play_history
+   	   	GROUP BY track_id
+   	   ) tp ON tp.track_id = t.id
+   	   WHERE l.owner = ?
+   	   ORDER BY l.created_at ASC;
+	`
+
+	if err := sqlx.SelectContext(ctx, d.ext, &tracks, tracksQuery, userID); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachTrackArtists(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachMediaFiles(ctx, tracks); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachTrackRatings(ctx, tracks, userID); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachTrackLike(ctx, tracks, userID); err != nil {
+		return nil, err
+	}
+
+	return tracks, nil
+}
+
 func (d Database) attachTrackLike(ctx context.Context, tracks []types.TrackDetailed, userID uuid.UUID) error {
 	if len(tracks) == 0 {
 		return nil

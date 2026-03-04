@@ -290,6 +290,10 @@ func (d Database) ListPlaylistTracks(ctx context.Context, playlistID, userID uui
 		return nil, err
 	}
 
+	if err := d.attachTrackLike(ctx, tracks, userID); err != nil {
+		return nil, err
+	}
+
 	return tracks, nil
 }
 

@@ -30,6 +30,15 @@ func (m MediaManager) AddLike(ctx context.Context, trackID, userID uuid.UUID) er
 	return nil
 }
 
+func (m MediaManager) ListLikedTracksDetailed(ctx context.Context, userID uuid.UUID) (tracks []types.TrackDetailed, err error) {
+	tracks, err = m.db.ListLikedTracksDetailed(ctx, userID)
+	if err != nil {
+		return nil, m.berr.DatabaseError(err, types.EntityTrack, nil)
+	}
+
+	return tracks, nil
+}
+
 func (m MediaManager) RemoveLike(ctx context.Context, trackID, userID uuid.UUID) error {
 	hasLike, err := m.db.HasLike(ctx, trackID, userID)
 	if err != nil {

@@ -150,6 +150,7 @@ type DatabaseFace interface {
 	DeleteLike(ctx context.Context, id, userID uuid.UUID) error
 	GetLikeID(ctx context.Context, trackID, userID uuid.UUID) (uuid.UUID, error)
 	HasLike(ctx context.Context, trackID, userID uuid.UUID) (bool, error)
+	ListLikedTracksDetailed(ctx context.Context, userID uuid.UUID) (tracks []types.TrackDetailed, err error)
 
 	AuthFace
 	ImportFace

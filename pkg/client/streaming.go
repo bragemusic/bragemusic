@@ -41,6 +41,16 @@ func (c *ClientStreaming) updatePlayCount(trackID uuid.UUID) {
 }
 
 func (c *ClientStreaming) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
+	if c.user == nil {
+		return c.berr.NoUserInContext(errors.New("could not start player"))
+	}
+
+	track, err := c.GetTrackDetailed(ctx, trackID, albumID)
+	if err != nil {
+		return err
+	}
+
+	c.AudioPlayer.AddTrackToQueue(ctx, track)
 	return nil
 }
 
