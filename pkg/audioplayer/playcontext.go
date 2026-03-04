@@ -11,9 +11,10 @@ type (
 )
 
 const (
-	PlayContextAlbum     PlayContextType = "album"
-	PlayContextTopTracks PlayContextType = "top_tracks"
-	PlayContextPlaylist  PlayContextType = "playlist"
+	PlayContextAlbum       PlayContextType = "album"
+	PlayContextLikedTracks PlayContextType = "liked_tracks"
+	PlayContextTopTracks   PlayContextType = "top_tracks"
+	PlayContextPlaylist    PlayContextType = "playlist"
 
 	RepeatOne RepeatType = "one"
 	RepeatAll RepeatType = "all"

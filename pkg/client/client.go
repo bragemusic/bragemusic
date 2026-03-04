@@ -100,6 +100,9 @@ type AudioPlayerFace interface {
 	// Tracks are ordered according to sortBy and sortOrder.
 	StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, sortBy database.SortBy, sortOrder database.SortOrder) error
 
+	// StartPlayerWithLikedTracks starts playback of an liked tracks beginning at the given track number.
+	StartPlayerWithLikedTracks(ctx context.Context, trackNumber int) error
+
 	// AddTrackToQueue adds a track to the current playback queue.
 	AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error
 

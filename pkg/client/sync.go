@@ -327,6 +327,36 @@ func (c *ClientSync) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID
 	return nil
 }
 
+func (c *ClientSync) StartPlayerWithLikedTracks(ctx context.Context, trackNumber int) error {
+	if c.user == nil {
+		return c.berr.NoUserInContext(errors.New("could not start player"))
+	}
+
+	tracks, err := c.ListLikedTracks(ctx)
+	if err != nil {
+		return err
+	}
+
+	pCtx := audioplayer.PlayContext{
+		Type:            audioplayer.PlayContextLikedTracks,
+		RefID:           uuid.Nil,
+		Tracks:          tracks,
+		Queue:           []types.TrackDetailed{},
+		CurrentTrackIdx: trackNumber,
+		Shuffle:         c.PlayContext().Shuffle,
+		Repeat:          c.PlayContext().Repeat,
+	}
+
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
+	if err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "started player", "type", "liked tracks", "trackNumber", trackNumber)
+
+	return nil
+}
+
 func (c *ClientSync) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, sortBy database.SortBy, sortOrder database.SortOrder) error {
 	if c.user == nil {
 		return c.berr.NoUserInContext(errors.New("could not start player"))
