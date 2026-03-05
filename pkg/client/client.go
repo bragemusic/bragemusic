@@ -9,6 +9,7 @@ package client
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/bragemusic/core/pkg/audiointerface"
@@ -31,6 +32,13 @@ type Config struct {
 	MusicDirPath  string
 	PlayerName    string
 	ServerBaseURL string
+	ClientType    types.ClientType
+}
+
+type IdentityFace interface {
+	ClientID() uuid.UUID
+	ClientName() string
+	ClientType() types.ClientType
 }
 
 // SyncFace defines functionality for synchronizing server data
@@ -179,6 +187,9 @@ type MetadataFace interface {
 	// CountTracks returns the total number of tracks.
 	CountTracks(ctx context.Context) (int, error)
 
+	// GetTrackDetailed returns the detailed version of the wanted track
+	GetTrackDetailed(ctx context.Context, trackID, albumID uuid.UUID) (track types.TrackDetailed, err error)
+
 	// ListTracksDetailedByAlbum returns detailed track metadata for a given album.
 	ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.UUID) ([]types.TrackDetailed, error)
 
@@ -268,7 +279,7 @@ type JobManagerFace interface {
 //
 // It represents the main entry point for interacting with the system from
 // a client perspective.
-type ClientFace interface {
+type clientFace interface {
 	// RegisterEventCallback registers a callback that is invoked whenever
 	// a client-level evant is emitted. Messages may represent events,
 	// warnings, or informational notifications originating from the client.
@@ -276,15 +287,23 @@ type ClientFace interface {
 
 	SyncFace
 	AuthFace
-	AudioPlayerFace
 	MetadataFace
 	JobManagerFace
 }
 
-type ClientSync struct {
+type ClientFace interface {
+	clientFace
+	IdentityFace
+	AudioPlayerFace
+
+	// hit ska åtminstone auth och audioplayer flyttas. Det är delat mellan sync och streaming. Typ iaf. Får lösa så att auth är det.
+	// 	Sen ska clientface generarea en clientSync/Stream när det loggas in en användare, så slipper vi pekar på user o en massa skit
+}
+
+type clientSync struct {
 	*syncer.Syncer
 	authclient.AuthClient
-	*audioplayer.AudioPlayer
+	// *audioplayer.AudioPlayer
 	*mediamanager.MediaManager
 	*jobmanager.JobManager
 
@@ -299,9 +318,9 @@ type ClientSync struct {
 	user           *types.UserDetails
 }
 
-type ClientStreaming struct {
+type clientStreaming struct {
 	authclient.AuthClient
-	*audioplayer.AudioPlayer
+	// *audioplayer.AudioPlayer
 	*jobmanager.JobManager
 	*syncer.NoSync
 
@@ -315,64 +334,144 @@ type ClientStreaming struct {
 	user           *types.UserDetails
 }
 
-func NewSyncClient(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
-	sc := serverclient.New(config.ServerBaseURL, slogHandler)
-	mm := mediamanager.New(slogHandler, nil, nil, config.MusicDirPath, config.ImagePath)
-	sy := syncer.New(&sc, nil, config.MusicDirPath, config.ImagePath, slogHandler)
+type Client struct {
+	clientFace
+	*Identity
+	*audioplayer.AudioPlayer
 
-	pa, err := audiointerface.NewPortAudio(slogHandler)
-	if err != nil {
-		return nil, err
-	}
-
-	ar := audioreader.NewLocalReader(config.MusicDirPath)
-
-	apCfg := audioplayer.Config{
-		PlayerName:   config.PlayerName,
-		MusicDirPath: config.MusicDirPath,
-	}
-
-	ap, err := audioplayer.New(apCfg, pa, ar, slogHandler)
-	if err != nil {
-		return nil, err
-	}
-
-	jm := jobmanager.New(slogHandler)
-
-	c := &ClientSync{
-		config:       config,
-		log:          slog.New(slogHandler).With("service", "client"),
-		Syncer:       &sy,
-		AuthClient:   authclient.New(&sc, slogHandler),
-		AudioPlayer:  ap,
-		MediaManager: &mm,
-		JobManager:   &jm,
-		sc:           &sc,
-		berr:         bragerr.NewFactory("client"),
-	}
-
-	ap.RegisterPlayCountCallback(c.updatePlayCount)
-	c.RegisterUserCallback(sy.SetUser)
-	c.RegisterUserCallback(c.setUser)
-	c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
-
-	jm.RegisterJob(ctx, jobmanager.JobDefinition{
-		Type:     types.JobAuthClientServerStatus,
-		CronExpr: "*/10 * * * * *",
-		Run:      c.AuthClient.UpdateServerStatus,
-	})
-
-	jm.RegisterJob(ctx, jobmanager.JobDefinition{
-		Type:     types.JobSyncerDaemon,
-		CronExpr: "*/10 * * * *",
-		Run:      c.Syncer.Sync,
-	})
-
-	return c, nil
+	log *slog.Logger
 }
 
-func NewStreamingClient(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
+func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error {
+	tracks, err := c.ListTracksDetailedByAlbum(ctx, albumID)
+	if err != nil {
+		return err
+	}
+
+	pCtx := audioplayer.PlayContext{
+		Type:            audioplayer.PlayContextAlbum,
+		RefID:           albumID,
+		Tracks:          tracks,
+		Queue:           []types.TrackDetailed{},
+		CurrentTrackIdx: trackNumber,
+		Shuffle:         c.PlayContext().Shuffle,
+		Repeat:          c.PlayContext().Repeat,
+	}
+
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
+	if err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "started player", "albumID", albumID.String(), "trackNumber", trackNumber)
+
+	return nil
+}
+
+func (c *Client) StartPlayerWithLikedTracks(ctx context.Context, trackNumber int) error {
+	tracks, err := c.ListLikedTracks(ctx)
+	if err != nil {
+		return err
+	}
+
+	pCtx := audioplayer.PlayContext{
+		Type:            audioplayer.PlayContextLikedTracks,
+		RefID:           uuid.Nil,
+		Tracks:          tracks,
+		Queue:           []types.TrackDetailed{},
+		CurrentTrackIdx: trackNumber,
+		Shuffle:         c.PlayContext().Shuffle,
+		Repeat:          c.PlayContext().Repeat,
+	}
+
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
+	if err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "started player", "type", "liked tracks", "trackNumber", trackNumber)
+
+	return nil
+}
+
+func (c *Client) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, sortBy database.SortBy, sortOrder database.SortOrder) error {
+	tracks, err := c.ListPlaylistTracks(ctx, playlistID, sortBy, sortOrder)
+	if err != nil {
+		return err
+	}
+
+	pCtx := audioplayer.PlayContext{
+		Type:            audioplayer.PlayContextPlaylist,
+		RefID:           playlistID,
+		Tracks:          tracks,
+		Queue:           []types.TrackDetailed{},
+		CurrentTrackIdx: trackNumber,
+		Shuffle:         c.PlayContext().Shuffle,
+		Repeat:          c.PlayContext().Repeat,
+	}
+
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
+	if err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "started player", "playlistID", playlistID.String(), "trackNumber", trackNumber)
+
+	return nil
+}
+
+func (c *Client) updatePlayCount(trackID uuid.UUID) {
+	// FIXME: Do we need context here?
+	ctx := context.TODO()
+
+	err := c.AddPlayCount(ctx, trackID)
+	if err != nil {
+		c.log.ErrorContext(ctx, "could not add play count", "error", err.Error())
+		return
+	}
+	c.log.DebugContext(ctx, "added play count", "track_id", trackID)
+
+	// c.emitEvent(types.ClientEventEntitiesUpdated, nil)
+}
+
+func (c *Client) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
+	track, err := c.GetTrackDetailed(ctx, trackID, albumID)
+	if err != nil {
+		return err
+	}
+
+	c.AudioPlayer.AddTrackToQueue(ctx, track)
+	return nil
+}
+
+func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
+	var cf clientFace
+	var ar audioreader.AudioReader
+	var err error
+
 	sc := serverclient.New(config.ServerBaseURL, slogHandler)
+
+	switch config.ClientType {
+	case types.ClientTypeStreaming:
+		cf, err = newStreamingClient(ctx, config, &sc, slogHandler)
+		if err != nil {
+			return nil, err
+		}
+		ar = audioreader.NewServerReader(&sc, slogHandler)
+	case types.ClientTypeSync:
+		cf, err = newSyncClient(ctx, config, &sc, slogHandler)
+		if err != nil {
+			return nil, err
+		}
+		ar = audioreader.NewLocalReader(config.MusicDirPath)
+	default:
+		return nil, errors.New("type not implemented")
+	}
+
+	id, err := NewIdentity("lucas test")
+	if err != nil {
+		return nil, err
+	}
 
 	pa, err := audiointerface.NewPortAudio(slogHandler)
 	if err != nil {
@@ -384,35 +483,19 @@ func NewStreamingClient(ctx context.Context, config Config, slogHandler slog.Han
 		MusicDirPath: config.MusicDirPath,
 	}
 
-	ar := audioreader.NewServerReader(&sc, slogHandler)
-
 	ap, err := audioplayer.New(apCfg, pa, ar, slogHandler)
 	if err != nil {
 		return nil, err
 	}
 
-	jm := jobmanager.New(slogHandler)
-
-	c := &ClientStreaming{
-		config:       config,
-		log:          slog.New(slogHandler).With("service", "client"),
-		AuthClient:   authclient.New(&sc, slogHandler),
-		AudioPlayer:  ap,
-		JobManager:   &jm,
-		ServerClient: &sc,
-		NoSync:       &syncer.NoSync{},
-		berr:         bragerr.NewFactory("client"),
+	c := &Client{
+		clientFace:  cf,
+		Identity:    &id,
+		AudioPlayer: ap,
+		log:         slog.New(slogHandler).With("service", "client"),
 	}
 
 	ap.RegisterPlayCountCallback(c.updatePlayCount)
-	c.RegisterUserCallback(c.setUser)
-	// c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
-
-	jm.RegisterJob(ctx, jobmanager.JobDefinition{
-		Type:     types.JobAuthClientServerStatus,
-		CronExpr: "*/10 * * * * *",
-		Run:      c.AuthClient.UpdateServerStatus,
-	})
 
 	return c, nil
 }

@@ -247,7 +247,6 @@ func (ac *AuthClient) saveToken(ctx context.Context, token string, userID uuid.U
 	}
 
 	if err := os.WriteFile(path, []byte(token), 0o600); err != nil {
-		fmt.Println("kaka")
 		return err
 	}
 

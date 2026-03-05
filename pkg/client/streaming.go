@@ -3,66 +3,41 @@ package client
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"os"
 
-	"github.com/bragemusic/core/pkg/audioplayer"
-	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/authclient"
+	"github.com/bragemusic/core/pkg/bragerr"
+	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/serverclient"
+	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 
-func (c *ClientStreaming) RegisterEventCallback(f func(types.ClientEvent, any)) {
+func (c *clientStreaming) RegisterEventCallback(f func(types.ClientEvent, any)) {
 	c.eventCallbacks = append(c.eventCallbacks, f)
 }
 
-func (c *ClientStreaming) emitEvent(event types.ClientEvent, payload any) {
+func (c *clientStreaming) emitEvent(event types.ClientEvent, payload any) {
 	for _, f := range c.eventCallbacks {
 		f(event, payload)
 	}
 }
 
-func (c *ClientStreaming) setUser(user *types.UserDetails) {
+func (c *clientStreaming) setUser(user *types.UserDetails) {
 	c.user = user
 }
 
-func (c *ClientStreaming) updatePlayCount(trackID uuid.UUID) {
-	// FIXME: Do we need context here?
-	ctx := context.TODO()
-
-	err := c.AddPlayCount(ctx, trackID)
-	if err != nil {
-		c.log.ErrorContext(ctx, "could not add play count", "error", err.Error())
-		return
-	}
-	c.log.DebugContext(ctx, "added play count", "track_id", trackID)
-
-	c.emitEvent(types.ClientEventEntitiesUpdated, nil)
-}
-
-func (c *ClientStreaming) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
-	if c.user == nil {
-		return c.berr.NoUserInContext(errors.New("could not start player"))
-	}
-
-	track, err := c.GetTrackDetailed(ctx, trackID, albumID)
-	if err != nil {
-		return err
-	}
-
-	c.AudioPlayer.AddTrackToQueue(ctx, track)
-	return nil
-}
-
-func (c ClientStreaming) GetUser() *types.UserDetails {
+func (c clientStreaming) GetUser() *types.UserDetails {
 	return c.user
 }
 
-func (c *ClientStreaming) Login(ctx context.Context, username, password string, longLivedToken bool) (types.UserDetails, error) {
+func (c *clientStreaming) Login(ctx context.Context, username, password string, longLivedToken bool) (types.UserDetails, error) {
 	return c.AuthClient.Login(ctx, username, password, longLivedToken)
 }
 
-func (c *ClientStreaming) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
+func (c *clientStreaming) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
 	c.log.InfoContext(ctx, "logging in local user", "id", userID.String())
 
 	user, err := c.AuthClient.LoginLocalUser(ctx, userID, false)
@@ -76,7 +51,7 @@ func (c *ClientStreaming) LoginLocalUser(ctx context.Context, userID uuid.UUID) 
 	return nil
 }
 
-func (c *ClientStreaming) LoginCachedServerUser(ctx context.Context, password string, longLivedToken bool) error {
+func (c *clientStreaming) LoginCachedServerUser(ctx context.Context, password string, longLivedToken bool) error {
 	if c.user == nil {
 		return c.berr.NoUserInContext(errors.New("could not login cached user"))
 	}
@@ -84,18 +59,18 @@ func (c *ClientStreaming) LoginCachedServerUser(ctx context.Context, password st
 	return c.AuthClient.LoginCachedServerUser(ctx, *c.user, password, longLivedToken)
 }
 
-func (c *ClientStreaming) LogoutLocalUser(ctx context.Context) {
+func (c *clientStreaming) LogoutLocalUser(ctx context.Context) {
 	c.AuthClient.UserCallback(nil)
 }
 
-func (c *ClientStreaming) LogoutServerUser(ctx context.Context) error {
+func (c *clientStreaming) LogoutServerUser(ctx context.Context) error {
 	if c.user == nil {
 		return c.berr.NoUserInContext(errors.New("could not logout server user"))
 	}
 	return c.AuthClient.LogoutServerUser(ctx, c.user.ID)
 }
 
-func (c ClientStreaming) ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error {
+func (c clientStreaming) ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error {
 	r, err := os.Open(filename)
 	if err != nil {
 		return err
@@ -106,7 +81,7 @@ func (c ClientStreaming) ImportAlbum(ctx context.Context, filename string, music
 
 ///////
 
-func (c ClientStreaming) UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData types.Artist) error {
+func (c clientStreaming) UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData types.Artist) error {
 	if err := c.ServerClient.UpdateArtist(ctx, artistID, artistData); err != nil {
 		return err
 	}
@@ -115,7 +90,7 @@ func (c ClientStreaming) UpdateArtist(ctx context.Context, artistID uuid.UUID, a
 	return nil
 }
 
-func (c ClientStreaming) UploadArtistImage(ctx context.Context, artistID uuid.UUID, img serverclient.FileUpload) error {
+func (c clientStreaming) UploadArtistImage(ctx context.Context, artistID uuid.UUID, img serverclient.FileUpload) error {
 	if err := c.ServerClient.UploadArtistImage(ctx, artistID, img); err != nil {
 		return err
 	}
@@ -124,7 +99,7 @@ func (c ClientStreaming) UploadArtistImage(ctx context.Context, artistID uuid.UU
 	return nil
 }
 
-func (c ClientStreaming) UpdateAlbum(ctx context.Context, id uuid.UUID, album types.AlbumUpdate) error {
+func (c clientStreaming) UpdateAlbum(ctx context.Context, id uuid.UUID, album types.AlbumUpdate) error {
 	if err := c.ServerClient.UpdateAlbum(ctx, id, album); err != nil {
 		return err
 	}
@@ -133,7 +108,7 @@ func (c ClientStreaming) UpdateAlbum(ctx context.Context, id uuid.UUID, album ty
 	return nil
 }
 
-func (c ClientStreaming) UploadAlbumImage(ctx context.Context, id uuid.UUID, img serverclient.FileUpload) error {
+func (c clientStreaming) UploadAlbumImage(ctx context.Context, id uuid.UUID, img serverclient.FileUpload) error {
 	if err := c.ServerClient.UploadAlbumImage(ctx, id, img); err != nil {
 		return err
 	}
@@ -142,7 +117,7 @@ func (c ClientStreaming) UploadAlbumImage(ctx context.Context, id uuid.UUID, img
 	return nil
 }
 
-func (c ClientStreaming) RateTrack(ctx context.Context, trackID uuid.UUID, value int) error {
+func (c clientStreaming) RateTrack(ctx context.Context, trackID uuid.UUID, value int) error {
 	if err := c.ServerClient.RateTrack(ctx, trackID, value); err != nil {
 		return err
 	}
@@ -151,7 +126,7 @@ func (c ClientStreaming) RateTrack(ctx context.Context, trackID uuid.UUID, value
 	return nil
 }
 
-func (c ClientStreaming) LikeTrack(ctx context.Context, trackID uuid.UUID) error {
+func (c clientStreaming) LikeTrack(ctx context.Context, trackID uuid.UUID) error {
 	if err := c.ServerClient.LikeTrack(ctx, trackID); err != nil {
 		return err
 	}
@@ -160,7 +135,7 @@ func (c ClientStreaming) LikeTrack(ctx context.Context, trackID uuid.UUID) error
 	return nil
 }
 
-func (c ClientStreaming) UnlikeTrack(ctx context.Context, trackID uuid.UUID) error {
+func (c clientStreaming) UnlikeTrack(ctx context.Context, trackID uuid.UUID) error {
 	if err := c.ServerClient.UnlikeTrack(ctx, trackID); err != nil {
 		return err
 	}
@@ -169,7 +144,7 @@ func (c ClientStreaming) UnlikeTrack(ctx context.Context, trackID uuid.UUID) err
 	return nil
 }
 
-func (c ClientStreaming) UpdateTrack(ctx context.Context, id uuid.UUID, track types.TrackUpdate) error {
+func (c clientStreaming) UpdateTrack(ctx context.Context, id uuid.UUID, track types.TrackUpdate) error {
 	if err := c.ServerClient.UpdateTrack(ctx, id, track); err != nil {
 		return err
 	}
@@ -178,7 +153,7 @@ func (c ClientStreaming) UpdateTrack(ctx context.Context, id uuid.UUID, track ty
 	return nil
 }
 
-func (c ClientStreaming) AddPlaylist(ctx context.Context, playlist types.Playlist) error {
+func (c clientStreaming) AddPlaylist(ctx context.Context, playlist types.Playlist) error {
 	if err := c.ServerClient.AddPlaylist(ctx, playlist); err != nil {
 		return err
 	}
@@ -187,7 +162,7 @@ func (c ClientStreaming) AddPlaylist(ctx context.Context, playlist types.Playlis
 	return nil
 }
 
-func (c ClientStreaming) AddPlaylistTrack(ctx context.Context, playlistID, albumID, trackID uuid.UUID) error {
+func (c clientStreaming) AddPlaylistTrack(ctx context.Context, playlistID, albumID, trackID uuid.UUID) error {
 	if err := c.ServerClient.AddPlaylistTrack(ctx, playlistID, albumID, trackID); err != nil {
 		return err
 	}
@@ -196,7 +171,7 @@ func (c ClientStreaming) AddPlaylistTrack(ctx context.Context, playlistID, album
 	return nil
 }
 
-func (c ClientStreaming) DeletePlaylist(ctx context.Context, id uuid.UUID) error {
+func (c clientStreaming) DeletePlaylist(ctx context.Context, id uuid.UUID) error {
 	if err := c.ServerClient.DeletePlaylist(ctx, id); err != nil {
 		return err
 	}
@@ -205,7 +180,7 @@ func (c ClientStreaming) DeletePlaylist(ctx context.Context, id uuid.UUID) error
 	return nil
 }
 
-func (c ClientStreaming) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error {
+func (c clientStreaming) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) error {
 	if err := c.ServerClient.DeletePlaylistTrack(ctx, id); err != nil {
 		return err
 	}
@@ -214,7 +189,7 @@ func (c ClientStreaming) DeletePlaylistTrack(ctx context.Context, id uuid.UUID) 
 	return nil
 }
 
-func (c ClientStreaming) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist) error {
+func (c clientStreaming) UpdatePlaylist(ctx context.Context, id uuid.UUID, data types.Playlist) error {
 	if err := c.ServerClient.UpdatePlaylist(ctx, id, data); err != nil {
 		return err
 	}
@@ -223,7 +198,7 @@ func (c ClientStreaming) UpdatePlaylist(ctx context.Context, id uuid.UUID, data 
 	return nil
 }
 
-func (c ClientStreaming) UploadPlaylistImage(ctx context.Context, id uuid.UUID, img serverclient.FileUpload) error {
+func (c clientStreaming) UploadPlaylistImage(ctx context.Context, id uuid.UUID, img serverclient.FileUpload) error {
 	if err := c.ServerClient.UploadPlaylistImage(ctx, id, img); err != nil {
 		return err
 	}
@@ -232,84 +207,47 @@ func (c ClientStreaming) UploadPlaylistImage(ctx context.Context, id uuid.UUID, 
 	return nil
 }
 
-func (c *ClientStreaming) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error {
-	tracks, err := c.ListTracksDetailedByAlbum(ctx, albumID)
-	if err != nil {
-		return err
+func newStreamingClient(ctx context.Context, config Config, sc *serverclient.ServerClient, slogHandler slog.Handler) (clientFace, error) {
+	// sc := serverclient.New(config.ServerBaseURL, slogHandler)
+
+	// pa, err := audiointerface.NewPortAudio(slogHandler)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// apCfg := audioplayer.Config{
+	// 	PlayerName:   config.PlayerName,
+	// 	MusicDirPath: config.MusicDirPath,
+	// }
+
+	// ar := audioreader.NewServerReader(&sc, slogHandler)
+
+	// ap, err := audioplayer.New(apCfg, pa, ar, slogHandler)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	jm := jobmanager.New(slogHandler)
+
+	c := &clientStreaming{
+		config:       config,
+		log:          slog.New(slogHandler).With("service", "client"),
+		AuthClient:   authclient.New(sc, slogHandler),
+		JobManager:   &jm,
+		ServerClient: sc,
+		NoSync:       &syncer.NoSync{},
+		berr:         bragerr.NewFactory("client"),
 	}
 
-	pCtx := audioplayer.PlayContext{
-		Type:            audioplayer.PlayContextAlbum,
-		RefID:           albumID,
-		Tracks:          tracks,
-		Queue:           []types.TrackDetailed{},
-		CurrentTrackIdx: trackNumber,
-		Shuffle:         c.PlayContext().Shuffle,
-		Repeat:          c.PlayContext().Repeat,
-	}
+	// ap.RegisterPlayCountCallback(c.updatePlayCount)
+	c.RegisterUserCallback(c.setUser)
+	// c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
 
-	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
-	if err != nil {
-		return err
-	}
+	jm.RegisterJob(ctx, jobmanager.JobDefinition{
+		Type:     types.JobAuthClientServerStatus,
+		CronExpr: "*/10 * * * * *",
+		Run:      c.AuthClient.UpdateServerStatus,
+	})
 
-	c.log.InfoContext(ctx, "started player", "albumID", albumID.String(), "trackNumber", trackNumber)
-
-	return nil
-}
-
-func (c *ClientStreaming) StartPlayerWithLikedTracks(ctx context.Context, trackNumber int) error {
-	if c.user == nil {
-		return c.berr.NoUserInContext(errors.New("could not start player"))
-	}
-
-	tracks, err := c.ListLikedTracks(ctx)
-	if err != nil {
-		return err
-	}
-
-	pCtx := audioplayer.PlayContext{
-		Type:            audioplayer.PlayContextLikedTracks,
-		RefID:           uuid.Nil,
-		Tracks:          tracks,
-		Queue:           []types.TrackDetailed{},
-		CurrentTrackIdx: trackNumber,
-		Shuffle:         c.PlayContext().Shuffle,
-		Repeat:          c.PlayContext().Repeat,
-	}
-
-	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
-	if err != nil {
-		return err
-	}
-
-	c.log.InfoContext(ctx, "started player", "type", "liked tracks", "trackNumber", trackNumber)
-
-	return nil
-}
-
-func (c *ClientStreaming) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, sortBy database.SortBy, sortOrder database.SortOrder) error {
-	tracks, err := c.ListPlaylistTracks(ctx, playlistID, sortBy, sortOrder)
-	if err != nil {
-		return err
-	}
-
-	pCtx := audioplayer.PlayContext{
-		Type:            audioplayer.PlayContextPlaylist,
-		RefID:           playlistID,
-		Tracks:          tracks,
-		Queue:           []types.TrackDetailed{},
-		CurrentTrackIdx: trackNumber,
-		Shuffle:         c.PlayContext().Shuffle,
-		Repeat:          c.PlayContext().Repeat,
-	}
-
-	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
-	if err != nil {
-		return err
-	}
-
-	c.log.InfoContext(ctx, "started player", "playlistID", playlistID.String(), "trackNumber", trackNumber)
-
-	return nil
+	return c, nil
 }
