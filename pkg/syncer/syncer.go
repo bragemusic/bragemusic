@@ -153,6 +153,8 @@ func (s Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, 
 			f = s.syncMediaFile
 		case types.EntityRating:
 			f = s.syncRating
+		case types.EntityLike:
+			f = s.syncLike
 		default:
 			return fmt.Errorf("unsupported entity type '%s'", e.EntityType)
 		}
@@ -477,6 +479,26 @@ func (s *Syncer) syncRating(ctx context.Context, tx database.DatabaseFace, userI
 		}
 	case types.EntityEventDelete:
 		return errors.New("'delete' not supported for ratings")
+	}
+	return nil
+}
+
+func (s *Syncer) syncLike(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) error {
+	switch event.Type {
+	case types.EntityEventCreate:
+		l, err := s.sc.GetLike(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.AddLike(ctx, l); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		return errors.New("'update' not supported for likes")
+	case types.EntityEventDelete:
+		if err := tx.DeleteLike(ctx, event.ItemID, userID); err != nil {
+			return err
+		}
 	}
 	return nil
 }

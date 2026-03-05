@@ -78,6 +78,23 @@ func (d Database) DeleteLike(ctx context.Context, id, userID uuid.UUID) error {
 	return nil
 }
 
+func (d Database) GetLike(ctx context.Context, id, userID uuid.UUID) (like types.Like, err error) {
+	query := `
+        SELECT *
+        FROM likes
+        WHERE id = ?
+        AND owner = ?
+        LIMIT 1;
+    `
+
+	err = sqlx.GetContext(ctx, d.ext, &like, query, id, userID)
+	if err != nil {
+		return types.Like{}, err
+	}
+
+	return like, err
+}
+
 func (d Database) GetLikeID(ctx context.Context, trackID, userID uuid.UUID) (uuid.UUID, error) {
 	query := `
         SELECT id
