@@ -43,6 +43,7 @@ func (s *Server) api() http.Handler {
 	r.Mount("/album-tracks", s.buildMount(s.albumTrackRoutes()))
 	r.Mount("/artists", s.buildMount(s.artistRoutes()))
 	r.Mount("/import", s.buildMount(s.importRoutes()))
+	r.Mount("/likes", s.buildMount(s.likeRoutes()))
 	r.Mount("/mediafiles", s.buildMount(s.mediafileRoutes()))
 	r.Mount("/playlists", s.buildMount(s.playlistRoutes()))
 	r.Mount("/playlist-tracks", s.buildMount(s.playlistTrackRoutes()))

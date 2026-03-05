@@ -251,9 +251,9 @@ func ParsePaths[T Validator](ctx context.Context, berr *bragerr.BragErrFactory, 
 					return berr.ParamWrongFormat(err, k, "uuid")
 				}
 				field.Set(reflect.ValueOf(parsed))
-				return nil
+			} else {
+				return fmt.Errorf("cannot parse path '%s' of type '%s'. No support.", k, rv.Field(fidx).Kind())
 			}
-			return fmt.Errorf("cannot parse path '%s' of type '%s'. No support.", k, rv.Field(fidx).Kind())
 		}
 	}
 

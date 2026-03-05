@@ -92,6 +92,10 @@ func (d Database) GetMediaFileFromChecksum(ctx context.Context, cs string) (mf t
 }
 
 func (d Database) attachMediaFiles(ctx context.Context, tracks []types.TrackDetailed) error {
+	if len(tracks) == 0 {
+		return nil
+	}
+
 	trackIDs := make([]string, 0, len(tracks))
 	trackIndex := make(map[string]*types.TrackDetailed)
 

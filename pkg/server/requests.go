@@ -217,6 +217,14 @@ func (r ReqImportAlbum) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqLikesGet struct {
+	LikeID uuid.UUID `path:"likeID" description:"ID of the wanted like"`
+}
+
+func (r ReqLikesGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`

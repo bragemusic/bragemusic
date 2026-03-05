@@ -110,3 +110,69 @@ func (s ServerClient) UpdateTrack(ctx context.Context, id uuid.UUID, data types.
 
 	return nil
 }
+
+func (s ServerClient) LikeTrack(ctx context.Context, trackID uuid.UUID) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "tracks", trackID.String(), "like")
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPostJson(ctx, u, nil, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s ServerClient) UnlikeTrack(ctx context.Context, trackID uuid.UUID) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "tracks", trackID.String(), "like")
+	if err != nil {
+		return err
+	}
+
+	if err := s.doDelete(ctx, u); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s ServerClient) ListLikedTracks(ctx context.Context) ([]types.TrackDetailed, error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "tracks", "liked")
+	if err != nil {
+		return nil, err
+	}
+
+	resp := types.ListPayload[types.TrackDetailed]{}
+
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Items, nil
+}
+
+func (s ServerClient) CountLikedTracks(ctx context.Context) (cnt int, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "tracks", "liked")
+	if err != nil {
+		return 0, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return 0, err
+	}
+
+	q := ur.Query()
+	q.Set("count", "true")
+
+	ur.RawQuery = q.Encode()
+
+	resp := types.ListPayload[types.TrackDetailed]{}
+
+	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
+		return 0, err
+	}
+
+	return resp.Count, nil
+}

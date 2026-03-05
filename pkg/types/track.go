@@ -35,6 +35,7 @@ type TrackDetailed struct {
 	ContextID     *uuid.UUID `db:"context_id" json:"context_id" ts_type:"string"`
 	Rating        *float64   `json:"rating"`
 	UserRating    *int       `json:"user_rating"`
+	Liked         bool       `json:"liked"`
 	CreatedAt     time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt     time.Time  `db:"updated_at" json:"updated_at"`
 }

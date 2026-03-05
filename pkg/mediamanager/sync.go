@@ -71,6 +71,12 @@ func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st typ
 	}
 	st.New = append(st.New, ratings...)
 
+	likes, err := m.db.ListEntityEventsByEntityType(ctx, types.EntityLike, since, &user.ID)
+	if err != nil {
+		return types.SyncState{}, err
+	}
+	st.New = append(st.New, likes...)
+
 	return
 }
 

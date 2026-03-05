@@ -146,6 +146,13 @@ type DatabaseFace interface {
 	GetTrackRatings(ctx context.Context, trackID uuid.UUID) (ratings []types.Rating, err error)
 	UpdateRating(ctx context.Context, id uuid.UUID, rating int, userID uuid.UUID) error
 
+	AddLike(ctx context.Context, l types.Like) (uuid.UUID, error)
+	DeleteLike(ctx context.Context, id, userID uuid.UUID) error
+	GetLike(ctx context.Context, id, userID uuid.UUID) (like types.Like, err error)
+	GetLikeID(ctx context.Context, trackID, userID uuid.UUID) (uuid.UUID, error)
+	HasLike(ctx context.Context, trackID, userID uuid.UUID) (bool, error)
+	ListLikedTracksDetailed(ctx context.Context, userID uuid.UUID) (tracks []types.TrackDetailed, err error)
+
 	AuthFace
 	ImportFace
 }

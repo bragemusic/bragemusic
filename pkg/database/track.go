@@ -176,6 +176,10 @@ func (d Database) GetTrackDetailed(ctx context.Context, trackID, albumID, userID
 		return types.TrackDetailed{}, err
 	}
 
+	if err := d.attachTrackLike(ctx, dummySlice, userID); err != nil {
+		return types.TrackDetailed{}, err
+	}
+
 	return dummySlice[0], nil
 }
 
@@ -296,6 +300,10 @@ func (d Database) GetTracksDetailedFromArtistID(ctx context.Context, artistID, u
 		return nil, err
 	}
 
+	if err := d.attachTrackLike(ctx, tracks, userID); err != nil {
+		return nil, err
+	}
+
 	return tracks, nil
 }
 
@@ -391,6 +399,10 @@ func (d Database) ListAlbumTracksDetailed(ctx context.Context, albumID, userID u
 	}
 
 	if err := d.attachTrackRatings(ctx, tracks, userID); err != nil {
+		return nil, err
+	}
+
+	if err := d.attachTrackLike(ctx, tracks, userID); err != nil {
 		return nil, err
 	}
 

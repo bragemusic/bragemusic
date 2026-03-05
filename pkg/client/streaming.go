@@ -36,9 +36,21 @@ func (c *ClientStreaming) updatePlayCount(trackID uuid.UUID) {
 		return
 	}
 	c.log.DebugContext(ctx, "added play count", "track_id", trackID)
+
+	c.emitEvent(types.ClientEventEntitiesUpdated, nil)
 }
 
 func (c *ClientStreaming) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
+	if c.user == nil {
+		return c.berr.NoUserInContext(errors.New("could not start player"))
+	}
+
+	track, err := c.GetTrackDetailed(ctx, trackID, albumID)
+	if err != nil {
+		return err
+	}
+
+	c.AudioPlayer.AddTrackToQueue(ctx, track)
 	return nil
 }
 
@@ -139,6 +151,24 @@ func (c ClientStreaming) RateTrack(ctx context.Context, trackID uuid.UUID, value
 	return nil
 }
 
+func (c ClientStreaming) LikeTrack(ctx context.Context, trackID uuid.UUID) error {
+	if err := c.ServerClient.LikeTrack(ctx, trackID); err != nil {
+		return err
+	}
+
+	c.emitEvent(types.ClientEventEntitiesUpdated, nil)
+	return nil
+}
+
+func (c ClientStreaming) UnlikeTrack(ctx context.Context, trackID uuid.UUID) error {
+	if err := c.ServerClient.UnlikeTrack(ctx, trackID); err != nil {
+		return err
+	}
+
+	c.emitEvent(types.ClientEventEntitiesUpdated, nil)
+	return nil
+}
+
 func (c ClientStreaming) UpdateTrack(ctx context.Context, id uuid.UUID, track types.TrackUpdate) error {
 	if err := c.ServerClient.UpdateTrack(ctx, id, track); err != nil {
 		return err
@@ -224,6 +254,36 @@ func (c *ClientStreaming) StartPlayerWithAlbum(ctx context.Context, albumID uuid
 	}
 
 	c.log.InfoContext(ctx, "started player", "albumID", albumID.String(), "trackNumber", trackNumber)
+
+	return nil
+}
+
+func (c *ClientStreaming) StartPlayerWithLikedTracks(ctx context.Context, trackNumber int) error {
+	if c.user == nil {
+		return c.berr.NoUserInContext(errors.New("could not start player"))
+	}
+
+	tracks, err := c.ListLikedTracks(ctx)
+	if err != nil {
+		return err
+	}
+
+	pCtx := audioplayer.PlayContext{
+		Type:            audioplayer.PlayContextLikedTracks,
+		RefID:           uuid.Nil,
+		Tracks:          tracks,
+		Queue:           []types.TrackDetailed{},
+		CurrentTrackIdx: trackNumber,
+		Shuffle:         c.PlayContext().Shuffle,
+		Repeat:          c.PlayContext().Repeat,
+	}
+
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
+	if err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "started player", "type", "liked tracks", "trackNumber", trackNumber)
 
 	return nil
 }

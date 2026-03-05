@@ -100,6 +100,9 @@ type AudioPlayerFace interface {
 	// Tracks are ordered according to sortBy and sortOrder.
 	StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, sortBy database.SortBy, sortOrder database.SortOrder) error
 
+	// StartPlayerWithLikedTracks starts playback of an liked tracks beginning at the given track number.
+	StartPlayerWithLikedTracks(ctx context.Context, trackNumber int) error
+
 	// AddTrackToQueue adds a track to the current playback queue.
 	AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error
 
@@ -235,6 +238,18 @@ type MetadataFace interface {
 
 	// AddPlayCount increments the play count for a track for a specific user.
 	AddPlayCount(ctx context.Context, trackID uuid.UUID) error
+
+	// LikeTrack adds a like to a track for a specific user. If the track already has a like an error is returned.
+	LikeTrack(ctx context.Context, trackID uuid.UUID) error
+
+	// UnlikeTrack removes a like to a track for a specific user. If the track does not have a like an error is returned.
+	UnlikeTrack(ctx context.Context, trackID uuid.UUID) error
+
+	// ListLikedTracks returns the tracks liked by the authenticated user.
+	ListLikedTracks(ctx context.Context) ([]types.TrackDetailed, error)
+
+	// CountLikedTracks returns the total number of tracks liked by the authenticated user.
+	CountLikedTracks(ctx context.Context) (cnt int, err error)
 }
 
 // JobManagerFace defines background job execution and scheduling functionality.
