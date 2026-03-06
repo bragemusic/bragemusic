@@ -1,5 +1,5 @@
 -- migrate:up
-CREATE TABLE likes (
+CREATE TABLE IF NOT EXISTS likes (
     id          TEXT PRIMARY KEY,
     track_id    TEXT NOT NULL,
     owner       TEXT NOT NULL,

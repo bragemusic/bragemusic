@@ -32,13 +32,13 @@ type Config struct {
 	MusicDirPath  string
 	PlayerName    string
 	ServerBaseURL string
-	ClientType    types.ClientType
+	ClientType    types.DeviceType
 }
 
 type IdentityFace interface {
 	ClientID() uuid.UUID
 	ClientName() string
-	ClientType() types.ClientType
+	ClientType() types.DeviceType
 }
 
 // SyncFace defines functionality for synchronizing server data
@@ -452,13 +452,13 @@ func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFa
 	sc := serverclient.New(config.ServerBaseURL, slogHandler)
 
 	switch config.ClientType {
-	case types.ClientTypeStreaming:
+	case types.DeviceTypeStreaming:
 		cf, err = newStreamingClient(ctx, config, &sc, slogHandler)
 		if err != nil {
 			return nil, err
 		}
 		ar = audioreader.NewServerReader(&sc, slogHandler)
-	case types.ClientTypeSync:
+	case types.DeviceTypeSync:
 		cf, err = newSyncClient(ctx, config, &sc, slogHandler)
 		if err != nil {
 			return nil, err

@@ -22,8 +22,8 @@ func (i Identity) ClientName() string {
 	return i.name
 }
 
-func (i Identity) ClientType() types.ClientType {
-	return types.ClientTypeStreaming
+func (i Identity) ClientType() types.DeviceType {
+	return types.DeviceTypeStreaming
 }
 
 func idFilePath() (string, error) {

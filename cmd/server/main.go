@@ -21,6 +21,7 @@ import (
 	"github.com/bragemusic/core/pkg/metasyncer"
 	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/server"
+	"github.com/bragemusic/core/pkg/sse"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/wiki"
 
@@ -126,7 +127,9 @@ func main() {
 		Run:      m.UpdateSearchItems,
 	})
 
-	s := server.New(slogHandler, &m, &a, &imp, &jmgr, scfg)
+	sseHub := sse.NewHub(&db, slogHandler)
+
+	s := server.New(slogHandler, &m, &a, &imp, &jmgr, sseHub, scfg)
 
 	// logger.Info(fmt.Sprintf("serving on port %d", scfg.Port))
 	// if err = http.ListenAndServe(fmt.Sprintf(":%d", scfg.Port), s.Handler()); err != nil {

@@ -16,6 +16,7 @@ import (
 	"github.com/bragemusic/core/pkg/importer"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
+	"github.com/bragemusic/core/pkg/sse"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
@@ -33,6 +34,7 @@ type Server struct {
 	authPkg  *auth.Auth
 	importer *importer.Importer
 	jobmgr   *jobmanager.JobManager
+	sseHub   *sse.Hub
 	config   Config
 	berr     bragerr.BragErrFactory
 	httpSrv  *http.Server
@@ -49,6 +51,7 @@ func (s *Server) Handler() http.Handler {
 
 	r.Mount("/api", s.api())
 	r.Mount("/auth", s.auth())
+	r.Mount("/events", s.sse())
 
 	return r
 }
@@ -134,6 +137,11 @@ func (s *Server) Start(ctx context.Context) error {
 	})
 
 	g.Go(func() error {
+		s.sseHub.Run(ctx)
+		return nil
+	})
+
+	g.Go(func() error {
 		<-ctx.Done()
 
 		s.log.InfoContext(ctx, "shutdown initiated")
@@ -167,7 +175,7 @@ func (s *Server) Start(ctx context.Context) error {
 // 	return nil
 // }
 
-func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, c Config) Server {
+func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, sseHub *sse.Hub, c Config) Server {
 	return Server{
 		log:      slog.New(slogHandler).With("service", "server"),
 		errLog:   slog.New(slogHandler),
@@ -176,6 +184,7 @@ func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i
 		authPkg:  a,
 		importer: i,
 		jobmgr:   j,
+		sseHub:   sseHub,
 		berr:     bragerr.NewFactory("server"),
 	}
 }

@@ -271,24 +271,24 @@ func (a Auth) generateToken(ctx context.Context, userID uuid.UUID, tokenType typ
 	return token, int(t.ExpiresAt.Sub(time.Now()).Seconds()), nil
 }
 
-func (a Auth) getUserFromTokenString(ctx context.Context, tokenString string) (types.UserDetails, error) {
+func (a Auth) getUserFromTokenString(ctx context.Context, tokenString string) (user types.UserDetails, tokenID uuid.UUID, err error) {
 	hash := hashToken(tokenString)
 
 	token, err := a.db.GetTokenFromHash(ctx, hash)
 	if err != nil {
-		return types.UserDetails{}, ErrTokenNotValid
+		return types.UserDetails{}, uuid.Nil, ErrTokenNotValid
 	}
 
 	if err = a.validateToken(ctx, token); err != nil {
-		return types.UserDetails{}, ErrTokenNotValid
+		return types.UserDetails{}, uuid.Nil, ErrTokenNotValid
 	}
 
-	user, err := a.db.GetUserDetails(ctx, token.UserID)
+	user, err = a.db.GetUserDetails(ctx, token.UserID)
 	if err != nil {
-		return types.UserDetails{}, err
+		return types.UserDetails{}, uuid.Nil, err
 	}
 
-	return user, nil
+	return user, token.ID, nil
 }
 
 func (a Auth) validateToken(ctx context.Context, token types.Token) error {
@@ -327,13 +327,14 @@ func (a Auth) Middleware(next http.Handler) http.Handler {
 			return
 		}
 
-		user, err := a.getUserFromTokenString(ctx, token)
+		user, tokenID, err := a.getUserFromTokenString(ctx, token)
 		if err != nil {
 			bragerr.HandleHttpResponse(ctx, a.berr.Unauthenticated(err), w, a.log)
 			return
 		}
 
 		ctx = UpgradeContextWithUser(ctx, user)
+		ctx = UpgradeContextWithTokenID(ctx, tokenID)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
