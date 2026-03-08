@@ -225,6 +225,24 @@ func (r ReqLikesGet) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqDevicesRegister struct {
+	DeviceID         *uuid.UUID            `json:"id"`
+	Name             string                `json:"name"`
+	Type             types.DeviceType      `json:"type"`
+	Interface        types.DeviceInterface `json:"interface"`
+	SupportsPlayback bool                  `json:"supports_playback"`
+	Platform         string                `json:"platform"`
+	Version          string                `json:"version"`
+}
+
+func (r ReqDevicesRegister) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type RespDevicesRegister struct {
+	DeviceID uuid.UUID `json:"id"`
+}
+
 type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`

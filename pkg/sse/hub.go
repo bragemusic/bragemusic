@@ -2,13 +2,11 @@ package sse
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"time"
 
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/database"
@@ -17,30 +15,32 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-type ReqSubscribe struct {
+type ReqEvents struct {
 	// AlbumID uuid.UUID `path:"albumID" description:"ID of the wanted album"`
-	ID               uuid.UUID             `json:"id"`
-	Name             string                `json:"name"`
-	Type             types.DeviceType      `json:"type"`
-	Interface        types.DeviceInterface `json:"interface"`
-	SupportsPlayback bool                  `json:"supports_playback"`
-	Platform         string                `json:"platform"`
-	Version          string                `json:"version"`
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of your device"`
 }
 
-func (r ReqSubscribe) Validate() (validationMessages string, err error) {
+func (r ReqEvents) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
 type Event struct {
-	ID   uuid.UUID `json:"id"`
-	Type string    `json:"type"`
-	Data any       `json:"data"`
+	ID       uuid.UUID `json:"id"`
+	Type     string    `json:"type"`
+	Data     any       `json:"data"`
+	deviceID *uuid.UUID
 }
 
 type client struct {
-	id     uuid.UUID
-	events chan Event
+	deviceID uuid.UUID
+	userID   uuid.UUID
+	events   chan Event
+}
+
+type Dispatcher interface {
+	Broadcast(Event) error
+	ActiveDevices(userID uuid.UUID) []uuid.UUID
+	SendToDevice(deviceID uuid.UUID, ev Event) error
 }
 
 type Hub struct {
@@ -71,6 +71,33 @@ func (h *Hub) Broadcast(ev Event) error {
 	}
 	h.broadcast <- ev
 	return nil
+}
+
+func (h *Hub) SendToDevice(deviceID uuid.UUID, ev Event) error {
+	found := false
+	for c := range h.clients {
+		if c.deviceID == deviceID {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return errors.New("device not found")
+	}
+
+	ev.deviceID = &deviceID
+	h.broadcast <- ev
+	return nil
+}
+
+func (h *Hub) ActiveDevices(userID uuid.UUID) (d []uuid.UUID) {
+	for c := range h.clients {
+		if c.userID == userID {
+			d = append(d, c.deviceID)
+		}
+	}
+	return d
 }
 
 func (h *Hub) Run(ctx context.Context) {
@@ -106,46 +133,17 @@ func (h *Hub) Run(ctx context.Context) {
 	}
 }
 
-func (h *Hub) Handler() routes.RouteFunc[ReqSubscribe, types.NoResponse] {
-	return func(ctx context.Context, req ReqSubscribe, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+func (h *Hub) EventsHandler() routes.RouteFunc[ReqEvents, types.NoResponse] {
+	return func(ctx context.Context, req ReqEvents, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
 		tokenID, err := auth.TokenIDFromContext(ctx)
 		if err != nil {
 			return types.Response[types.NoResponse]{}, err
 		}
 
-		device, err := h.db.GetDeviceFromTokenID(ctx, tokenID)
+		device, err := h.db.GetDeviceFromTokenAndDeviceID(ctx, req.DeviceID, tokenID)
 		if err != nil {
-			if !errors.Is(err, sql.ErrNoRows) {
-				return types.Response[types.NoResponse]{}, err
-			}
-			device = types.Device{
-				ID:               req.ID,
-				Name:             req.Name,
-				Type:             req.Type,
-				Interface:        req.Interface,
-				TokenID:          tokenID,
-				SupportsPlayback: req.SupportsPlayback,
-				Platform:         req.Platform,
-				Version:          req.Version,
-				LastIP:           "will.fix.this.later",
-				LastSeen:         time.Now(),
-			}
-			if err = h.db.AddDevice(ctx, device); err != nil {
-				return types.Response[types.NoResponse]{}, err
-			}
-		} else {
-			device.Name = req.Name
-			device.Type = req.Type
-			device.Interface = req.Interface
-			device.SupportsPlayback = req.SupportsPlayback
-			device.Platform = req.Platform
-			device.Version = req.Version
-			device.LastIP = "will.fix.this.later"
-			device.LastSeen = time.Now()
-
-			if err = h.db.UpdateDevice(ctx, device); err != nil {
-				return types.Response[types.NoResponse]{}, err
-			}
+			// FIXME: Bragerr device not registered
+			return types.Response[types.NoResponse]{}, err
 		}
 
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -157,9 +155,14 @@ func (h *Hub) Handler() routes.RouteFunc[ReqSubscribe, types.NoResponse] {
 			return types.Response[types.NoResponse]{}, errors.New("Streaming unsupported")
 		}
 
+		if err = h.db.UpdateDeviceLastSeen(ctx, "updated.ip.address.now", device.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
 		client := &client{
-			id:     device.ID,
-			events: make(chan Event, 16),
+			deviceID: device.ID,
+			userID:   user.ID,
+			events:   make(chan Event, 16),
 		}
 
 		h.log.InfoContext(ctx, "new client subscription", "device.name", device.Name, "user.email", user.Email)
@@ -186,9 +189,11 @@ func (h *Hub) Handler() routes.RouteFunc[ReqSubscribe, types.NoResponse] {
 					// channel closed -> hub shutting down
 					return
 				}
-				if err = sendEvent(w, flusher, e); err != nil {
-					h.log.ErrorContext(ctx, "could not send event", "device.name", device.Name, "user.email", user.Email, "error", err.Error())
-					return
+				if e.deviceID == nil || *e.deviceID == device.ID {
+					if err = sendEvent(w, flusher, e); err != nil {
+						h.log.ErrorContext(ctx, "could not send event", "device.name", device.Name, "user.email", user.Email, "error", err.Error())
+						return
+					}
 				}
 			}
 		}

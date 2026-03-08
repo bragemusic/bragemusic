@@ -12,6 +12,7 @@ import (
 	"github.com/bragemusic/core/pkg/acoustid"
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/devicemanager"
 	"github.com/bragemusic/core/pkg/filetx"
 	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/importer"
@@ -128,8 +129,9 @@ func main() {
 	})
 
 	sseHub := sse.NewHub(&db, slogHandler)
+	dm := devicemanager.New(sseHub, &db)
 
-	s := server.New(slogHandler, &m, &a, &imp, &jmgr, sseHub, scfg)
+	s := server.New(slogHandler, &m, &a, &imp, &jmgr, sseHub, &dm, scfg)
 
 	// logger.Info(fmt.Sprintf("serving on port %d", scfg.Port))
 	// if err = http.ListenAndServe(fmt.Sprintf(":%d", scfg.Port), s.Handler()); err != nil {

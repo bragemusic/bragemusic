@@ -155,6 +155,7 @@ type DatabaseFace interface {
 
 	AuthFace
 	ImportFace
+	DeviceFace
 }
 
 type executor interface {

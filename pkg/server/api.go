@@ -52,6 +52,8 @@ func (s *Server) api() http.Handler {
 	r.Mount("/search", s.buildMount(s.searchRoutes()))
 	r.Mount("/tracks", s.buildMount(s.trackRoutes()))
 
+	r.Mount("/devices", s.buildMount(s.deviceRoutes()))
+
 	return r
 }
 

@@ -13,6 +13,7 @@ import (
 	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/bragerr"
+	"github.com/bragemusic/core/pkg/devicemanager"
 	"github.com/bragemusic/core/pkg/importer"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
@@ -28,17 +29,18 @@ type (
 )
 
 type Server struct {
-	log      *slog.Logger
-	errLog   *slog.Logger
-	mediamgr *mediamanager.MediaManager
-	authPkg  *auth.Auth
-	importer *importer.Importer
-	jobmgr   *jobmanager.JobManager
-	sseHub   *sse.Hub
-	config   Config
-	berr     bragerr.BragErrFactory
-	httpSrv  *http.Server
-	ready    atomic.Bool
+	log       *slog.Logger
+	errLog    *slog.Logger
+	mediamgr  *mediamanager.MediaManager
+	devicemgr *devicemanager.DeviceManager
+	authPkg   *auth.Auth
+	importer  *importer.Importer
+	jobmgr    *jobmanager.JobManager
+	sseHub    *sse.Hub
+	config    Config
+	berr      bragerr.BragErrFactory
+	httpSrv   *http.Server
+	ready     atomic.Bool
 }
 
 func (s *Server) Handler() http.Handler {
@@ -51,7 +53,6 @@ func (s *Server) Handler() http.Handler {
 
 	r.Mount("/api", s.api())
 	r.Mount("/auth", s.auth())
-	r.Mount("/events", s.sse())
 
 	return r
 }
@@ -175,16 +176,17 @@ func (s *Server) Start(ctx context.Context) error {
 // 	return nil
 // }
 
-func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, sseHub *sse.Hub, c Config) Server {
+func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, sseHub *sse.Hub, d *devicemanager.DeviceManager, c Config) Server {
 	return Server{
-		log:      slog.New(slogHandler).With("service", "server"),
-		errLog:   slog.New(slogHandler),
-		mediamgr: m,
-		config:   c,
-		authPkg:  a,
-		importer: i,
-		jobmgr:   j,
-		sseHub:   sseHub,
-		berr:     bragerr.NewFactory("server"),
+		log:       slog.New(slogHandler).With("service", "server"),
+		errLog:    slog.New(slogHandler),
+		mediamgr:  m,
+		config:    c,
+		authPkg:   a,
+		importer:  i,
+		jobmgr:    j,
+		sseHub:    sseHub,
+		devicemgr: d,
+		berr:      bragerr.NewFactory("server"),
 	}
 }

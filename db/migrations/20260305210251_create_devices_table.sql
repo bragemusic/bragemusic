@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS devices (
     name               TEXT NOT NULL,
     type               TEXT NOT NULL,
     interface          TEXT NOT NULL,
-    token_id           TEXT NOT NULL,
+    user_id            TEXT NOT NULL,
     supports_playback  BOOLEAN NOT NULL,
     platform           TEXT NOT NULL,
     version            TEXT NOT NULL,
@@ -13,10 +13,7 @@ CREATE TABLE IF NOT EXISTS devices (
     created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    FOREIGN KEY (token_id) REFERENCES tokens(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_devices_token_id ON devices(token_id);
-
 -- migrate:down
-

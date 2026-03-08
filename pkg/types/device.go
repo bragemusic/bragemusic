@@ -27,7 +27,7 @@ type Device struct {
 	Name             string          `db:"name" json:"name"`
 	Type             DeviceType      `db:"type" json:"type"`
 	Interface        DeviceInterface `db:"interface" json:"interface"`
-	TokenID          uuid.UUID       `db:"token_id" json:"token_id"`
+	UserID           uuid.UUID       `db:"user_id" json:"user_id"`
 	SupportsPlayback bool            `db:"supports_playback" json:"supports_playback"`
 	Platform         string          `db:"platform" json:"platform"`
 	Version          string          `db:"version" json:"version"`
@@ -36,4 +36,10 @@ type Device struct {
 	Active           bool            `db:"-" json:"active"`
 	CreatedAt        time.Time       `db:"created_at" json:"created_at"`
 	UpdatedAt        time.Time       `db:"updated_at" json:"updated_at"`
+}
+
+type DeviceToken struct {
+	DeviceID  uuid.UUID `db:"device_id"`
+	TokenID   uuid.UUID `db:"token_id"`
+	CreatedAt time.Time `db:"created_at"`
 }
