@@ -1,4 +1,4 @@
-package devicemanager
+package device
 
 import (
 	"context"
@@ -18,17 +18,19 @@ type DeviceManager struct {
 }
 
 func (d DeviceManager) ListActiveDevices(ctx context.Context, userID uuid.UUID) ([]types.Device, error) {
-	d.sseDispatch.Broadcast(sse.Event{
-		ID:   userID,
-		Type: "kalaskula broadcast",
-		Data: map[string]string{"kaka": "gott"},
-	})
+	// d.sseDispatch.Broadcast(sse.Event{
+	// 	ID:   userID,
+	// 	Type: "kalaskula broadcast",
+	// 	Data: map[string]string{"kaka": "gott"},
+	// })
 
-	d.sseDispatch.SendToDevice(uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111112")), sse.Event{
-		ID:   userID,
-		Type: "kalaskula till 2an",
-		Data: map[string]string{"kaka": "gott, mkt"},
-	})
+	d.sseDispatch.Broadcast(types.SSEPlayerPlayPause().Base())
+
+	// d.sseDispatch.SendToDevice(uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111112")), sse.Event{
+	// 	ID:   userID,
+	// 	Type: "kalaskula till 2an",
+	// 	Data: map[string]string{"kaka": "gott, mkt"},
+	// })
 
 	devices, err := d.db.ListUsersDevices(ctx, userID)
 	if err != nil {
@@ -120,7 +122,7 @@ func (d DeviceManager) RegisterOrUpdateDevice(ctx context.Context, id *uuid.UUID
 	return newID, nil
 }
 
-func New(sd sse.Dispatcher, db database.DeviceFace) DeviceManager {
+func NewManager(sd sse.Dispatcher, db database.DeviceFace) DeviceManager {
 	return DeviceManager{
 		sseDispatch: sd,
 		db:          db,

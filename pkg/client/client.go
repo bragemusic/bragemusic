@@ -18,6 +18,7 @@ import (
 	"github.com/bragemusic/core/pkg/authclient"
 	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/device"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/serverclient"
@@ -116,7 +117,7 @@ type AudioPlayerFace interface {
 
 	// RegisterPlayContextChangeCallback registers a callback that is invoked
 	// whenever the play context (album, playlist, queue, etc.) changes.
-	RegisterPlayContextChangeCallback(f func(audioplayer.PlayContext))
+	RegisterPlayContextChangeCallback(f func(types.PlayContext))
 
 	// RegisterPlayPauseCallback registers a callback that is invoked whenever
 	// playback transitions between playing and paused states.
@@ -130,7 +131,7 @@ type AudioPlayerFace interface {
 	NextTrack(ctx context.Context) (err error)
 
 	// PlayContext returns the current playback context.
-	PlayContext() audioplayer.PlayContext
+	PlayContext() types.PlayContext
 
 	// PlayPause toggles playback between playing and paused states.
 	PlayPause(ctx context.Context)
@@ -139,7 +140,7 @@ type AudioPlayerFace interface {
 	PreviousTrack(ctx context.Context) (err error)
 
 	// SetRepeat sets the repeat mode for playback.
-	SetRepeat(ctx context.Context, r audioplayer.RepeatType)
+	SetRepeat(ctx context.Context, r types.RepeatType)
 
 	// SetShuffle enables or disables shuffle mode for playback.
 	SetShuffle(ctx context.Context, s bool)
@@ -339,6 +340,8 @@ type Client struct {
 	*Identity
 	*audioplayer.AudioPlayer
 
+	*device.DeviceAgent
+
 	log *slog.Logger
 }
 
@@ -348,8 +351,8 @@ func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, tr
 		return err
 	}
 
-	pCtx := audioplayer.PlayContext{
-		Type:            audioplayer.PlayContextAlbum,
+	pCtx := types.PlayContext{
+		Type:            types.PlayContextAlbum,
 		RefID:           albumID,
 		Tracks:          tracks,
 		Queue:           []types.TrackDetailed{},
@@ -374,8 +377,8 @@ func (c *Client) StartPlayerWithLikedTracks(ctx context.Context, trackNumber int
 		return err
 	}
 
-	pCtx := audioplayer.PlayContext{
-		Type:            audioplayer.PlayContextLikedTracks,
+	pCtx := types.PlayContext{
+		Type:            types.PlayContextLikedTracks,
 		RefID:           uuid.Nil,
 		Tracks:          tracks,
 		Queue:           []types.TrackDetailed{},
@@ -400,8 +403,8 @@ func (c *Client) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UU
 		return err
 	}
 
-	pCtx := audioplayer.PlayContext{
-		Type:            audioplayer.PlayContextPlaylist,
+	pCtx := types.PlayContext{
+		Type:            types.PlayContextPlaylist,
 		RefID:           playlistID,
 		Tracks:          tracks,
 		Queue:           []types.TrackDetailed{},
@@ -442,6 +445,26 @@ func (c *Client) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID
 
 	c.AudioPlayer.AddTrackToQueue(ctx, track)
 	return nil
+}
+
+// FIXME ONLY FOR TEST
+func (c *Client) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
+	err := c.clientFace.LoginLocalUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+	err = c.SubscribeDeviceEvents(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent[any]) {
+	switch e.Type {
+	case types.SSEventTypePlayerPlayPause:
+		c.PlayPause(ctx)
+	}
 }
 
 func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
@@ -488,14 +511,30 @@ func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFa
 		return nil, err
 	}
 
+	// FIXME: Needs to make another client structure. With authed starting the real clients
+	da := device.NewAgent(slogHandler, &sc, uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111")), types.DeviceBase{
+		Name:             "Lucas Dator",
+		Type:             types.DeviceTypeSync,
+		Interface:        types.DeviceInterfaceDesktop,
+		SupportsPlayback: true,
+		Platform:         "linux",
+		Version:          "1.2.0",
+	})
+
 	c := &Client{
 		clientFace:  cf,
 		Identity:    &id,
 		AudioPlayer: ap,
 		log:         slog.New(slogHandler).With("service", "client"),
+		DeviceAgent: &da,
 	}
 
+	// if err := da.SubscribeDeviceEvents(ctx); err != nil {
+	// 	return nil, err
+	// }
 	ap.RegisterPlayCountCallback(c.updatePlayCount)
+
+	da.SubscribeToEventCategory(c.handlePlayerEvents, "player")
 
 	return c, nil
 }

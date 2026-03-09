@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/bragemusic/core/pkg/auth"
@@ -58,40 +57,34 @@ func (s *Server) listDevices() routes.RouteFunc[ReqNoContent, types.ListPayload[
 	}
 }
 
-func (s *Server) registerDevice() routes.RouteFunc[ReqDevicesRegister, RespDevicesRegister] {
-	return func(ctx context.Context, req ReqDevicesRegister, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[RespDevicesRegister], err error) {
+func (s *Server) registerDevice() routes.RouteFunc[ReqDevicesRegister, types.RespDevicesRegister] {
+	return func(ctx context.Context, req ReqDevicesRegister, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.RespDevicesRegister], err error) {
 		tokenID, err := auth.TokenIDFromContext(ctx)
 		if err != nil {
-			return types.Response[RespDevicesRegister]{}, err
+			return types.Response[types.RespDevicesRegister]{}, err
 		}
 
 		device := types.Device{
-			Name:             req.Name,
-			Type:             req.Type,
-			Interface:        req.Interface,
-			UserID:           user.ID,
-			SupportsPlayback: req.SupportsPlayback,
-			Platform:         req.Platform,
-			Version:          req.Version,
-			LastIP:           "must.add.ip.here",
+			DeviceBase: req.DeviceBase,
+			UserID:     user.ID,
+			LastIP:     "must.add.ip.here",
 		}
 
-		fmt.Println("kalas!", req)
-		id, err := s.devicemgr.RegisterOrUpdateDevice(ctx, req.DeviceID, tokenID, user.ID, device)
+		id, err := s.devicemgr.RegisterOrUpdateDevice(ctx, req.ID, tokenID, user.ID, device)
 		if err != nil {
-			return types.Response[RespDevicesRegister]{}, err
+			return types.Response[types.RespDevicesRegister]{}, err
 		}
 
-		if req.DeviceID == nil {
-			return types.Response[RespDevicesRegister]{
-				Payload: RespDevicesRegister{
+		if req.ID == nil {
+			return types.Response[types.RespDevicesRegister]{
+				Payload: types.RespDevicesRegister{
 					DeviceID: id,
 				},
 				Status: http.StatusCreated,
 			}, nil
 		} else {
-			return types.Response[RespDevicesRegister]{
-				Payload: RespDevicesRegister{
+			return types.Response[types.RespDevicesRegister]{
+				Payload: types.RespDevicesRegister{
 					DeviceID: id,
 				},
 				Status: http.StatusOK,

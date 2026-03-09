@@ -26,15 +26,15 @@ func (i Identity) ClientType() types.DeviceType {
 	return types.DeviceTypeStreaming
 }
 
-func idFilePath() (string, error) {
-	return xdg.StateFile(filepath.Join("brage", "client_id"))
+func idFilePath(userID uuid.UUID) (string, error) {
+	return xdg.StateFile(filepath.Join("brage", "users", userID.String(), "device_id"))
 }
 
 func NewIdentity(name string) (Identity, error) {
 	i := Identity{
 		name: name,
 	}
-	path, err := idFilePath()
+	path, err := idFilePath(uuid.Nil)
 	if err != nil {
 		return Identity{}, err
 	}

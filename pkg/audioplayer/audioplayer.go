@@ -31,10 +31,10 @@ type AudioPlayer struct {
 	ai                            audiointerface.AudioInterface
 	ar                            audioreader.AudioReader
 	mp                            mpris.Mpris
-	playCtx                       PlayContext
+	playCtx                       types.PlayContext
 	currentFile                   types.MediaStream
 	progressTicker                *time.Ticker
-	currentPlayCtxChangeCallbacks []func(PlayContext)
+	currentPlayCtxChangeCallbacks []func(types.PlayContext)
 	pausePlayCallbacks            []func(isPlaying bool)
 	progressCallbacks             []func(ms int64)
 	playCountCallbacks            []func(trackID uuid.UUID)
@@ -48,7 +48,7 @@ func (a *AudioPlayer) RegisterErrorCallback(f func(context.Context, error)) {
 	a.errCallback = f
 }
 
-func (a *AudioPlayer) RegisterPlayContextChangeCallback(f func(PlayContext)) {
+func (a *AudioPlayer) RegisterPlayContextChangeCallback(f func(types.PlayContext)) {
 	a.currentPlayCtxChangeCallbacks = append(a.currentPlayCtxChangeCallbacks, f)
 }
 
@@ -69,7 +69,7 @@ func (a *AudioPlayer) setCurrentTrack(ctx context.Context) {
 	a.playCtx.CurrentTrack = &a.playCtx.Tracks[idx]
 }
 
-func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, playCtx PlayContext) (err error) {
+func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, playCtx types.PlayContext) (err error) {
 	if playCtx.CurrentTrackIdx < 0 || playCtx.CurrentTrackIdx >= len(playCtx.Tracks) {
 		return errors.New("startTrackIndex must be between 0 and len of tracks")
 	}
@@ -119,7 +119,7 @@ func (a *AudioPlayer) makeTrackOrder(currentTrackIdx, numberOfTracks int, shuffl
 	return trackOrder
 }
 
-func (a *AudioPlayer) SetRepeat(ctx context.Context, r RepeatType) {
+func (a *AudioPlayer) SetRepeat(ctx context.Context, r types.RepeatType) {
 	a.playCtx.Repeat = r
 
 	for _, f := range a.currentPlayCtxChangeCallbacks {
@@ -161,14 +161,14 @@ func (a *AudioPlayer) NextTrack(ctx context.Context) (err error) {
 
 	if queuedTrack == nil {
 		var cidx int
-		if a.playCtx.Repeat == RepeatOne {
+		if a.playCtx.Repeat == types.RepeatOne {
 			cidx = a.playCtx.CurrentTrackIdx
 		} else {
 			cidx = a.playCtx.CurrentTrackIdx + 1
 		}
 
 		if cidx >= len(a.playCtx.Tracks) {
-			if a.playCtx.Repeat == RepeatAll {
+			if a.playCtx.Repeat == types.RepeatAll {
 				cidx = 0
 			} else {
 				return a.Stop(ctx)
@@ -192,14 +192,14 @@ func (a *AudioPlayer) PreviousTrack(ctx context.Context) (err error) {
 	a.log.DebugContext(ctx, "previous track")
 
 	var cidx int
-	if a.playCtx.Repeat == RepeatOne || a.ai.PlayedMS() > 10000 {
+	if a.playCtx.Repeat == types.RepeatOne || a.ai.PlayedMS() > 10000 {
 		cidx = a.playCtx.CurrentTrackIdx
 	} else {
 		cidx = a.playCtx.CurrentTrackIdx - 1
 	}
 
 	if cidx < 0 {
-		if a.playCtx.Repeat == RepeatAll {
+		if a.playCtx.Repeat == types.RepeatAll {
 			cidx = len(a.playCtx.Tracks) - 1
 		} else {
 			return a.Stop(ctx)
@@ -216,7 +216,7 @@ func (a *AudioPlayer) PreviousTrack(ctx context.Context) (err error) {
 	return a.startTrack(ctx)
 }
 
-func (a *AudioPlayer) PlayContext() PlayContext {
+func (a *AudioPlayer) PlayContext() types.PlayContext {
 	return a.playCtx
 }
 
@@ -291,7 +291,7 @@ func (a *AudioPlayer) Stop(ctx context.Context) error {
 		return err
 	}
 
-	a.playCtx = PlayContext{
+	a.playCtx = types.PlayContext{
 		Shuffle: a.playCtx.Shuffle,
 		Repeat:  a.playCtx.Repeat,
 	}
@@ -394,9 +394,9 @@ func New(cfg Config, ai audiointerface.AudioInterface, ar audioreader.AudioReade
 		currentFile:  nil,
 		musicDirPath: cfg.MusicDirPath,
 		log:          slog.New(slogHandler).With("service", "audioplayer"),
-		playCtx: PlayContext{
+		playCtx: types.PlayContext{
 			Shuffle: false,
-			Repeat:  RepeatOff,
+			Repeat:  types.RepeatOff,
 		},
 	}
 

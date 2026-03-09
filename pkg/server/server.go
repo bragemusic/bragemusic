@@ -13,7 +13,7 @@ import (
 	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/bragerr"
-	"github.com/bragemusic/core/pkg/devicemanager"
+	"github.com/bragemusic/core/pkg/device"
 	"github.com/bragemusic/core/pkg/importer"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
@@ -32,7 +32,7 @@ type Server struct {
 	log       *slog.Logger
 	errLog    *slog.Logger
 	mediamgr  *mediamanager.MediaManager
-	devicemgr *devicemanager.DeviceManager
+	devicemgr *device.DeviceManager
 	authPkg   *auth.Auth
 	importer  *importer.Importer
 	jobmgr    *jobmanager.JobManager
@@ -176,7 +176,7 @@ func (s *Server) Start(ctx context.Context) error {
 // 	return nil
 // }
 
-func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, sseHub *sse.Hub, d *devicemanager.DeviceManager, c Config) Server {
+func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, sseHub *sse.Hub, d *device.DeviceManager, c Config) Server {
 	return Server{
 		log:       slog.New(slogHandler).With("service", "server"),
 		errLog:    slog.New(slogHandler),

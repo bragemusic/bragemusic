@@ -144,6 +144,10 @@ func (p *PortAudio) Stop() {
 }
 
 func (p *PortAudio) PlayPause() {
+	if p.stream == nil {
+		return
+	}
+
 	if p.isPlaying {
 		p.Pause()
 	} else {

@@ -13,6 +13,8 @@ import (
 	"github.com/bragemusic/core/pkg/types"
 )
 
+var DEVICES_PATH = []string{"api", "devices"}
+
 type ErrStatus struct {
 	Status int
 }

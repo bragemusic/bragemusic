@@ -15,6 +15,8 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
+type EventHandler func(context.Context, types.SSEvent[any])
+
 type ReqEvents struct {
 	// AlbumID uuid.UUID `path:"albumID" description:"ID of the wanted album"`
 	DeviceID uuid.UUID `path:"deviceID" description:"ID of your device"`
@@ -24,23 +26,21 @@ func (r ReqEvents) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
-type Event struct {
-	ID       uuid.UUID `json:"id"`
-	Type     string    `json:"type"`
-	Data     any       `json:"data"`
+type eventEnvelope struct {
+	event    types.SSEventBase
 	deviceID *uuid.UUID
 }
 
 type client struct {
 	deviceID uuid.UUID
 	userID   uuid.UUID
-	events   chan Event
+	events   chan eventEnvelope
 }
 
 type Dispatcher interface {
-	Broadcast(Event) error
+	Broadcast(types.SSEventBase) error
 	ActiveDevices(userID uuid.UUID) []uuid.UUID
-	SendToDevice(deviceID uuid.UUID, ev Event) error
+	SendToDevice(deviceID uuid.UUID, ev types.SSEventBase) error
 }
 
 type Hub struct {
@@ -51,7 +51,7 @@ type Hub struct {
 
 	add       chan *client
 	remove    chan *client
-	broadcast chan Event
+	broadcast chan eventEnvelope
 }
 
 func NewHub(db database.DeviceFace, slogHandler slog.Handler) *Hub {
@@ -61,19 +61,22 @@ func NewHub(db database.DeviceFace, slogHandler slog.Handler) *Hub {
 		clients:   make(map[*client]struct{}),
 		add:       make(chan *client),
 		remove:    make(chan *client),
-		broadcast: make(chan Event),
+		broadcast: make(chan eventEnvelope),
 	}
 }
 
-func (h *Hub) Broadcast(ev Event) error {
+func (h *Hub) Broadcast(ev types.SSEventBase) error {
 	if len(h.clients) == 0 {
 		return errors.New("no active clients")
 	}
-	h.broadcast <- ev
+	h.broadcast <- eventEnvelope{
+		event:    ev,
+		deviceID: nil,
+	}
 	return nil
 }
 
-func (h *Hub) SendToDevice(deviceID uuid.UUID, ev Event) error {
+func (h *Hub) SendToDevice(deviceID uuid.UUID, ev types.SSEventBase) error {
 	found := false
 	for c := range h.clients {
 		if c.deviceID == deviceID {
@@ -86,8 +89,10 @@ func (h *Hub) SendToDevice(deviceID uuid.UUID, ev Event) error {
 		return errors.New("device not found")
 	}
 
-	ev.deviceID = &deviceID
-	h.broadcast <- ev
+	h.broadcast <- eventEnvelope{
+		event:    ev,
+		deviceID: &deviceID,
+	}
 	return nil
 }
 
@@ -162,7 +167,7 @@ func (h *Hub) EventsHandler() routes.RouteFunc[ReqEvents, types.NoResponse] {
 		client := &client{
 			deviceID: device.ID,
 			userID:   user.ID,
-			events:   make(chan Event, 16),
+			events:   make(chan eventEnvelope, 16),
 		}
 
 		h.log.InfoContext(ctx, "new client subscription", "device.name", device.Name, "user.email", user.Email)
@@ -190,7 +195,7 @@ func (h *Hub) EventsHandler() routes.RouteFunc[ReqEvents, types.NoResponse] {
 					return
 				}
 				if e.deviceID == nil || *e.deviceID == device.ID {
-					if err = sendEvent(w, flusher, e); err != nil {
+					if err = sendEvent(w, flusher, e.event); err != nil {
 						h.log.ErrorContext(ctx, "could not send event", "device.name", device.Name, "user.email", user.Email, "error", err.Error())
 						return
 					}
@@ -200,7 +205,7 @@ func (h *Hub) EventsHandler() routes.RouteFunc[ReqEvents, types.NoResponse] {
 	}
 }
 
-func sendEvent(w http.ResponseWriter, flusher http.Flusher, event Event) error {
+func sendEvent(w http.ResponseWriter, flusher http.Flusher, event types.SSEventBase) error {
 	// Marshal the entire event to JSON
 	jsonBytes, err := json.Marshal(event)
 	if err != nil {

@@ -64,3 +64,7 @@ type LoginResp struct {
 	TokenType string `json:"token_type"`
 	ExpiresIn int    `json:"expires_in"`
 }
+
+type RespDevicesRegister struct {
+	DeviceID uuid.UUID `json:"id"`
+}
