@@ -17,6 +17,42 @@ type DeviceManager struct {
 	db          database.DeviceFace
 }
 
+// FIXME
+func (d DeviceManager) hasAccess(ctx context.Context, deviceID, userID uuid.UUID) (bool, error) {
+	return true, nil
+}
+
+// FIXME
+func (d DeviceManager) isConnected(ctx context.Context, targetDeviceID, callingDeviceID, userID uuid.UUID) (bool, error) {
+	return true, nil
+}
+
+func (d DeviceManager) PlayerPlayPause(ctx context.Context, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
+	hasAccess, err := d.hasAccess(ctx, targetDeviceID, userID)
+	if err != nil {
+		return err
+	}
+
+	if !hasAccess {
+		return errors.New("FIXME no access")
+	}
+
+	isConnected, err := d.isConnected(ctx, targetDeviceID, callingDeviceID, userID)
+	if err != nil {
+		return err
+	}
+
+	if !isConnected {
+		return errors.New("FIXME not connected")
+	}
+
+	if err = d.sseDispatch.SendToDevice(targetDeviceID, types.SSEPlayerPlayPause().Base()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (d DeviceManager) ListActiveDevices(ctx context.Context, userID uuid.UUID) ([]types.Device, error) {
 	// d.sseDispatch.Broadcast(sse.Event{
 	// 	ID:   userID,

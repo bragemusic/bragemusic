@@ -17,8 +17,8 @@ migrate:
 generate-docs:
     go run cmd/docs/main.go
 
-call-api route:
-    curl --header "Authorization: Bearer $(cat ~/.local/state/brage/users/11111111-1111-1111-1111-111111111111/token)" "http://localhost:3000/{{route}}"
+call-api route method="GET":
+    curl -X "{{method}}" --header "Authorization: Bearer $(cat ~/.local/state/brage/users/11111111-1111-1111-1111-111111111111/token)" "http://localhost:3000/{{route}}"
 
 login email password long_lived_token="true":
     jq -n \

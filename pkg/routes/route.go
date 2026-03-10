@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -101,8 +102,10 @@ func (ro RouteObject[Req, Resp]) Handler(log, errLog *slog.Logger, berr *bragerr
 		if r.Method == "POST" || r.Method == "PUT" || r.Method == "PATCH" {
 			if !strings.Contains(ct, "multipart/form-data") {
 				if err = json.NewDecoder(r.Body).Decode(&reqStruct); err != nil {
-					bragerr.HandleHttpResponse(ctx, err, w, errLog)
-					return
+					if err != io.EOF {
+						bragerr.HandleHttpResponse(ctx, err, w, errLog)
+						return
+					}
 				}
 			}
 		}

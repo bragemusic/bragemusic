@@ -7,6 +7,7 @@ import (
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/routes"
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 )
 
 func (s *Server) deviceRoutes() []routes.RouteHandler {
@@ -36,6 +37,15 @@ func (s *Server) deviceRoutes() []routes.RouteHandler {
 			Tags:                []string{},
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusCreated,
+		}),
+
+		routes.New("POST", "/{deviceID}/player/play-pause", s.devicePlayerPlayPause(), nil, routes.RouteMeta{
+			Summary:             "Sends a play/pause command to player.",
+			Description:         "Sends a command to tell the selected device to play or pause. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
 		}),
 	}
 }
@@ -90,5 +100,20 @@ func (s *Server) registerDevice() routes.RouteFunc[ReqDevicesRegister, types.Res
 				Status: http.StatusOK,
 			}, nil
 		}
+	}
+}
+
+func (s *Server) devicePlayerPlayPause() routes.RouteFunc[ReqDevicesGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		// FIXME
+		callingDeviceID := uuid.Nil
+		if err := s.devicemgr.PlayerPlayPause(ctx, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
 	}
 }

@@ -233,6 +233,14 @@ func (r ReqDevicesRegister) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqDevicesGet struct {
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
+}
+
+func (r ReqDevicesGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`
