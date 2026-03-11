@@ -312,8 +312,9 @@ func New(cfg Config, ai audiointerface.AudioInterface, ar audioreader.AudioReade
 		log:          slog.New(slogHandler).With("service", "audioplayer"),
 		state: types.PlayerState{
 			Playback: types.PlaybackState{
-				Shuffle: false,
-				Repeat:  types.RepeatOff,
+				Shuffle:     false,
+				Repeat:      types.RepeatOff,
+				TrackSource: types.TrackSourceContext,
 			},
 		},
 	}
