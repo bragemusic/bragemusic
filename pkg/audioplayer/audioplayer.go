@@ -61,7 +61,6 @@ func (a *AudioPlayer) RegisterPlayCountCallback(f func(trackID uuid.UUID)) {
 func (a *AudioPlayer) sendStateCallback(ctx context.Context) {
 	a.sendContextCallback(ctx)
 	a.sendPlaybackCallback(ctx)
-	fmt.Println(a.state)
 }
 
 func (a *AudioPlayer) sendContextCallback(ctx context.Context) {
@@ -93,9 +92,7 @@ func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, state types.Player
 	state.Context.Queue = a.state.Context.Queue
 	state.Playback.TrackSource = types.TrackSourceContext
 
-	fmt.Println("re")
 	state.RebuildTrackOrder()
-	fmt.Println("re done")
 
 	// if err = a.closeCurrentFile(ctx); err != nil {
 	// 	return err

@@ -69,8 +69,17 @@ func (pc *PlayContext) pullFromQueue() *TrackDetailed {
 }
 
 func (p *PlayerState) NextTrack() (contextUpdated, stop bool) {
-	queuedTrack := p.Context.pullFromQueue()
-	if queuedTrack == nil {
+	if p.Playback.TrackSource == TrackSourceQueue {
+		queuedTrackExists := len(p.Context.Queue) > 0
+		if queuedTrackExists {
+			p.Context.pullFromQueue()
+			contextUpdated = true
+		}
+	}
+
+	queuedTrackExists := len(p.Context.Queue) > 0
+
+	if !queuedTrackExists {
 		var cidx int
 		if p.Playback.Repeat == RepeatOne {
 			cidx = p.Playback.TrackIndex
@@ -82,17 +91,17 @@ func (p *PlayerState) NextTrack() (contextUpdated, stop bool) {
 			if p.Playback.Repeat == RepeatAll {
 				cidx = 0
 			} else {
-				return false, true
+				return contextUpdated, true
 			}
 		}
 
 		p.Playback.TrackSource = TrackSourceContext
 		p.Playback.TrackIndex = cidx
 
-		return false, false
+		return contextUpdated, false
 	} else {
 		p.Playback.TrackSource = TrackSourceQueue
-		return true, false
+		return contextUpdated, false
 	}
 }
 
@@ -173,7 +182,7 @@ func (p *PlayerState) CurrentTrack() (TrackDetailed, error) {
 		return p.Context.Tracks[idx], nil
 
 	case TrackSourceQueue:
-		if len(p.Context.Queue) <= 1 {
+		if len(p.Context.Queue) < 1 {
 			return TrackDetailed{}, errors.New("track index oob")
 		}
 		return p.Context.Queue[0], nil
