@@ -10,6 +10,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/bragemusic/core/pkg/audiointerface"
@@ -115,23 +116,16 @@ type AudioPlayerFace interface {
 	// AddTrackToQueue adds a track to the current playback queue.
 	AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error
 
-	// RegisterPlayContextChangeCallback registers a callback that is invoked
+	// RegisterPlayContextCallback registers a callback that is invoked
 	// whenever the play context (album, playlist, queue, etc.) changes.
-	RegisterPlayContextChangeCallback(f func(types.PlayContext))
+	RegisterPlayContextCallback(f func(context.Context, types.PlayContext))
 
-	// RegisterPlayPauseCallback registers a callback that is invoked whenever
-	// playback transitions between playing and paused states.
-	RegisterPlayPauseCallback(f func(isPlaying bool))
-
-	// RegisterProgressCallback registers a callback that is invoked periodically
-	// with the current playback position in milliseconds.
-	RegisterProgressCallback(f func(ms int64))
+	// RegisterPlaybackStateCallback registers a callback that is invoked
+	// whenever the playback state (playing, shuffle, repeat, etc.) changes.
+	RegisterPlaybackStateCallback(f func(context.Context, types.PlaybackState))
 
 	// NextTrack skips to the next track in the current play context.
 	NextTrack(ctx context.Context) (err error)
-
-	// PlayContext returns the current playback context.
-	PlayContext() types.PlayContext
 
 	// PlayPause toggles playback between playing and paused states.
 	PlayPause(ctx context.Context)
@@ -144,6 +138,9 @@ type AudioPlayerFace interface {
 
 	// SetShuffle enables or disables shuffle mode for playback.
 	SetShuffle(ctx context.Context, s bool)
+
+	// PlayerState returns the current player state.
+	PlayerState() types.PlayerState
 }
 
 // MetadataFace defines access to and modification of music library metadata,
@@ -351,17 +348,20 @@ func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, tr
 		return err
 	}
 
-	pCtx := types.PlayContext{
-		Type:            types.PlayContextAlbum,
-		RefID:           albumID,
-		Tracks:          tracks,
-		Queue:           []types.TrackDetailed{},
-		CurrentTrackIdx: trackNumber,
-		Shuffle:         c.PlayContext().Shuffle,
-		Repeat:          c.PlayContext().Repeat,
+	fmt.Println(tracks)
+
+	pState := types.PlayerState{
+		Playback: types.PlaybackState{
+			TrackIndex: trackNumber,
+		},
+		Context: types.PlayContext{
+			Type:   types.PlayContextAlbum,
+			RefID:  albumID,
+			Tracks: tracks,
+		},
 	}
 
-	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pState)
 	if err != nil {
 		return err
 	}
@@ -377,17 +377,18 @@ func (c *Client) StartPlayerWithLikedTracks(ctx context.Context, trackNumber int
 		return err
 	}
 
-	pCtx := types.PlayContext{
-		Type:            types.PlayContextLikedTracks,
-		RefID:           uuid.Nil,
-		Tracks:          tracks,
-		Queue:           []types.TrackDetailed{},
-		CurrentTrackIdx: trackNumber,
-		Shuffle:         c.PlayContext().Shuffle,
-		Repeat:          c.PlayContext().Repeat,
+	pState := types.PlayerState{
+		Playback: types.PlaybackState{
+			TrackIndex: trackNumber,
+		},
+		Context: types.PlayContext{
+			Type:   types.PlayContextLikedTracks,
+			RefID:  uuid.Nil,
+			Tracks: tracks,
+		},
 	}
 
-	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pState)
 	if err != nil {
 		return err
 	}
@@ -403,17 +404,18 @@ func (c *Client) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UU
 		return err
 	}
 
-	pCtx := types.PlayContext{
-		Type:            types.PlayContextPlaylist,
-		RefID:           playlistID,
-		Tracks:          tracks,
-		Queue:           []types.TrackDetailed{},
-		CurrentTrackIdx: trackNumber,
-		Shuffle:         c.PlayContext().Shuffle,
-		Repeat:          c.PlayContext().Repeat,
+	pState := types.PlayerState{
+		Playback: types.PlaybackState{
+			TrackIndex: trackNumber,
+		},
+		Context: types.PlayContext{
+			Type:   types.PlayContextPlaylist,
+			RefID:  playlistID,
+			Tracks: tracks,
+		},
 	}
 
-	err = c.AudioPlayer.LoadAndStartTracks(ctx, pCtx)
+	err = c.AudioPlayer.LoadAndStartTracks(ctx, pState)
 	if err != nil {
 		return err
 	}

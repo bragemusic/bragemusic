@@ -30,7 +30,7 @@ func (e SSEvent[T]) Base() SSEventBase {
 }
 
 type (
-	SSEventPlayerStart     = SSEvent[PlayContext]
+	SSEventPlayerStart     = SSEvent[PlayerState]
 	SSEventPlayerPlayPause = SSEvent[SSENoData]
 )
 
@@ -44,7 +44,7 @@ func newUUID() uuid.UUID {
 	return id
 }
 
-func SSEPlayerStart(pc PlayContext) SSEventPlayerStart {
+func SSEPlayerStart(pc PlayerState) SSEventPlayerStart {
 	return SSEventPlayerStart{
 		ID:   newUUID(),
 		Type: SSEventTypePlayerStart,

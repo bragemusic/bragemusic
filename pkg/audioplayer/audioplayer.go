@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math/rand"
 	"time"
 
 	"github.com/bragemusic/core/pkg/audiointerface"
@@ -28,161 +27,108 @@ type Config struct {
 type CallbackType string
 
 type AudioPlayer struct {
-	ai                            audiointerface.AudioInterface
-	ar                            audioreader.AudioReader
-	mp                            mpris.Mpris
-	playCtx                       types.PlayContext
-	currentFile                   types.MediaStream
-	progressTicker                *time.Ticker
-	currentPlayCtxChangeCallbacks []func(types.PlayContext)
-	pausePlayCallbacks            []func(isPlaying bool)
-	progressCallbacks             []func(ms int64)
-	playCountCallbacks            []func(trackID uuid.UUID)
-	errCallback                   func(context.Context, error)
-	musicDirPath                  string
-	playCountReported             bool
-	log                           *slog.Logger
+	ai                 audiointerface.AudioInterface
+	ar                 audioreader.AudioReader
+	mp                 mpris.Mpris
+	state              types.PlayerState
+	currentFile        types.MediaStream
+	progressTicker     *time.Ticker
+	playCountCallbacks []func(trackID uuid.UUID)
+	contextCallbacks   []func(context.Context, types.PlayContext)
+	playbackCallbacks  []func(context.Context, types.PlaybackState)
+	errCallback        func(context.Context, error)
+	musicDirPath       string
+	playCountReported  bool
+	log                *slog.Logger
 }
 
 func (a *AudioPlayer) RegisterErrorCallback(f func(context.Context, error)) {
 	a.errCallback = f
 }
 
-func (a *AudioPlayer) RegisterPlayContextChangeCallback(f func(types.PlayContext)) {
-	a.currentPlayCtxChangeCallbacks = append(a.currentPlayCtxChangeCallbacks, f)
+func (a *AudioPlayer) RegisterPlayContextCallback(f func(context.Context, types.PlayContext)) {
+	a.contextCallbacks = append(a.contextCallbacks, f)
 }
 
-func (a *AudioPlayer) RegisterPlayPauseCallback(f func(isPlaying bool)) {
-	a.pausePlayCallbacks = append(a.pausePlayCallbacks, f)
-}
-
-func (a *AudioPlayer) RegisterProgressCallback(f func(ms int64)) {
-	a.progressCallbacks = append(a.progressCallbacks, f)
+func (a *AudioPlayer) RegisterPlaybackStateCallback(f func(context.Context, types.PlaybackState)) {
+	a.playbackCallbacks = append(a.playbackCallbacks, f)
 }
 
 func (a *AudioPlayer) RegisterPlayCountCallback(f func(trackID uuid.UUID)) {
 	a.playCountCallbacks = append(a.playCountCallbacks, f)
 }
 
-func (a *AudioPlayer) setCurrentTrack(ctx context.Context) {
-	idx := a.playCtx.TrackOrder[a.playCtx.CurrentTrackIdx]
-	a.playCtx.CurrentTrack = &a.playCtx.Tracks[idx]
+func (a *AudioPlayer) sendStateCallback(ctx context.Context) {
+	a.sendContextCallback(ctx)
+	a.sendPlaybackCallback(ctx)
 }
 
-func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, playCtx types.PlayContext) (err error) {
-	if playCtx.CurrentTrackIdx < 0 || playCtx.CurrentTrackIdx >= len(playCtx.Tracks) {
+func (a *AudioPlayer) sendContextCallback(ctx context.Context) {
+	for _, f := range a.contextCallbacks {
+		f(ctx, a.state.Context)
+	}
+}
+
+func (a *AudioPlayer) sendPlaybackCallback(ctx context.Context) {
+	a.state.Playback.ProgressMS = a.ai.PlayedMS()
+	a.state.Playback.UpdatedAt = time.Now()
+
+	for _, f := range a.playbackCallbacks {
+		f(ctx, a.state.Playback)
+	}
+}
+
+func (a *AudioPlayer) PlayerState() types.PlayerState {
+	return a.state
+}
+
+func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, state types.PlayerState) (err error) {
+	if state.Playback.TrackIndex < 0 || state.Playback.TrackIndex >= len(state.Context.Tracks) {
 		return errors.New("startTrackIndex must be between 0 and len of tracks")
 	}
 
-	playCtx.TrackOrder = a.makeTrackOrder(playCtx.CurrentTrackIdx, len(playCtx.Tracks), playCtx.Shuffle)
-	if playCtx.Shuffle {
-		playCtx.CurrentTrackIdx = 0
-	}
+	state.Playback.Repeat = a.state.Playback.Repeat
+	state.Playback.Shuffle = a.state.Playback.Shuffle
+	state.Context.Queue = a.state.Context.Queue
+	state.Playback.TrackSource = types.TrackSourceContext
+
+	fmt.Println("re")
+	state.RebuildTrackOrder(true)
+	fmt.Println("re done")
 
 	if err = a.closeCurrentFile(ctx); err != nil {
 		return err
 	}
 
-	a.playCtx = playCtx
-	a.setCurrentTrack(ctx)
+	a.state = state
+	a.sendStateCallback(ctx)
 
 	return a.startTrack(ctx)
 }
 
-func (a *AudioPlayer) makeTrackOrder(currentTrackIdx, numberOfTracks int, shuffle bool) []int {
-	trackOrder := []int{}
-	if !shuffle {
-		for i := range numberOfTracks {
-			trackOrder = append(trackOrder, i)
-		}
-	} else {
-		nums := make([]int, numberOfTracks)
-		for i := range numberOfTracks {
-			nums[i] = i
-		}
-
-		rand.Shuffle(numberOfTracks-1, func(i, j int) {
-			nums[i+1], nums[j+1] = nums[j+1], nums[i+1]
-		})
-
-		for i := range numberOfTracks {
-			if nums[i] == currentTrackIdx {
-				nums[0], nums[i] = nums[i], nums[0]
-				break
-			}
-		}
-
-		trackOrder = nums
-
-	}
-
-	return trackOrder
-}
-
 func (a *AudioPlayer) SetRepeat(ctx context.Context, r types.RepeatType) {
-	a.playCtx.Repeat = r
-
-	for _, f := range a.currentPlayCtxChangeCallbacks {
-		f(a.playCtx)
-	}
+	a.state.Playback.Repeat = r
+	a.sendPlaybackCallback(ctx)
 }
 
 func (a *AudioPlayer) SetShuffle(ctx context.Context, s bool) {
-	a.playCtx.Shuffle = s
+	a.state.Playback.Shuffle = s
+	a.state.RebuildTrackOrder(false)
 
-	if len(a.playCtx.TrackOrder) == 0 || len(a.playCtx.Tracks) == 0 {
-		for _, f := range a.currentPlayCtxChangeCallbacks {
-			f(a.playCtx)
-		}
-		return
-	}
-
-	trackIdx := a.playCtx.TrackOrder[a.playCtx.CurrentTrackIdx]
-
-	a.playCtx.TrackOrder = a.makeTrackOrder(a.playCtx.CurrentTrackIdx, len(a.playCtx.Tracks), s)
-
-	if s {
-		a.playCtx.CurrentTrackIdx = 0
-	} else {
-		a.playCtx.CurrentTrackIdx = trackIdx
-	}
-
-	a.setCurrentTrack(ctx)
-
-	for _, f := range a.currentPlayCtxChangeCallbacks {
-		f(a.playCtx)
-	}
+	a.sendStateCallback(ctx)
 }
 
 func (a *AudioPlayer) NextTrack(ctx context.Context) (err error) {
 	a.log.DebugContext(ctx, "next track")
 
-	queuedTrack := a.playCtx.PullFromQueue()
+	contextUpdated, stop := a.state.NextTrack()
 
-	if queuedTrack == nil {
-		var cidx int
-		if a.playCtx.Repeat == types.RepeatOne {
-			cidx = a.playCtx.CurrentTrackIdx
-		} else {
-			cidx = a.playCtx.CurrentTrackIdx + 1
-		}
-
-		if cidx >= len(a.playCtx.Tracks) {
-			if a.playCtx.Repeat == types.RepeatAll {
-				cidx = 0
-			} else {
-				return a.Stop(ctx)
-			}
-		}
-
-		a.playCtx.CurrentTrackIdx = cidx
-		a.setCurrentTrack(ctx)
-	} else {
-		a.playCtx.CurrentTrack = queuedTrack
+	if contextUpdated {
+		a.sendContextCallback(ctx)
 	}
 
-	for _, f := range a.currentPlayCtxChangeCallbacks {
-		f(a.playCtx)
+	if stop {
+		return a.Stop(ctx)
 	}
 
 	return a.startTrack(ctx)
@@ -191,52 +137,30 @@ func (a *AudioPlayer) NextTrack(ctx context.Context) (err error) {
 func (a *AudioPlayer) PreviousTrack(ctx context.Context) (err error) {
 	a.log.DebugContext(ctx, "previous track")
 
-	var cidx int
-	if a.playCtx.Repeat == types.RepeatOne || a.ai.PlayedMS() > 10000 {
-		cidx = a.playCtx.CurrentTrackIdx
-	} else {
-		cidx = a.playCtx.CurrentTrackIdx - 1
-	}
-
-	if cidx < 0 {
-		if a.playCtx.Repeat == types.RepeatAll {
-			cidx = len(a.playCtx.Tracks) - 1
-		} else {
-			return a.Stop(ctx)
-		}
-	}
-
-	a.playCtx.CurrentTrackIdx = cidx
-	a.setCurrentTrack(ctx)
-
-	for _, f := range a.currentPlayCtxChangeCallbacks {
-		f(a.playCtx)
+	stop := a.state.PreviousTrack()
+	if stop {
+		return a.Stop(ctx)
 	}
 
 	return a.startTrack(ctx)
 }
 
-func (a *AudioPlayer) PlayContext() types.PlayContext {
-	return a.playCtx
-}
-
-func (a *AudioPlayer) currentTrack() *types.TrackDetailed {
-	return a.playCtx.CurrentTrack
-	// if len(a.playCtx.Tracks) == 0 {
-	// 	return nil
-	// }
-
-	// return &a.playCtx.Tracks[a.playCtx.CurrentTrackIdx]
-}
-
 func (a *AudioPlayer) Pause(ctx context.Context) {
 	a.log.DebugContext(ctx, "pause")
+
+	a.state.Playback.Playing = false
+	a.sendPlaybackCallback(ctx)
+
 	a.ai.Pause()
 	a.mp.SetStatus(mpris.MprisPaused)
 }
 
 func (a *AudioPlayer) Play(ctx context.Context) {
 	a.log.DebugContext(ctx, "play")
+
+	a.state.Playback.Playing = true
+	a.sendPlaybackCallback(ctx)
+
 	a.ai.Play()
 	a.mp.SetStatus(mpris.MprisPlaying)
 }
@@ -249,14 +173,8 @@ func (a *AudioPlayer) PlayPause(ctx context.Context) {
 		a.mp.SetStatus(mpris.MprisPaused)
 	}
 
-	for _, f := range a.pausePlayCallbacks {
-		f(a.ai.IsPlaying())
-	}
-}
-
-func (a *AudioPlayer) Terminate(ctx context.Context) {
-	a.log.DebugContext(ctx, "terminate")
-	a.ai.Terminate()
+	a.state.Playback.Playing = a.ai.IsPlaying()
+	a.sendPlaybackCallback(ctx)
 }
 
 func (a *AudioPlayer) startProgressPrinter() {
@@ -266,16 +184,18 @@ func (a *AudioPlayer) startProgressPrinter() {
 			case <-a.progressTicker.C:
 				if a.ai.IsPlaying() {
 					ms := a.ai.PlayedMS()
-					for _, f := range a.progressCallbacks {
-						f(ms)
-					}
 
 					if !a.playCountReported {
-						totMs := a.currentTrack().MediaFile.DurationMs
+						ct, err := a.state.CurrentTrack()
+						if err != nil {
+							a.log.Warn("could not check for play count", "error", err.Error())
+							continue
+						}
+						totMs := ct.MediaFile.DurationMs
 						percPlayed := float32(ms) / float32(totMs)
 						if percPlayed > playCountCountFrac {
 							for _, f := range a.playCountCallbacks {
-								f(a.currentTrack().ID)
+								f(ct.ID)
 							}
 							a.playCountReported = true
 						}
@@ -291,28 +211,22 @@ func (a *AudioPlayer) Stop(ctx context.Context) error {
 		return err
 	}
 
-	a.playCtx = types.PlayContext{
-		Shuffle: a.playCtx.Shuffle,
-		Repeat:  a.playCtx.Repeat,
+	a.state = types.PlayerState{
+		Playback: types.PlaybackState{
+			Shuffle: a.state.Playback.Shuffle,
+			Repeat:  a.state.Playback.Repeat,
+		},
 	}
 
-	for _, f := range a.currentPlayCtxChangeCallbacks {
-		f(a.playCtx)
-	}
-
-	for _, f := range a.pausePlayCallbacks {
-		f(a.ai.IsPlaying())
-	}
+	a.sendStateCallback(ctx)
 
 	return nil
 }
 
 func (a *AudioPlayer) AddTrackToQueue(ctx context.Context, track types.TrackDetailed) {
-	a.playCtx.Queue = append(a.playCtx.Queue, track)
+	a.state.Context.Queue = append(a.state.Context.Queue, track)
 
-	for _, f := range a.currentPlayCtxChangeCallbacks {
-		f(a.playCtx)
-	}
+	a.sendStateCallback(ctx)
 
 	a.log.InfoContext(ctx, "added track to queue", "name", track.Title, "album", track.AlbumName, "artist", track.ArtistNames)
 }
@@ -334,35 +248,35 @@ func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
 		return err
 	}
 
-	if a.currentTrack().MediaFile == nil {
+	cT, err := a.state.CurrentTrack()
+	if err != nil {
+		return err
+	}
+
+	if cT.MediaFile == nil {
 		return ErrFileNotFound
 	}
 
-	// trackFilePath := filepath.Join(a.musicDirPath, a.currentTrack().MediaFile.Filename())
-
-	a.currentFile, err = a.ar.ReadMediafile(ctx, *a.currentTrack().MediaFile)
-	// a.currentFile, err = a.ar.
+	a.currentFile, err = a.ar.ReadMediafile(ctx, *cT.MediaFile)
 	if err != nil {
 		return err
 	}
 
-	af, err := files.ParseAudioFile(a.currentFile, a.currentTrack().MediaFile.Codec)
+	af, err := files.ParseAudioFile(a.currentFile, cT.MediaFile.Codec)
 	if err != nil {
 		return err
 	}
-	a.log.InfoContext(ctx, "start track", "title", a.currentTrack().Title, "artist", a.currentTrack().ArtistNames, "album", a.currentTrack().AlbumName)
+	a.log.InfoContext(ctx, "start track", "title", cT.Title, "artist", cT.ArtistNames, "album", cT.AlbumName)
 
 	a.ai.StartAudioFile(ctx, af, a.NextTrack)
+
+	a.state.Playback.Playing = true
+
+	// FIXME: MP should consume state aswell
 	a.mp.SetStatus(mpris.MprisPlaying)
-	a.mp.SetTrack(a.currentTrack())
+	a.mp.SetTrack(&cT)
 
-	for _, f := range a.currentPlayCtxChangeCallbacks {
-		f(a.playCtx)
-	}
-
-	for _, f := range a.pausePlayCallbacks {
-		f(a.ai.IsPlaying())
-	}
+	a.sendPlaybackCallback(ctx)
 
 	return nil
 }
@@ -394,9 +308,11 @@ func New(cfg Config, ai audiointerface.AudioInterface, ar audioreader.AudioReade
 		currentFile:  nil,
 		musicDirPath: cfg.MusicDirPath,
 		log:          slog.New(slogHandler).With("service", "audioplayer"),
-		playCtx: types.PlayContext{
-			Shuffle: false,
-			Repeat:  types.RepeatOff,
+		state: types.PlayerState{
+			Playback: types.PlaybackState{
+				Shuffle: false,
+				Repeat:  types.RepeatOff,
+			},
 		},
 	}
 
