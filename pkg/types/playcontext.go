@@ -39,7 +39,7 @@ type PlaybackState struct {
 	Repeat  RepeatType `json:"repeat"`
 
 	ProgressMS int64     `json:"progress"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	UpdatedAt  time.Time `json:"updated_at" ts_type:"string"`
 
 	TrackSource TrackSource `json:"track_source"`
 	TrackIndex  int         `json:"track_index"`

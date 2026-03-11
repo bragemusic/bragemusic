@@ -99,9 +99,14 @@ func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, state types.Player
 	// }
 
 	a.state = state
+
+	if err := a.startTrack(ctx); err != nil {
+		return err
+	}
+
 	a.sendStateCallback(ctx)
 
-	return a.startTrack(ctx)
+	return nil
 }
 
 func (a *AudioPlayer) SetRepeat(ctx context.Context, r types.RepeatType) {

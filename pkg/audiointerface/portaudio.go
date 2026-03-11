@@ -140,6 +140,7 @@ func (p *PortAudio) Stop() {
 		p.cStop <- true
 	}
 	p.isPlaying = false
+	p.framesPlayed = 0
 	// p.stream = nil
 }
 
@@ -172,6 +173,7 @@ func (p *PortAudio) killStream() {
 		p.stream = nil
 	}
 	p.isPlaying = false
+	p.framesPlayed = 0
 }
 
 func (p *PortAudio) Terminate() {
