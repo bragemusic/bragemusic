@@ -61,6 +61,7 @@ func (a *AudioPlayer) RegisterPlayCountCallback(f func(trackID uuid.UUID)) {
 func (a *AudioPlayer) sendStateCallback(ctx context.Context) {
 	a.sendContextCallback(ctx)
 	a.sendPlaybackCallback(ctx)
+	fmt.Println(a.state)
 }
 
 func (a *AudioPlayer) sendContextCallback(ctx context.Context) {
@@ -93,12 +94,12 @@ func (a *AudioPlayer) LoadAndStartTracks(ctx context.Context, state types.Player
 	state.Playback.TrackSource = types.TrackSourceContext
 
 	fmt.Println("re")
-	state.RebuildTrackOrder(true)
+	state.RebuildTrackOrder()
 	fmt.Println("re done")
 
-	if err = a.closeCurrentFile(ctx); err != nil {
-		return err
-	}
+	// if err = a.closeCurrentFile(ctx); err != nil {
+	// 	return err
+	// }
 
 	a.state = state
 	a.sendStateCallback(ctx)
@@ -113,7 +114,7 @@ func (a *AudioPlayer) SetRepeat(ctx context.Context, r types.RepeatType) {
 
 func (a *AudioPlayer) SetShuffle(ctx context.Context, s bool) {
 	a.state.Playback.Shuffle = s
-	a.state.RebuildTrackOrder(false)
+	a.state.RebuildTrackOrder()
 
 	a.sendStateCallback(ctx)
 }
@@ -213,8 +214,12 @@ func (a *AudioPlayer) Stop(ctx context.Context) error {
 
 	a.state = types.PlayerState{
 		Playback: types.PlaybackState{
-			Shuffle: a.state.Playback.Shuffle,
-			Repeat:  a.state.Playback.Repeat,
+			Shuffle:     a.state.Playback.Shuffle,
+			Repeat:      a.state.Playback.Repeat,
+			Playing:     false,
+			ProgressMS:  0,
+			TrackSource: types.TrackSourceContext,
+			TrackIndex:  0,
 		},
 	}
 

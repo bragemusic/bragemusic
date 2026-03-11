@@ -117,12 +117,17 @@ func (p *PlayerState) PreviousTrack() (stop bool) {
 	return false
 }
 
-func (p *PlayerState) RebuildTrackOrder(new bool) {
+func (p *PlayerState) RebuildTrackOrder() {
 	trackOrder := []int{}
 	numberOfTracks := len(p.Context.Tracks)
 
+	if numberOfTracks == 0 {
+		p.Context.TrackOrder = []int{}
+		return
+	}
+
 	trackIdx := p.Playback.TrackIndex
-	if !new {
+	if len(p.Context.TrackOrder) > p.Playback.TrackIndex {
 		trackIdx = p.Context.TrackOrder[p.Playback.TrackIndex]
 	}
 
