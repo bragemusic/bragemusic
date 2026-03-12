@@ -41,6 +41,7 @@ type Dispatcher interface {
 	Broadcast(types.SSEventBase) error
 	ActiveDevices(userID uuid.UUID) []uuid.UUID
 	SendToDevice(deviceID uuid.UUID, ev types.SSEventBase) error
+	SendToUser(userID uuid.UUID, ev types.SSEventBase) error
 }
 
 type Hub struct {
@@ -93,6 +94,29 @@ func (h *Hub) SendToDevice(deviceID uuid.UUID, ev types.SSEventBase) error {
 		event:    ev,
 		deviceID: &deviceID,
 	}
+	return nil
+}
+
+func (h *Hub) SendToUser(userID uuid.UUID, ev types.SSEventBase) error {
+	evEnvs := []eventEnvelope{}
+
+	for c := range h.clients {
+		if c.userID == userID {
+			evEnvs = append(evEnvs, eventEnvelope{
+				event:    ev,
+				deviceID: &c.deviceID,
+			})
+		}
+	}
+
+	if len(evEnvs) == 0 {
+		return errors.New("no user devices found")
+	}
+
+	for _, e := range evEnvs {
+		h.broadcast <- e
+	}
+
 	return nil
 }
 

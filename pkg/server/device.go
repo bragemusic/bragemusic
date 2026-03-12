@@ -47,18 +47,41 @@ func (s *Server) deviceRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
+
+		routes.New("POST", "/{deviceID}/playcontext", s.deviceUpdatePlayerPlayContext(), nil, routes.RouteMeta{
+			Summary:             "Update the device current play context.",
+			Description:         "Update the playcontext for the selected device. Can only be accessed if the device ID is belonging to the token the user is logged in with.",
+			ExpectedDescription: "PlayContext updated",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/{deviceID}/playbackstate", s.deviceUpdatePlayerPlaybackState(), nil, routes.RouteMeta{
+			Summary:             "Update the device current playback state.",
+			Description:         "Update the playback statefor the selected device. Can only be accessed if the device ID is belonging to the token the user is logged in with.",
+			ExpectedDescription: "PlaybackState updated",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
 	}
 }
 
-func (s *Server) listDevices() routes.RouteFunc[ReqNoContent, types.ListPayload[types.Device]] {
-	return func(ctx context.Context, req ReqNoContent, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[types.Device]], err error) {
+// FIXME: The routes object should probably be divided in to 3 parts:
+// - listdevices, registerdevice (standard auth)
+// - play-pause, start track, next track and so on: deviceID is owned by the user
+// - update playcontext, playback state: deviceID is the one that correspondes with the used token. This might require unique on the device - token relationship.
+
+func (s *Server) listDevices() routes.RouteFunc[ReqNoContent, types.ListPayload[types.DeviceDetailed]] {
+	return func(ctx context.Context, req ReqNoContent, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[types.DeviceDetailed]], err error) {
 		d, err := s.devicemgr.ListActiveDevices(ctx, user.ID)
 		if err != nil {
-			return types.Response[types.ListPayload[types.Device]]{}, err
+			return types.Response[types.ListPayload[types.DeviceDetailed]]{}, err
 		}
 
-		return types.Response[types.ListPayload[types.Device]]{
-			Payload: types.ListPayload[types.Device]{
+		return types.Response[types.ListPayload[types.DeviceDetailed]]{
+			Payload: types.ListPayload[types.DeviceDetailed]{
 				Items: d,
 				Count: len(d),
 			},
@@ -109,6 +132,32 @@ func (s *Server) devicePlayerPlayPause() routes.RouteFunc[ReqDevicesGet, types.N
 		callingDeviceID := uuid.Nil
 		if err := s.devicemgr.PlayerPlayPause(ctx, req.DeviceID, callingDeviceID, user.ID); err != nil {
 			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) deviceUpdatePlayerPlayContext() routes.RouteFunc[ReqDevicesUpdatePlayContext, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesUpdatePlayContext, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		if err := s.devicemgr.UpdatePlayerPlayContext(ctx, req.PlayContextDTO, req.DeviceID, user.ID); err != nil {
+			return resp, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) deviceUpdatePlayerPlaybackState() routes.RouteFunc[ReqDevicesUpdatePlaybackState, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesUpdatePlaybackState, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		if err := s.devicemgr.UpdatePlayerPlaybackState(ctx, req.PlaybackStateDTO, req.DeviceID, user.ID); err != nil {
+			return resp, err
 		}
 
 		return types.Response[types.NoResponse]{

@@ -10,7 +10,6 @@ package client
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
 	"github.com/bragemusic/core/pkg/audiointerface"
@@ -339,6 +338,7 @@ type Client struct {
 
 	*device.DeviceAgent
 
+	sc  *serverclient.ServerClient
 	log *slog.Logger
 }
 
@@ -347,8 +347,6 @@ func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, tr
 	if err != nil {
 		return err
 	}
-
-	fmt.Println(tracks)
 
 	pState := types.PlayerState{
 		Playback: types.PlaybackState{
@@ -469,6 +467,20 @@ func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent[any]) {
 	}
 }
 
+func (c *Client) handlePlayContextCallbacks(ctx context.Context, pc types.PlayContext) {
+	err := c.sc.UpdatePlayContext(ctx, pc)
+	if err != nil {
+		c.log.ErrorContext(ctx, "could not send playcontext to server", "error", err.Error())
+	}
+}
+
+func (c *Client) handlePlaybackStateCallbacks(ctx context.Context, ps types.PlaybackState) {
+	err := c.sc.UpdatePlaybackState(ctx, ps)
+	if err != nil {
+		c.log.ErrorContext(ctx, "could not send playback state to server", "error", err.Error())
+	}
+}
+
 func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
 	var cf clientFace
 	var ar audioreader.AudioReader
@@ -527,6 +539,7 @@ func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFa
 		clientFace:  cf,
 		Identity:    &id,
 		AudioPlayer: ap,
+		sc:          &sc,
 		log:         slog.New(slogHandler).With("service", "client"),
 		DeviceAgent: &da,
 	}
@@ -535,6 +548,8 @@ func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFa
 	// 	return nil, err
 	// }
 	ap.RegisterPlayCountCallback(c.updatePlayCount)
+	ap.RegisterPlayContextCallback(c.handlePlayContextCallbacks)
+	ap.RegisterPlaybackStateCallback(c.handlePlaybackStateCallbacks)
 
 	da.SubscribeToEventCategory(c.handlePlayerEvents, "player")
 

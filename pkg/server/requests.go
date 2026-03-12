@@ -241,6 +241,24 @@ func (r ReqDevicesGet) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqDevicesUpdatePlayContext struct {
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
+	types.PlayContextDTO
+}
+
+func (r ReqDevicesUpdatePlayContext) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqDevicesUpdatePlaybackState struct {
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
+	types.PlaybackStateDTO
+}
+
+func (r ReqDevicesUpdatePlaybackState) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`

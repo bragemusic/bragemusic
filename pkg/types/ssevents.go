@@ -30,18 +30,38 @@ func (e SSEvent[T]) Base() SSEventBase {
 }
 
 type (
-	SSEventPlayerStart     = SSEvent[PlayerState]
-	SSEventPlayerPlayPause = SSEvent[SSENoData]
+	SSEventPlayerPlayContext   = SSEvent[PlayContextDTO]
+	SSEventPlayerPlaybackState = SSEvent[PlaybackStateDTO]
+	SSEventPlayerStart         = SSEvent[PlayerState]
+	SSEventPlayerPlayPause     = SSEvent[SSENoData]
 )
 
 const (
-	SSEventTypePlayerStart     SSEventType = "player.start"
-	SSEventTypePlayerPlayPause SSEventType = "player.playpause"
+	SSEventTypePlayerPlayContext   SSEventType = "player.playcontext"
+	SSEventTypePlayerPlaybackState SSEventType = "player.playbackstate"
+	SSEventTypePlayerStart         SSEventType = "player.start"
+	SSEventTypePlayerPlayPause     SSEventType = "player.playpause"
 )
 
 func newUUID() uuid.UUID {
 	id, _ := uuid.NewV4()
 	return id
+}
+
+func SSEPlayerPlayContext(pc PlayContextDTO) SSEventPlayerPlayContext {
+	return SSEventPlayerPlayContext{
+		ID:   newUUID(),
+		Type: SSEventTypePlayerPlayContext,
+		Data: pc,
+	}
+}
+
+func SSEPlayerPlaybackState(ps PlaybackStateDTO) SSEventPlayerPlaybackState {
+	return SSEventPlayerPlaybackState{
+		ID:   newUUID(),
+		Type: SSEventTypePlayerPlaybackState,
+		Data: ps,
+	}
 }
 
 func SSEPlayerStart(pc PlayerState) SSEventPlayerStart {

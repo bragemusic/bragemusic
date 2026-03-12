@@ -129,7 +129,7 @@ func main() {
 	})
 
 	sseHub := sse.NewHub(&db, slogHandler)
-	dm := device.NewManager(sseHub, &db)
+	dm := device.NewManager(sseHub, &db, slogHandler)
 
 	s := server.New(slogHandler, &m, &a, &imp, &jmgr, sseHub, &dm, scfg)
 

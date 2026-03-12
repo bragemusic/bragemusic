@@ -4,17 +4,24 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/sse"
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/core/pkg/utils"
 	"github.com/gofrs/uuid/v5"
+	"github.com/samber/lo"
 )
 
 type DeviceManager struct {
 	sseDispatch sse.Dispatcher
 	db          database.DeviceFace
+
+	log *slog.Logger
+
+	playerStates map[uuid.UUID]types.PlayerStateDTO
 }
 
 // FIXME
@@ -53,14 +60,52 @@ func (d DeviceManager) PlayerPlayPause(ctx context.Context, targetDeviceID, call
 	return nil
 }
 
-func (d DeviceManager) ListActiveDevices(ctx context.Context, userID uuid.UUID) ([]types.Device, error) {
+func (d DeviceManager) UpdatePlayerPlayContext(ctx context.Context, pc types.PlayContextDTO, deviceID, userID uuid.UUID) error {
+	// FIXME: security
+
+	state, found := d.playerStates[deviceID]
+	if !found {
+		state = types.PlayerStateDTO{}
+	}
+
+	state.Context = pc
+
+	d.playerStates[deviceID] = state
+
+	err := d.sseDispatch.SendToUser(userID, types.SSEPlayerPlayContext(pc).Base())
+	if err != nil {
+		d.log.WarnContext(ctx, "could not send play context to user's devices", "userID", userID.String(), "deviceID", deviceID.String(), "error", err.Error())
+	}
+
+	return nil
+}
+
+func (d DeviceManager) UpdatePlayerPlaybackState(ctx context.Context, ps types.PlaybackStateDTO, deviceID, userID uuid.UUID) error {
+	// FIXME: security
+
+	state, found := d.playerStates[deviceID]
+	if !found {
+		state = types.PlayerStateDTO{}
+	}
+
+	state.Playback = ps
+
+	d.playerStates[deviceID] = state
+
+	err := d.sseDispatch.SendToUser(userID, types.SSEPlayerPlaybackState(ps).Base())
+	if err != nil {
+		d.log.WarnContext(ctx, "could not send playback state to user's devices", "userID", userID.String(), "deviceID", deviceID.String(), "error", err.Error())
+	}
+
+	return nil
+}
+
+func (d DeviceManager) ListActiveDevices(ctx context.Context, userID uuid.UUID) ([]types.DeviceDetailed, error) {
 	// d.sseDispatch.Broadcast(sse.Event{
 	// 	ID:   userID,
 	// 	Type: "kalaskula broadcast",
 	// 	Data: map[string]string{"kaka": "gott"},
 	// })
-
-	d.sseDispatch.Broadcast(types.SSEPlayerPlayPause().Base())
 
 	// d.sseDispatch.SendToDevice(uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111112")), sse.Event{
 	// 	ID:   userID,
@@ -74,16 +119,26 @@ func (d DeviceManager) ListActiveDevices(ctx context.Context, userID uuid.UUID) 
 		return nil, err
 	}
 
+	devicesDetailed := lo.Map(devices, func(item types.Device, index int) types.DeviceDetailed {
+		return types.DeviceDetailed{Device: item}
+	})
+
+	// NOTE: Should probably add playstater here somwhoe. Do a DeviceDetailed type
+
 	for _, adID := range d.sseDispatch.ActiveDevices(userID) {
-		for idx := range devices {
-			if devices[idx].ID == adID {
-				devices[idx].Active = true
+		for idx := range devicesDetailed {
+			if devicesDetailed[idx].ID == adID {
+				devicesDetailed[idx].Active = true
+				ps, ok := d.playerStates[devicesDetailed[idx].ID]
+				if ok {
+					devicesDetailed[idx].PlayerState = utils.Ptr(ps)
+				}
 				break
 			}
 		}
 	}
 
-	return devices, nil
+	return devicesDetailed, nil
 }
 
 func (d DeviceManager) RegisterOrUpdateDevice(ctx context.Context, id *uuid.UUID, tokenID, userID uuid.UUID, device types.Device) (deviceID uuid.UUID, err error) {
@@ -158,9 +213,11 @@ func (d DeviceManager) RegisterOrUpdateDevice(ctx context.Context, id *uuid.UUID
 	return newID, nil
 }
 
-func NewManager(sd sse.Dispatcher, db database.DeviceFace) DeviceManager {
+func NewManager(sd sse.Dispatcher, db database.DeviceFace, slogHandler slog.Handler) DeviceManager {
 	return DeviceManager{
-		sseDispatch: sd,
-		db:          db,
+		sseDispatch:  sd,
+		db:           db,
+		log:          slog.New(slogHandler).With("service", "device.manager"),
+		playerStates: map[uuid.UUID]types.PlayerStateDTO{},
 	}
 }

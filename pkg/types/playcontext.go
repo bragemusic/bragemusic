@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid/v5"
+	"github.com/samber/lo"
 )
 
 type (
@@ -28,9 +29,19 @@ const (
 	TrackSourceQueue   TrackSource = "queue"
 )
 
+type PlayerStateDTO struct {
+	Playback PlaybackStateDTO `json:"playback"`
+	Context  PlayContextDTO   `json:"context"`
+}
+
 type PlayerState struct {
 	Playback PlaybackState `json:"playback"`
 	Context  PlayContext   `json:"context"`
+}
+
+type PlaybackStateDTO struct {
+	DeviceID uuid.UUID `json:"device_id"`
+	PlaybackState
 }
 
 type PlaybackState struct {
@@ -45,8 +56,24 @@ type PlaybackState struct {
 	TrackIndex  int         `json:"track_index"`
 }
 
+func (p PlaybackState) DTO(deviceID uuid.UUID) PlaybackStateDTO {
+	return PlaybackStateDTO{
+		DeviceID:      deviceID,
+		PlaybackState: p,
+	}
+}
+
 func (p PlaybackState) TotalProgress() int64 {
 	return p.ProgressMS + time.Now().Sub(p.UpdatedAt).Milliseconds()
+}
+
+type PlayContextDTO struct {
+	DeviceID   uuid.UUID       `json:"device_id"`
+	Type       PlayContextType `json:"type"`
+	RefID      uuid.UUID       `json:"ref_id" ts_type:"string"`
+	Tracks     []uuid.UUID     `json:"tracks"`
+	TrackOrder []int           `json:"track_order"`
+	Queue      []uuid.UUID     `json:"queue"`
 }
 
 type PlayContext struct {
@@ -55,6 +82,17 @@ type PlayContext struct {
 	Tracks     []TrackDetailed `json:"tracks"`
 	TrackOrder []int           `json:"track_order"`
 	Queue      []TrackDetailed `json:"queue"`
+}
+
+func (pc *PlayContext) DTO(deviceID uuid.UUID) PlayContextDTO {
+	return PlayContextDTO{
+		DeviceID:   deviceID,
+		Type:       pc.Type,
+		RefID:      pc.RefID,
+		Tracks:     lo.Map(pc.Tracks, func(item TrackDetailed, index int) uuid.UUID { return item.ID }),
+		TrackOrder: pc.TrackOrder,
+		Queue:      lo.Map(pc.Queue, func(item TrackDetailed, index int) uuid.UUID { return item.ID }),
+	}
 }
 
 func (pc *PlayContext) pullFromQueue() *TrackDetailed {
@@ -66,6 +104,13 @@ func (pc *PlayContext) pullFromQueue() *TrackDetailed {
 	pc.Queue = pc.Queue[1:]
 
 	return &qt
+}
+
+func (p *PlayerState) DTO(deviceID uuid.UUID) PlayerStateDTO {
+	return PlayerStateDTO{
+		Playback: p.Playback.DTO(deviceID),
+		Context:  p.Context.DTO(deviceID),
+	}
 }
 
 func (p *PlayerState) NextTrack() (contextUpdated, stop bool) {
@@ -190,17 +235,6 @@ func (p *PlayerState) CurrentTrack() (TrackDetailed, error) {
 	default:
 		return TrackDetailed{}, errors.New("unknown track source")
 	}
-}
-
-type PlayContextDTO struct {
-	PlaybackState   PlaybackState   `json:"playback_state"`
-	Type            PlayContextType `json:"type"`
-	RefID           uuid.UUID       `json:"ref_id" ts_type:"string"`
-	Tracks          []uuid.UUID     `json:"tracks"`
-	Queue           []uuid.UUID     `json:"queue"`
-	CurrentTrackIdx int             `json:"current_track_idx"`
-	CurrentTrack    *uuid.UUID      `json:"current_track"`
-	TrackOrder      []int           `json:"track_order"`
 }
 
 type PlayContextOld struct {

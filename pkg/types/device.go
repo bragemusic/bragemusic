@@ -47,6 +47,11 @@ type Device struct {
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }
 
+type DeviceDetailed struct {
+	Device
+	PlayerState *PlayerStateDTO `json:"player_state"`
+}
+
 type DeviceToken struct {
 	DeviceID  uuid.UUID `db:"device_id"`
 	TokenID   uuid.UUID `db:"token_id"`

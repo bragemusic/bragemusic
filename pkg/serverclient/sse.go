@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -15,7 +16,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s ServerClient) RegisterDevice(ctx context.Context, deviceID *uuid.UUID, deviceDetails types.DeviceBase) (newDeviceID uuid.UUID, err error) {
+func (s *ServerClient) RegisterDevice(ctx context.Context, deviceID *uuid.UUID, deviceDetails types.DeviceBase) (newDeviceID uuid.UUID, err error) {
 	u, err := url.JoinPath(s.baseUrl, DEVICES_PATH...)
 	if err != nil {
 		return uuid.Nil, err
@@ -30,6 +31,8 @@ func (s ServerClient) RegisterDevice(ctx context.Context, deviceID *uuid.UUID, d
 	if err := s.doPostJson(ctx, u, req, &resp); err != nil {
 		return uuid.Nil, err
 	}
+
+	s.deviceID = &resp.DeviceID
 
 	return resp.DeviceID, nil
 }
@@ -100,4 +103,38 @@ func (s ServerClient) consumeSSE(ctx context.Context, deviceID uuid.UUID, handle
 	}
 
 	return reader.Err()
+}
+
+func (s ServerClient) UpdatePlayContext(ctx context.Context, pc types.PlayContext) error {
+	if s.deviceID == nil {
+		return errors.New("device not registered")
+	}
+
+	u, err := url.JoinPath(s.baseUrl, append(DEVICES_PATH, s.deviceID.String(), "playcontext")...)
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPostJson(ctx, u, pc.DTO(*s.deviceID), nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s ServerClient) UpdatePlaybackState(ctx context.Context, ps types.PlaybackState) error {
+	if s.deviceID == nil {
+		return errors.New("device not registered")
+	}
+
+	u, err := url.JoinPath(s.baseUrl, append(DEVICES_PATH, s.deviceID.String(), "playbackstate")...)
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPostJson(ctx, u, ps.DTO(*s.deviceID), nil); err != nil {
+		return err
+	}
+
+	return nil
 }

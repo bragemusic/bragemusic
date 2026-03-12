@@ -11,6 +11,7 @@ import (
 	"net/url"
 
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 )
 
 var DEVICES_PATH = []string{"api", "devices"}
@@ -27,6 +28,7 @@ type ServerClient struct {
 	log       *slog.Logger
 	baseUrl   string
 	authToken string
+	deviceID  *uuid.UUID
 	client    *http.Client
 }
 
