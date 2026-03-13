@@ -40,7 +40,7 @@ type PlayerState struct {
 }
 
 type PlaybackStateDTO struct {
-	DeviceID uuid.UUID `json:"device_id"`
+	DeviceID uuid.UUID `json:"device_id" ts_type:"string"`
 	PlaybackState
 }
 
@@ -68,18 +68,18 @@ func (p PlaybackState) TotalProgress() int64 {
 }
 
 type PlayContextDTO struct {
-	DeviceID   uuid.UUID       `json:"device_id"`
+	DeviceID   uuid.UUID       `json:"device_id" ts_type:"string"`
 	Type       PlayContextType `json:"type"`
 	RefID      uuid.UUID       `json:"ref_id" ts_type:"string"`
-	Tracks     []uuid.UUID     `json:"tracks"`
+	Tracks     []uuid.UUID     `json:"tracks" ts_type:"string[]"`
 	TrackOrder []int           `json:"track_order"`
-	Queue      []uuid.UUID     `json:"queue"`
+	Queue      []uuid.UUID     `json:"queue" ts_type:"string[]"`
 }
 
 type PlayContext struct {
 	Type       PlayContextType `json:"type"`
 	RefID      uuid.UUID       `json:"ref_id" ts_type:"string"`
-	Tracks     []TrackDetailed `json:"tracks"`
+	Tracks     []TrackDetailed `json:"tracks" `
 	TrackOrder []int           `json:"track_order"`
 	Queue      []TrackDetailed `json:"queue"`
 }

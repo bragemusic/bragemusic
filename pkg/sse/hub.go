@@ -202,11 +202,15 @@ func (h *Hub) EventsHandler() routes.RouteFunc[ReqEvents, types.NoResponse] {
 			case h.remove <- client:
 			default:
 			}
+
+			if err = h.SendToUser(user.ID, types.SSEClientDisconnected(device).Base()); err != nil {
+				h.log.WarnContext(ctx, "could not send client disconnected sse")
+			}
 			h.log.InfoContext(ctx, "client disconnected", "device.name", device.Name, "user.email", user.Email)
 		}()
 
 		if err = h.SendToUser(user.ID, types.SSEClientConnected(device).Base()); err != nil {
-			h.log.WarnContext(ctx, "colud not send client connected sse")
+			h.log.WarnContext(ctx, "could not send client connected sse")
 		}
 
 		resp.Status = http.StatusOK

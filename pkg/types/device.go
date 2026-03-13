@@ -23,7 +23,7 @@ const (
 
 // TODO:UNIQUE(token_id) (maybe, might not be necessary. Should not be able to disable a client, but a token. A token should be able to be used in multiple places)
 type DeviceBase struct {
-	Name             string          `db:"name" json:"name"`
+	Name             string          `db:"name" json:"name" `
 	Type             DeviceType      `db:"type" json:"type"`
 	Interface        DeviceInterface `db:"interface" json:"interface"`
 	SupportsPlayback bool            `db:"supports_playback" json:"supports_playback"`
@@ -38,7 +38,7 @@ type ReqDevicesRegister struct {
 
 type Device struct {
 	DeviceBase
-	ID        uuid.UUID `db:"id" json:"id"`
+	ID        uuid.UUID `db:"id" json:"id" ts_type:"string"`
 	UserID    uuid.UUID `db:"user_id" json:"user_id"`
 	LastIP    string    `db:"last_ip" json:"last_ip"`
 	LastSeen  time.Time `db:"last_seen" json:"last_seen"`

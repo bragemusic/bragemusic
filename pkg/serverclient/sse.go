@@ -138,3 +138,18 @@ func (s ServerClient) UpdatePlaybackState(ctx context.Context, ps types.Playback
 
 	return nil
 }
+
+func (s ServerClient) ListDevices(ctx context.Context) (devices []types.DeviceDetailed, err error) {
+	u, err := url.JoinPath(s.baseUrl, DEVICES_PATH...)
+	if err != nil {
+		return nil, err
+	}
+
+	resp := types.ListPayload[types.DeviceDetailed]{}
+
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Items, nil
+}

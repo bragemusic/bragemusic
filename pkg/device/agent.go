@@ -122,6 +122,10 @@ func (a *DeviceAgent) SubscribeDeviceEvents(ctx context.Context) error {
 	return nil
 }
 
+func (a *DeviceAgent) ListDevices(ctx context.Context) (devices []types.DeviceDetailed, err error) {
+	return a.sc.ListDevices(ctx)
+}
+
 func NewAgent(slogHandler slog.Handler, sc *serverclient.ServerClient, userID uuid.UUID, meta types.DeviceBase, stateFilePath *string) DeviceAgent {
 	return DeviceAgent{
 		log:               slog.New(slogHandler).With("service", "device.agent"),

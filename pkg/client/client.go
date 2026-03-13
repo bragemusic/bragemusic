@@ -23,6 +23,7 @@ import (
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/serverclient"
+	"github.com/bragemusic/core/pkg/sse"
 	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
@@ -275,6 +276,11 @@ type JobManagerFace interface {
 	RunJob(ctx context.Context, jobType types.JobType) error
 }
 
+type DeviceManagerFace interface {
+	ListDevices(ctx context.Context) (devices []types.DeviceDetailed, err error)
+	SubscribeToEventTypes(handler sse.EventHandler, eventType ...types.SSEventType)
+}
+
 // ClientFace defines the high-level client interface that aggregates
 // synchronization, authentication, playback, metadata, and job management
 // functionality.
@@ -297,6 +303,7 @@ type ClientFace interface {
 	clientFace
 	IdentityFace
 	AudioPlayerFace
+	DeviceManagerFace
 
 	// hit ska åtminstone auth och audioplayer flyttas. Det är delat mellan sync och streaming. Typ iaf. Får lösa så att auth är det.
 	// 	Sen ska clientface generarea en clientSync/Stream när det loggas in en användare, så slipper vi pekar på user o en massa skit
