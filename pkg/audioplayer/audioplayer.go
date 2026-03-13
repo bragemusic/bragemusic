@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/bragemusic/core/pkg/audiointerface"
@@ -326,7 +327,8 @@ func New(cfg Config, ai audiointerface.AudioInterface, ar audioreader.AudioReade
 
 	ai.RegisterErrorCallback(ap.handleError)
 
-	ap.mp, err = mpris.New(cfg.PlayerName, ap.Play, ap.Pause, ap.PlayPause, ap.PreviousTrack, ap.NextTrack)
+	playerName := "BrageMusic-" + strings.ReplaceAll(cfg.PlayerName, " ", "")
+	ap.mp, err = mpris.New(playerName, ap.Play, ap.Pause, ap.PlayPause, ap.PreviousTrack, ap.NextTrack)
 	if err != nil {
 		return nil, err
 	}

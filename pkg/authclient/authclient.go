@@ -129,6 +129,19 @@ func (ac *AuthClient) Login(ctx context.Context, username, password string, long
 	return user, err
 }
 
+func (ac *AuthClient) LoginToken(ctx context.Context, token string) (types.UserDetails, error) {
+	ac.sc.SetAuthToken(token)
+
+	user, err := ac.sc.GetUser(ctx)
+	if err != nil {
+		return types.UserDetails{}, err
+	}
+
+	ac.UpdateServerStatusCallbacks(ctx)
+
+	return user, err
+}
+
 func (ac *AuthClient) LogoutServerUser(ctx context.Context, userID uuid.UUID) error {
 	if err := ac.removeToken(ctx, userID); err != nil {
 		return err

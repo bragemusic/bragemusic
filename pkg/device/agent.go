@@ -16,10 +16,6 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func idFilePath(userID uuid.UUID) (string, error) {
-	return xdg.StateFile(filepath.Join("brage", "users", userID.String(), "device_id"))
-}
-
 type DeviceAgent struct {
 	sc         *serverclient.ServerClient
 	deviceMeta types.DeviceBase
@@ -28,8 +24,16 @@ type DeviceAgent struct {
 	typeRecievers     map[types.SSEventType][]sse.EventHandler
 	categoryRecievers map[string][]sse.EventHandler
 
-	log  *slog.Logger
-	berr bragerr.BragErrFactory
+	stateFilePath *string
+	log           *slog.Logger
+	berr          bragerr.BragErrFactory
+}
+
+func (a *DeviceAgent) idFilePath(userID uuid.UUID) (string, error) {
+	if a.stateFilePath != nil {
+		return filepath.Join(*a.stateFilePath, "device_id"), nil
+	}
+	return xdg.StateFile(filepath.Join("brage", "users", userID.String(), "device_id"))
 }
 
 func (a *DeviceAgent) SubscribeToEventTypes(handler sse.EventHandler, eventType ...types.SSEventType) {
@@ -43,7 +47,7 @@ func (a *DeviceAgent) SubscribeToEventCategory(handler sse.EventHandler, eventCa
 }
 
 func (a *DeviceAgent) loadLocalDeviceID(userID uuid.UUID) (*uuid.UUID, error) {
-	path, err := idFilePath(userID)
+	path, err := a.idFilePath(userID)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +69,7 @@ func (a *DeviceAgent) loadLocalDeviceID(userID uuid.UUID) (*uuid.UUID, error) {
 }
 
 func (a *DeviceAgent) saveLocalDeviceID(userID, deviceID uuid.UUID) error {
-	path, err := idFilePath(userID)
+	path, err := a.idFilePath(userID)
 	if err != nil {
 		return err
 	}
@@ -118,13 +122,14 @@ func (a *DeviceAgent) SubscribeDeviceEvents(ctx context.Context) error {
 	return nil
 }
 
-func NewAgent(slogHandler slog.Handler, sc *serverclient.ServerClient, userID uuid.UUID, meta types.DeviceBase) DeviceAgent {
+func NewAgent(slogHandler slog.Handler, sc *serverclient.ServerClient, userID uuid.UUID, meta types.DeviceBase, stateFilePath *string) DeviceAgent {
 	return DeviceAgent{
 		log:               slog.New(slogHandler).With("service", "device.agent"),
 		berr:              bragerr.NewFactory("device.agent"),
 		sc:                sc,
 		deviceMeta:        meta,
 		userID:            userID,
+		stateFilePath:     stateFilePath,
 		typeRecievers:     map[types.SSEventType][]sse.EventHandler{},
 		categoryRecievers: map[string][]sse.EventHandler{},
 	}

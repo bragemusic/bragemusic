@@ -10,6 +10,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 
 	"github.com/bragemusic/core/pkg/audiointerface"
@@ -28,12 +29,14 @@ import (
 )
 
 type Config struct {
-	ConfigPath    string
-	ImagePath     string
-	MusicDirPath  string
-	PlayerName    string
-	ServerBaseURL string
-	ClientType    types.DeviceType
+	ConfigPath      string
+	ImagePath       string
+	MusicDirPath    string
+	PlayerName      string
+	ServerBaseURL   string
+	ClientType      types.DeviceType
+	ClientInterface types.DeviceInterface
+	StateFilePath   *string
 }
 
 type IdentityFace interface {
@@ -90,6 +93,8 @@ type AuthFace interface {
 	// Login authenticates a user against the server using username and password.
 	// If longLivedToken is true, a persistent authentication token is requested.
 	Login(ctx context.Context, username, password string, longLivedToken bool) (types.UserDetails, error)
+
+	LoginToken(ctx context.Context, token string) (types.UserDetails, error)
 
 	// LogoutServerUser logs out the currently authenticated server user
 	// and invalidates any associated server session.
@@ -460,6 +465,19 @@ func (c *Client) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
 	return nil
 }
 
+// FIXME ONLY FOR TEST
+func (c *Client) LoginToken(ctx context.Context, token string) (types.UserDetails, error) {
+	user, err := c.clientFace.LoginToken(ctx, token)
+	if err != nil {
+		return types.UserDetails{}, nil
+	}
+	err = c.SubscribeDeviceEvents(ctx)
+	if err != nil {
+		return types.UserDetails{}, nil
+	}
+	return user, nil
+}
+
 func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent[any]) {
 	switch e.Type {
 	case types.SSEventTypePlayerPlayPause:
@@ -522,18 +540,21 @@ func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFa
 
 	ap, err := audioplayer.New(apCfg, pa, ar, slogHandler)
 	if err != nil {
+		fmt.Println("hej")
 		return nil, err
 	}
 
 	// FIXME: Needs to make another client structure. With authed starting the real clients
 	da := device.NewAgent(slogHandler, &sc, uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111")), types.DeviceBase{
-		Name:             "Lucas Dator",
-		Type:             types.DeviceTypeSync,
-		Interface:        types.DeviceInterfaceDesktop,
+		Name:             config.PlayerName,
+		Type:             config.ClientType,
+		Interface:        config.ClientInterface,
 		SupportsPlayback: true,
 		Platform:         "linux",
 		Version:          "1.2.0",
-	})
+	},
+		config.StateFilePath,
+	)
 
 	c := &Client{
 		clientFace:  cf,

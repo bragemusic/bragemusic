@@ -30,6 +30,7 @@ func (e SSEvent[T]) Base() SSEventBase {
 }
 
 type (
+	SSEventClientConnected     = SSEvent[Device]
 	SSEventPlayerPlayContext   = SSEvent[PlayContextDTO]
 	SSEventPlayerPlaybackState = SSEvent[PlaybackStateDTO]
 	SSEventPlayerStart         = SSEvent[PlayerState]
@@ -37,6 +38,7 @@ type (
 )
 
 const (
+	SSEventTypeClientConnected     SSEventType = "client.connected"
 	SSEventTypePlayerPlayContext   SSEventType = "player.playcontext"
 	SSEventTypePlayerPlaybackState SSEventType = "player.playbackstate"
 	SSEventTypePlayerStart         SSEventType = "player.start"
@@ -46,6 +48,14 @@ const (
 func newUUID() uuid.UUID {
 	id, _ := uuid.NewV4()
 	return id
+}
+
+func SSEClientConnected(d Device) SSEventClientConnected {
+	return SSEventClientConnected{
+		ID:   newUUID(),
+		Type: SSEventTypeClientConnected,
+		Data: d,
+	}
 }
 
 func SSEPlayerPlayContext(pc PlayContextDTO) SSEventPlayerPlayContext {
