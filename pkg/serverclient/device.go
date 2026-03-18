@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/url"
 
+	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 
@@ -14,6 +15,19 @@ func (s ServerClient) DevicePlayPause(ctx context.Context, deviceID uuid.UUID) (
 	}
 
 	if err := s.doPostJson(ctx, u, nil, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s ServerClient) DeviceSetPlayerState(ctx context.Context, deviceID uuid.UUID, pc types.PlayerState) (err error) {
+	u, err := url.JoinPath(s.baseUrl, append(DEVICES_PATH, deviceID.String(), "player", "state")...)
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPostJson(ctx, u, pc, nil); err != nil {
 		return err
 	}
 

@@ -9,6 +9,7 @@ import (
 type (
 	DeviceType      string
 	DeviceInterface string
+	DeviceIcon      string
 )
 
 const (
@@ -19,6 +20,13 @@ const (
 	DeviceInterfaceDesktop  DeviceInterface = "desktop"
 	DeviceInterfaceTerminal DeviceInterface = "terminal"
 	DeviceInterfaceWeb      DeviceInterface = "web"
+
+	DeviceIconLaptop   DeviceIcon = "laptop"
+	DeviceIconComputer DeviceIcon = "computer"
+	DeviceIconPhone    DeviceIcon = "phone"
+	DeviceIconSpeaker  DeviceIcon = "speaker"
+	DeviceIconTV       DeviceIcon = "tv"
+	DeviceIconGeneric  DeviceIcon = "generic"
 )
 
 // TODO:UNIQUE(token_id) (maybe, might not be necessary. Should not be able to disable a client, but a token. A token should be able to be used in multiple places)
@@ -26,6 +34,7 @@ type DeviceBase struct {
 	Name             string          `db:"name" json:"name" `
 	Type             DeviceType      `db:"type" json:"type"`
 	Interface        DeviceInterface `db:"interface" json:"interface"`
+	Icon             DeviceIcon      `db:"icon" json:"icon"`
 	SupportsPlayback bool            `db:"supports_playback" json:"supports_playback"`
 	Platform         string          `db:"platform" json:"platform"`
 	Version          string          `db:"version" json:"version"`

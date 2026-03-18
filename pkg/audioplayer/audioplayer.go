@@ -251,6 +251,22 @@ func (a *AudioPlayer) stopPlayback(ctx context.Context) error {
 	return nil
 }
 
+func (a *AudioPlayer) stopCallback(ctx context.Context) error {
+	a.state = types.PlayerState{
+		Playback: types.PlaybackState{
+			Shuffle:     a.state.Playback.Shuffle,
+			Repeat:      a.state.Playback.Repeat,
+			Playing:     false,
+			ProgressMS:  0,
+			TrackSource: types.TrackSourceContext,
+			TrackIndex:  0,
+		},
+	}
+
+	a.sendStateCallback(ctx)
+	return nil
+}
+
 func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
 	if err = a.stopPlayback(ctx); err != nil {
 		return err
@@ -276,7 +292,7 @@ func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
 	}
 	a.log.InfoContext(ctx, "start track", "title", cT.Title, "artist", cT.ArtistNames, "album", cT.AlbumName)
 
-	a.ai.StartAudioFile(ctx, af, a.NextTrack)
+	a.ai.StartAudioFile(ctx, af, a.NextTrack, a.stopCallback)
 
 	a.state.Playback.Playing = true
 

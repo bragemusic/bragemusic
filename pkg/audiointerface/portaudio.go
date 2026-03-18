@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"io"
 	"log/slog"
+	"time"
 
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gordonklaus/portaudio"
@@ -25,19 +26,19 @@ type PortAudio struct {
 	cPause chan bool
 }
 
-func (p *PortAudio) StartAudioFile(ctx context.Context, audioFile types.AudioFile, finishedCallback func(context.Context) error) {
+func (p *PortAudio) StartAudioFile(ctx context.Context, audioFile types.AudioFile, finishedCallback, timeoutCallback func(context.Context) error) {
 	p.audioFile = audioFile
 	p.killStream()
 
 	p.isPlaying = true
-	go p.runStream(ctx, finishedCallback)
+	go p.runStream(ctx, finishedCallback, timeoutCallback)
 }
 
 func (p *PortAudio) RegisterErrorCallback(f func(context.Context, error)) {
 	p.errCallback = f
 }
 
-func (p *PortAudio) runStream(ctx context.Context, finishedCallback func(context.Context) error) {
+func (p *PortAudio) runStream(ctx context.Context, finishedCallback, timeoutCallback func(context.Context) error) {
 	out := make([]float32, 8192) // buffer of float32 samples
 
 	var err error
@@ -101,8 +102,15 @@ func (p *PortAudio) runStream(ctx context.Context, finishedCallback func(context
 				return
 			}
 
+			timer := time.NewTimer(30 * time.Minute)
+			defer timer.Stop()
+
 			select {
 			case <-p.cPlay:
+				if !timer.Stop() {
+					<-timer.C // drain if already fired
+				}
+
 				p.log.DebugContext(ctx, "playing stream")
 				err = p.stream.Start()
 				if err != nil {
@@ -111,8 +119,18 @@ func (p *PortAudio) runStream(ctx context.Context, finishedCallback func(context
 				}
 
 			case <-p.cStop:
+				if !timer.Stop() {
+					<-timer.C // drain if already fired
+				}
+
 				p.killStream()
 				p.log.DebugContext(ctx, "stopping stream")
+				return
+
+			case <-timer.C:
+				p.killStream()
+				p.log.DebugContext(ctx, "stopping stream (timeout)")
+				timeoutCallback(ctx)
 				return
 			}
 			p.log.DebugContext(ctx, "playing stream")

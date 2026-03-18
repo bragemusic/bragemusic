@@ -37,6 +37,7 @@ type Config struct {
 	ServerBaseURL   string
 	ClientType      types.DeviceType
 	ClientInterface types.DeviceInterface
+	ClientIcon      types.DeviceIcon
 	StateFilePath   *string
 }
 
@@ -489,11 +490,11 @@ func (c *Client) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
 func (c *Client) LoginToken(ctx context.Context, token string) (types.UserDetails, error) {
 	user, err := c.clientFace.LoginToken(ctx, token)
 	if err != nil {
-		return types.UserDetails{}, nil
+		return types.UserDetails{}, err
 	}
 	err = c.SubscribeDeviceEvents(ctx)
 	if err != nil {
-		return types.UserDetails{}, nil
+		return types.UserDetails{}, err
 	}
 	return user, nil
 }
@@ -502,6 +503,17 @@ func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent) {
 	switch e.Type {
 	case types.SSEventTypePlayerPlayPause:
 		c.PlayPause(ctx)
+	case types.SSEventTypePlayerSetState:
+		ps, err := types.DecodeEventData[types.PlayerState](e)
+		if err != nil {
+			c.log.ErrorContext(ctx, "could not decode playerstate data in event", "event.type", e.Type, "event.id", e.ID.String(), "event.data", e.Data)
+			return
+		}
+
+		if err = c.LoadAndStartTracks(ctx, ps); err != nil {
+			c.log.ErrorContext(ctx, "could not load state", "error", err.Error())
+			return
+		}
 	}
 }
 
@@ -602,6 +614,7 @@ func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFa
 		Name:             config.PlayerName,
 		Type:             config.ClientType,
 		Interface:        config.ClientInterface,
+		Icon:             config.ClientIcon,
 		SupportsPlayback: true,
 		Platform:         "linux",
 		Version:          "1.2.0",

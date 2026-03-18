@@ -60,6 +60,32 @@ func (d DeviceManager) PlayerPlayPause(ctx context.Context, targetDeviceID, call
 	return nil
 }
 
+func (d DeviceManager) PlayerSetState(ctx context.Context, ps types.PlayerState, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
+	hasAccess, err := d.hasAccess(ctx, targetDeviceID, userID)
+	if err != nil {
+		return err
+	}
+
+	if !hasAccess {
+		return errors.New("FIXME no access")
+	}
+
+	isConnected, err := d.isConnected(ctx, targetDeviceID, callingDeviceID, userID)
+	if err != nil {
+		return err
+	}
+
+	if !isConnected {
+		return errors.New("FIXME not connected")
+	}
+
+	if err = d.sseDispatch.SendToDevice(targetDeviceID, types.SSEPlayerSetState(ps)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (d DeviceManager) UpdatePlayerPlayContext(ctx context.Context, pc types.PlayContextDTO, deviceID, userID uuid.UUID) error {
 	// FIXME: security
 
@@ -164,6 +190,7 @@ func (d DeviceManager) RegisterOrUpdateDevice(ctx context.Context, id *uuid.UUID
 		existing.Name = device.Name
 		existing.Type = device.Type
 		existing.Interface = device.Interface
+		existing.Icon = device.Icon
 		existing.SupportsPlayback = device.SupportsPlayback
 		existing.Platform = device.Platform
 		existing.Version = device.Version

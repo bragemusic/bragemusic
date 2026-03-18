@@ -37,10 +37,10 @@ func (d Database) AddDevice(ctx context.Context, device types.Device) error {
 
 	query := `
         INSERT INTO devices (
-            id, name, type, interface, user_id, supports_playback, platform, version, last_ip, last_seen,
+            id, name, type, interface, icon, user_id, supports_playback, platform, version, last_ip, last_seen,
             created_at, updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     `
 
 	_, err := d.ext.ExecContext(
@@ -50,6 +50,7 @@ func (d Database) AddDevice(ctx context.Context, device types.Device) error {
 		device.Name,
 		device.Type,
 		device.Interface,
+		device.Icon,
 		device.UserID,
 		device.SupportsPlayback,
 		device.Platform,
@@ -182,6 +183,7 @@ func (d Database) UpdateDevice(ctx context.Context, device types.Device) error {
             name = :name,
             type = :type,
             interface = :interface,
+            icon = :icon,
             supports_playback = :supports_playback,
             platform = :platform,
             version = :version,

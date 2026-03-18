@@ -60,12 +60,30 @@ func (p *PlaybackController) ConnectDevice(ctx context.Context, id uuid.UUID) er
 
 	p.remoteDeviceID = &id
 
+	ps := device.PlayerState
+
+	if ps == nil {
+		ps = &types.PlayerStateDTO{
+			Playback: types.PlaybackStateDTO{
+				DeviceID: id,
+				PlaybackState: types.PlaybackState{
+					Shuffle:     false,
+					Repeat:      types.RepeatOff,
+					Playing:     false,
+					ProgressMS:  0,
+					TrackSource: types.TrackSourceContext,
+					TrackIndex:  0,
+				},
+			},
+		}
+	}
+
 	for _, f := range p.playbackCallbacks {
-		f(ctx, device.PlayerState.Playback.PlaybackState)
+		f(ctx, ps.Playback.PlaybackState)
 	}
 
 	for _, f := range p.contextCallbacks {
-		f(ctx, device.PlayerState.Context.PlayContext)
+		f(ctx, ps.Context.PlayContext)
 	}
 
 	return nil
@@ -92,7 +110,11 @@ func (p *PlaybackController) PlayerState() types.PlayerState {
 }
 
 func (p *PlaybackController) LoadAndStartTracks(ctx context.Context, state types.PlayerState) (err error) {
-	return p.localPlayer.LoadAndStartTracks(ctx, state)
+	if p.remoteDeviceID == nil {
+		return p.localPlayer.LoadAndStartTracks(ctx, state)
+	}
+
+	return p.sc.DeviceSetPlayerState(ctx, *p.remoteDeviceID, state)
 }
 
 func (p *PlaybackController) SetRepeat(ctx context.Context, r types.RepeatType) {
@@ -179,6 +201,25 @@ func (p *PlaybackController) handleRemotePlaybackStates(ctx context.Context, e t
 	}
 }
 
+func (p *PlaybackController) handleDeviceDisconnection(ctx context.Context, e types.SSEvent) {
+	if p.remoteDeviceID == nil {
+		return
+	}
+
+	d, err := types.DecodeEventData[types.Device](e)
+	if err != nil {
+		p.log.ErrorContext(ctx, "could not decode device data in event", "event.type", e.Type, "event.id", e.ID.String(), "event.data", e.Data)
+		return
+	}
+
+	if d.ID == *p.remoteDeviceID {
+		if err := p.DisconnectDevice(ctx); err != nil {
+			p.log.ErrorContext(ctx, "could not disconnect device", "error", err.Error())
+			return
+		}
+	}
+}
+
 func New(ap audioplayer.AudioPlayerFace, da *device.DeviceAgent, sc *serverclient.ServerClient, slogHandler slog.Handler) (PlaybackControllerFace, error) {
 	// var err error
 
@@ -194,6 +235,7 @@ func New(ap audioplayer.AudioPlayerFace, da *device.DeviceAgent, sc *serverclien
 
 	da.SubscribeToEventTypes(pc.handleRemotePlayContexts, types.SSEventTypePlayerPlayContext)
 	da.SubscribeToEventTypes(pc.handleRemotePlaybackStates, types.SSEventTypePlayerPlaybackState)
+	da.SubscribeToEventTypes(pc.handleDeviceDisconnection, types.SSEventTypeDeviceDisconnected)
 	// ap := &AudioPlayer{
 	// 	ai:           ai,
 	// 	ar:           ar,

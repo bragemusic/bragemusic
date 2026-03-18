@@ -204,7 +204,7 @@ func (h *Hub) EventsHandler() routes.RouteFunc[ReqEvents, types.NoResponse] {
 			default:
 			}
 
-			if err = h.SendToUser(user.ID, types.SSEDeviceConnected(device)); err != nil {
+			if err = h.SendToUser(user.ID, types.SSEDeviceDisconnected(device)); err != nil {
 				h.log.WarnContext(ctx, "could not send client disconnected sse")
 			}
 			h.log.InfoContext(ctx, "client disconnected", "device.name", device.Name, "user.email", user.Email)

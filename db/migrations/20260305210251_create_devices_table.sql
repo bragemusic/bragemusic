@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS devices (
     name               TEXT NOT NULL,
     type               TEXT NOT NULL,
     interface          TEXT NOT NULL,
+    icon               TEXT NOT NULL,
     user_id            TEXT NOT NULL,
     supports_playback  BOOLEAN NOT NULL,
     platform           TEXT NOT NULL,

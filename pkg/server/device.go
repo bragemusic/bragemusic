@@ -48,6 +48,15 @@ func (s *Server) deviceRoutes() []routes.RouteHandler {
 			ExpectedStatus:      http.StatusOK,
 		}),
 
+		routes.New("POST", "/{deviceID}/player/state", s.devicePlayerSetState(), nil, routes.RouteMeta{
+			Summary:             "Sends a playstate command to player.",
+			Description:         "Sends a command to tell the selected device to start a new playstate. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
 		routes.New("POST", "/{deviceID}/playcontext", s.deviceUpdatePlayerPlayContext(), nil, routes.RouteMeta{
 			Summary:             "Update the device current play context.",
 			Description:         "Update the playcontext for the selected device. Can only be accessed if the device ID is belonging to the token the user is logged in with.",
@@ -158,6 +167,21 @@ func (s *Server) deviceUpdatePlayerPlaybackState() routes.RouteFunc[ReqDevicesUp
 	return func(ctx context.Context, req ReqDevicesUpdatePlaybackState, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
 		if err := s.devicemgr.UpdatePlayerPlaybackState(ctx, req.PlaybackStateDTO, req.DeviceID, user.ID); err != nil {
 			return resp, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) devicePlayerSetState() routes.RouteFunc[ReqDevicesPlayerSetState, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesPlayerSetState, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		// FIXME
+		callingDeviceID := uuid.Nil
+		if err := s.devicemgr.PlayerSetState(ctx, req.PlayerState, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
 		}
 
 		return types.Response[types.NoResponse]{
