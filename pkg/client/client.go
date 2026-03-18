@@ -501,6 +501,8 @@ func (c *Client) LoginToken(ctx context.Context, token string) (types.UserDetail
 
 func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent) {
 	switch e.Type {
+	case types.SSEventTypePlayerNextTrack:
+		c.NextTrack(ctx)
 	case types.SSEventTypePlayerPlayPause:
 		c.PlayPause(ctx)
 	case types.SSEventTypePlayerSetState:

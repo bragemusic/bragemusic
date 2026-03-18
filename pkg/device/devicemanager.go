@@ -34,6 +34,32 @@ func (d DeviceManager) isConnected(ctx context.Context, targetDeviceID, callingD
 	return true, nil
 }
 
+func (d DeviceManager) PlayerNextTrack(ctx context.Context, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
+	hasAccess, err := d.hasAccess(ctx, targetDeviceID, userID)
+	if err != nil {
+		return err
+	}
+
+	if !hasAccess {
+		return errors.New("FIXME no access")
+	}
+
+	isConnected, err := d.isConnected(ctx, targetDeviceID, callingDeviceID, userID)
+	if err != nil {
+		return err
+	}
+
+	if !isConnected {
+		return errors.New("FIXME not connected")
+	}
+
+	if err = d.sseDispatch.SendToDevice(targetDeviceID, types.SSEPlayerNextTrack()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (d DeviceManager) PlayerPlayPause(ctx context.Context, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
 	hasAccess, err := d.hasAccess(ctx, targetDeviceID, userID)
 	if err != nil {

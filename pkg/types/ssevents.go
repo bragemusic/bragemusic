@@ -49,6 +49,7 @@ const (
 	SSEventTypePlayerPlayContext   SSEventType = "player.playcontext"
 	SSEventTypePlayerPlaybackState SSEventType = "player.playbackstate"
 	SSEventTypePlayerSetState      SSEventType = "player.setstate"
+	SSEventTypePlayerNextTrack     SSEventType = "player.nexttrack"
 	SSEventTypePlayerPlayPause     SSEventType = "player.playpause"
 )
 
@@ -106,6 +107,10 @@ func SSEPlayerPlaybackState(ps PlaybackStateDTO) SSEvent {
 
 func SSEPlayerSetState(pc PlayerState) SSEvent {
 	return newSSEvent(SSEventTypePlayerSetState, pc)
+}
+
+func SSEPlayerNextTrack() SSEvent {
+	return newSSEvent(SSEventTypePlayerNextTrack, nil)
 }
 
 func SSEPlayerPlayPause() SSEvent {

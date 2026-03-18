@@ -39,6 +39,15 @@ func (s *Server) deviceRoutes() []routes.RouteHandler {
 			ExpectedStatus:      http.StatusCreated,
 		}),
 
+		routes.New("POST", "/{deviceID}/player/next", s.devicePlayerNextTrack(), nil, routes.RouteMeta{
+			Summary:             "Sends a next track command to player.",
+			Description:         "Sends a command to tell the selected device to go to the next track. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
 		routes.New("POST", "/{deviceID}/player/play-pause", s.devicePlayerPlayPause(), nil, routes.RouteMeta{
 			Summary:             "Sends a play/pause command to player.",
 			Description:         "Sends a command to tell the selected device to play or pause. If the device does not support playback error is returned.",
@@ -132,6 +141,21 @@ func (s *Server) registerDevice() routes.RouteFunc[ReqDevicesRegister, types.Res
 				Status: http.StatusOK,
 			}, nil
 		}
+	}
+}
+
+func (s *Server) devicePlayerNextTrack() routes.RouteFunc[ReqDevicesGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		// FIXME
+		callingDeviceID := uuid.Nil
+		if err := s.devicemgr.PlayerNextTrack(ctx, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
 	}
 }
 

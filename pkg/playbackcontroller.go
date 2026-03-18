@@ -126,20 +126,25 @@ func (p *PlaybackController) SetShuffle(ctx context.Context, s bool) {
 }
 
 func (p *PlaybackController) NextTrack(ctx context.Context) (err error) {
-	return p.localPlayer.NextTrack(ctx)
+	if p.remoteDeviceID == nil {
+		p.localPlayer.NextTrack(ctx)
+		return
+	}
+
+	return p.sc.DeviceNextTrack(ctx, *p.remoteDeviceID)
 }
 
 func (p *PlaybackController) PreviousTrack(ctx context.Context) (err error) {
 	return p.localPlayer.PreviousTrack(ctx)
 }
 
-func (p *PlaybackController) Pause(ctx context.Context) {
-	p.localPlayer.Pause(ctx)
-}
+// func (p *PlaybackController) Pause(ctx context.Context) {
+// 	p.localPlayer.Pause(ctx)
+// }
 
-func (p *PlaybackController) Play(ctx context.Context) {
-	p.localPlayer.Play(ctx)
-}
+// func (p *PlaybackController) Play(ctx context.Context) {
+// 	p.localPlayer.Play(ctx)
+// }
 
 func (p *PlaybackController) PlayPause(ctx context.Context) {
 	if p.remoteDeviceID == nil {

@@ -18,8 +18,8 @@ type AudioPlayerFace interface {
 	SetShuffle(ctx context.Context, s bool)
 	NextTrack(ctx context.Context) (err error)
 	PreviousTrack(ctx context.Context) (err error)
-	Pause(ctx context.Context)
-	Play(ctx context.Context)
+	// Pause(ctx context.Context)
+	// Play(ctx context.Context)
 	PlayPause(ctx context.Context)
 	Stop(ctx context.Context) error
 	AddTrackToQueue(ctx context.Context, track types.TrackDetailed)
