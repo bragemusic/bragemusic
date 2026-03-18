@@ -309,8 +309,10 @@ func (a *AudioPlayer) handleError(ctx context.Context, err error) {
 	}
 }
 
-func New(cfg Config, ai audiointerface.AudioInterface, ar audioreader.AudioReader, slogHandler slog.Handler) (ap *AudioPlayer, err error) {
-	ap = &AudioPlayer{
+func New(cfg Config, ai audiointerface.AudioInterface, ar audioreader.AudioReader, slogHandler slog.Handler) (AudioPlayerFace, error) {
+	var err error
+
+	ap := &AudioPlayer{
 		ai:           ai,
 		ar:           ar,
 		currentFile:  nil,

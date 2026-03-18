@@ -1,0 +1,189 @@
+package playbackcontroller
+
+import (
+	"context"
+	"log/slog"
+
+	"github.com/bragemusic/core/pkg/audioplayer"
+	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/device"
+	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
+)
+
+type PlaybackControllerFace interface {
+	audioplayer.AudioPlayerFace
+	ConnectDevice(ctx context.Context, id uuid.UUID) error
+	DisconnectDevice(ctx context.Context) error
+}
+
+type PlaybackController struct {
+	remoteDeviceID *uuid.UUID
+	localPlayer    audioplayer.AudioPlayerFace
+	deviceAgent    *device.DeviceAgent
+	db             database.DatabaseFace
+
+	contextCallbacks  []func(context.Context, types.PlayContext)
+	playbackCallbacks []func(context.Context, types.PlaybackState)
+
+	log *slog.Logger
+}
+
+func (p *PlaybackController) RegisterErrorCallback(f func(context.Context, error)) {
+	p.localPlayer.RegisterErrorCallback(f)
+}
+
+func (p *PlaybackController) RegisterPlayContextCallback(f func(context.Context, types.PlayContext)) {
+	p.localPlayer.RegisterPlayContextCallback(f)
+	p.contextCallbacks = append(p.contextCallbacks, f)
+}
+
+func (p *PlaybackController) RegisterPlaybackStateCallback(f func(context.Context, types.PlaybackState)) {
+	p.localPlayer.RegisterPlaybackStateCallback(f)
+	p.playbackCallbacks = append(p.playbackCallbacks, f)
+}
+
+func (p *PlaybackController) RegisterPlayCountCallback(f func(trackID uuid.UUID)) {
+	p.localPlayer.RegisterPlayCountCallback(f)
+}
+
+func (p *PlaybackController) ConnectDevice(ctx context.Context, id uuid.UUID) error {
+	if err := p.localPlayer.Stop(ctx); err != nil {
+		return err
+	}
+
+	p.remoteDeviceID = &id
+	return nil
+}
+
+func (p *PlaybackController) DisconnectDevice(ctx context.Context) error {
+	p.remoteDeviceID = nil
+	return nil
+}
+
+func (p *PlaybackController) PlayerState() types.PlayerState {
+	return p.localPlayer.PlayerState()
+}
+
+func (p *PlaybackController) LoadAndStartTracks(ctx context.Context, state types.PlayerState) (err error) {
+	return p.localPlayer.LoadAndStartTracks(ctx, state)
+}
+
+func (p *PlaybackController) SetRepeat(ctx context.Context, r types.RepeatType) {
+	p.localPlayer.SetRepeat(ctx, r)
+}
+
+func (p *PlaybackController) SetShuffle(ctx context.Context, s bool) {
+	p.localPlayer.SetShuffle(ctx, s)
+}
+
+func (p *PlaybackController) NextTrack(ctx context.Context) (err error) {
+	return p.localPlayer.NextTrack(ctx)
+}
+
+func (p *PlaybackController) PreviousTrack(ctx context.Context) (err error) {
+	return p.localPlayer.PreviousTrack(ctx)
+}
+
+func (p *PlaybackController) Pause(ctx context.Context) {
+	p.localPlayer.Pause(ctx)
+}
+
+func (p *PlaybackController) Play(ctx context.Context) {
+	p.localPlayer.Play(ctx)
+}
+
+func (p *PlaybackController) PlayPause(ctx context.Context) {
+	p.localPlayer.PlayPause(ctx)
+}
+
+func (p *PlaybackController) Stop(ctx context.Context) error {
+	return p.localPlayer.Stop(ctx)
+}
+
+func (p *PlaybackController) AddTrackToQueue(ctx context.Context, track types.TrackDetailed) {
+	p.localPlayer.AddTrackToQueue(ctx, track)
+}
+
+func (p *PlaybackController) handleRemotePlayContexts(ctx context.Context, e types.SSEvent) {
+	if p.remoteDeviceID == nil {
+		return
+	}
+
+	pc, err := types.DecodeEventData[types.PlayContextDTO](e)
+	if err != nil {
+		p.log.ErrorContext(ctx, "could not decode playcontext data in event", "event.type", e.Type, "event.id", e.ID.String(), "event.data", e.Data)
+		return
+	}
+
+	if pc.DeviceID != *p.remoteDeviceID {
+		return
+	}
+
+	for _, f := range p.contextCallbacks {
+		f(ctx, pc.PlayContext)
+	}
+}
+
+func (p *PlaybackController) handleRemotePlaybackStates(ctx context.Context, e types.SSEvent) {
+	if p.remoteDeviceID == nil {
+		return
+	}
+
+	ps, err := types.DecodeEventData[types.PlaybackStateDTO](e)
+	if err != nil {
+		p.log.ErrorContext(ctx, "could not decode playbackstate data in event", "event.type", e.Type, "event.id", e.ID.String(), "event.data", e.Data)
+		return
+	}
+
+	if ps.DeviceID != *p.remoteDeviceID {
+		return
+	}
+
+	for _, f := range p.playbackCallbacks {
+		f(ctx, ps.PlaybackState)
+	}
+}
+
+func New(ap audioplayer.AudioPlayerFace, da *device.DeviceAgent, db database.DatabaseFace, slogHandler slog.Handler) (PlaybackControllerFace, error) {
+	// var err error
+
+	pc := &PlaybackController{
+		localPlayer:       ap,
+		deviceAgent:       da,
+		db:                db,
+		contextCallbacks:  []func(context.Context, types.PlayContext){},
+		playbackCallbacks: []func(context.Context, types.PlaybackState){},
+		log:               slog.New(slogHandler).With("service", "playbackcontroller"),
+	}
+
+	da.SubscribeToEventTypes(pc.handleRemotePlayContexts, types.SSEventTypePlayerPlayContext)
+	da.SubscribeToEventTypes(pc.handleRemotePlaybackStates, types.SSEventTypePlayerPlaybackState)
+	// ap := &AudioPlayer{
+	// 	ai:           ai,
+	// 	ar:           ar,
+	// 	currentFile:  nil,
+	// 	musicDirPath: cfg.MusicDirPath,
+	// 	log:          slog.New(slogHandler).With("service", "audioplayer"),
+	// 	state: types.PlayerState{
+	// 		Playback: types.PlaybackState{
+	// 			Shuffle:     false,
+	// 			Repeat:      types.RepeatOff,
+	// 			TrackSource: types.TrackSourceContext,
+	// 		},
+	// 	},
+	// }
+
+	// ai.RegisterErrorCallback(ap.handleError)
+
+	// playerName := "BrageMusic-" + strings.ReplaceAll(cfg.PlayerName, " ", "")
+	// ap.mp, err = mpris.New(playerName, ap.Play, ap.Pause, ap.PlayPause, ap.PreviousTrack, ap.NextTrack)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// ap.progressTicker = time.NewTicker(1 * time.Second)
+	// ap.startProgressPrinter()
+
+	return pc, nil
+}

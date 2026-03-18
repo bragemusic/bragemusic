@@ -53,7 +53,7 @@ func (d DeviceManager) PlayerPlayPause(ctx context.Context, targetDeviceID, call
 		return errors.New("FIXME not connected")
 	}
 
-	if err = d.sseDispatch.SendToDevice(targetDeviceID, types.SSEPlayerPlayPause().Base()); err != nil {
+	if err = d.sseDispatch.SendToDevice(targetDeviceID, types.SSEPlayerPlayPause()); err != nil {
 		return err
 	}
 
@@ -72,7 +72,7 @@ func (d DeviceManager) UpdatePlayerPlayContext(ctx context.Context, pc types.Pla
 
 	d.playerStates[deviceID] = state
 
-	err := d.sseDispatch.SendToUser(userID, types.SSEPlayerPlayContext(pc).Base())
+	err := d.sseDispatch.SendToUser(userID, types.SSEPlayerPlayContext(pc))
 	if err != nil {
 		d.log.WarnContext(ctx, "could not send play context to user's devices", "userID", userID.String(), "deviceID", deviceID.String(), "error", err.Error())
 	}
@@ -92,7 +92,7 @@ func (d DeviceManager) UpdatePlayerPlaybackState(ctx context.Context, ps types.P
 
 	d.playerStates[deviceID] = state
 
-	err := d.sseDispatch.SendToUser(userID, types.SSEPlayerPlaybackState(ps).Base())
+	err := d.sseDispatch.SendToUser(userID, types.SSEPlayerPlaybackState(ps))
 	if err != nil {
 		d.log.WarnContext(ctx, "could not send playback state to user's devices", "userID", userID.String(), "deviceID", deviceID.String(), "error", err.Error())
 	}

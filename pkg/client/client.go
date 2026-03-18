@@ -10,9 +10,9 @@ package client
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 
+	playbackcontroller "github.com/bragemusic/core/pkg"
 	"github.com/bragemusic/core/pkg/audiointerface"
 	"github.com/bragemusic/core/pkg/audioplayer"
 	"github.com/bragemusic/core/pkg/audioreader"
@@ -146,6 +146,9 @@ type AudioPlayerFace interface {
 
 	// PlayerState returns the current player state.
 	PlayerState() types.PlayerState
+
+	ConnectDevice(ctx context.Context, id uuid.UUID) error
+	DisconnectDevice(ctx context.Context) error
 }
 
 // MetadataFace defines access to and modification of music library metadata,
@@ -300,6 +303,7 @@ type clientFace interface {
 }
 
 type ClientFace interface {
+	SubscribeToClientEvents(handler sse.EventHandler)
 	clientFace
 	IdentityFace
 	AudioPlayerFace
@@ -346,12 +350,21 @@ type clientStreaming struct {
 type Client struct {
 	clientFace
 	*Identity
-	*audioplayer.AudioPlayer
+	playbackcontroller.PlaybackControllerFace
 
 	*device.DeviceAgent
 
+	activeRemoteDevice *uuid.UUID
+
+	contextCallbacks  []func(context.Context, types.PlayContext)
+	playbackCallbacks []func(context.Context, types.PlaybackState)
+
 	sc  *serverclient.ServerClient
 	log *slog.Logger
+}
+
+func (c *Client) SubscribeToClientEvents(handler sse.EventHandler) {
+	c.DeviceAgent.SubscribeToClientEvents(handler)
 }
 
 func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error {
@@ -371,7 +384,7 @@ func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, tr
 		},
 	}
 
-	err = c.AudioPlayer.LoadAndStartTracks(ctx, pState)
+	err = c.PlaybackControllerFace.LoadAndStartTracks(ctx, pState)
 	if err != nil {
 		return err
 	}
@@ -398,7 +411,7 @@ func (c *Client) StartPlayerWithLikedTracks(ctx context.Context, trackNumber int
 		},
 	}
 
-	err = c.AudioPlayer.LoadAndStartTracks(ctx, pState)
+	err = c.PlaybackControllerFace.LoadAndStartTracks(ctx, pState)
 	if err != nil {
 		return err
 	}
@@ -425,7 +438,7 @@ func (c *Client) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UU
 		},
 	}
 
-	err = c.AudioPlayer.LoadAndStartTracks(ctx, pState)
+	err = c.PlaybackControllerFace.LoadAndStartTracks(ctx, pState)
 	if err != nil {
 		return err
 	}
@@ -455,7 +468,7 @@ func (c *Client) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID
 		return err
 	}
 
-	c.AudioPlayer.AddTrackToQueue(ctx, track)
+	c.PlaybackControllerFace.AddTrackToQueue(ctx, track)
 	return nil
 }
 
@@ -485,7 +498,7 @@ func (c *Client) LoginToken(ctx context.Context, token string) (types.UserDetail
 	return user, nil
 }
 
-func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent[any]) {
+func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent) {
 	switch e.Type {
 	case types.SSEventTypePlayerPlayPause:
 		c.PlayPause(ctx)
@@ -505,6 +518,40 @@ func (c *Client) handlePlaybackStateCallbacks(ctx context.Context, ps types.Play
 		c.log.ErrorContext(ctx, "could not send playback state to server", "error", err.Error())
 	}
 }
+
+// func (c *Client) RegisterPlayContextCallback(f func(context.Context, types.PlayContext)) {
+// 	c.contextCallbacks = append(c.contextCallbacks, f)
+// 	c.AudioPlayer.RegisterPlayContextCallback(f)
+// }
+
+// func (c *Client) RegisterPlaybackStateCallback(f func(context.Context, types.PlaybackState)) {
+// 	c.playbackCallbacks = append(c.playbackCallbacks, f)
+// 	c.AudioPlayer.RegisterPlaybackStateCallback(f)
+// }
+
+// func (c *Client) ConnectToDevice(ctx context.Context, deviceID uuid.UUID) error {
+// 	if err := c.AudioPlayer.Stop(ctx); err != nil {
+// 		return err
+// 	}
+
+// 	c.activeRemoteDevice = &deviceID
+
+// 	// Här tänker jag att vi ska swappa ut audioplayer mot en remote
+// 	// ap := &English{}
+// 	// remote := Spanish{}
+
+// 	// var g Greeter
+// 	// g = eng
+// 	// fmt.Println(g.Greet()) // Hello
+
+// 	// g = spa
+// 	// fmt.Println(g.Greet()) // Hola
+
+// 	// g = eng
+// 	// fmt.Println(g.Greet()) // Hello
+
+// 	return nil
+// }
 
 func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
 	var cf clientFace
@@ -547,7 +594,6 @@ func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFa
 
 	ap, err := audioplayer.New(apCfg, pa, ar, slogHandler)
 	if err != nil {
-		fmt.Println("hej")
 		return nil, err
 	}
 
@@ -563,13 +609,22 @@ func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFa
 		config.StateFilePath,
 	)
 
+	// FIXME: Only for visual clients
+	pc, err := playbackcontroller.New(ap, da, nil, slogHandler)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &Client{
-		clientFace:  cf,
-		Identity:    &id,
-		AudioPlayer: ap,
-		sc:          &sc,
-		log:         slog.New(slogHandler).With("service", "client"),
-		DeviceAgent: &da,
+		clientFace:             cf,
+		Identity:               &id,
+		PlaybackControllerFace: pc,
+		sc:                     &sc,
+		log:                    slog.New(slogHandler).With("service", "client"),
+		DeviceAgent:            da,
+		activeRemoteDevice:     nil,
+		contextCallbacks:       []func(context.Context, types.PlayContext){},
+		playbackCallbacks:      []func(context.Context, types.PlaybackState){},
 	}
 
 	// if err := da.SubscribeDeviceEvents(ctx); err != nil {

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/gofrs/uuid/v5"
-	"github.com/samber/lo"
 )
 
 type (
@@ -68,12 +67,13 @@ func (p PlaybackState) TotalProgress() int64 {
 }
 
 type PlayContextDTO struct {
-	DeviceID   uuid.UUID       `json:"device_id" ts_type:"string"`
-	Type       PlayContextType `json:"type"`
-	RefID      uuid.UUID       `json:"ref_id" ts_type:"string"`
-	Tracks     []uuid.UUID     `json:"tracks" ts_type:"string[]"`
-	TrackOrder []int           `json:"track_order"`
-	Queue      []uuid.UUID     `json:"queue" ts_type:"string[]"`
+	DeviceID uuid.UUID `json:"device_id" ts_type:"string"`
+	PlayContext
+	// Type       PlayContextType `json:"type"`
+	// RefID      uuid.UUID       `json:"ref_id" ts_type:"string"`
+	// Tracks     []uuid.UUID     `json:"tracks" ts_type:"string[]"`
+	// TrackOrder []int           `json:"track_order"`
+	// Queue      []uuid.UUID     `json:"queue" ts_type:"string[]"`
 }
 
 type PlayContext struct {
@@ -84,14 +84,10 @@ type PlayContext struct {
 	Queue      []TrackDetailed `json:"queue"`
 }
 
-func (pc *PlayContext) DTO(deviceID uuid.UUID) PlayContextDTO {
+func (pc PlayContext) DTO(deviceID uuid.UUID) PlayContextDTO {
 	return PlayContextDTO{
-		DeviceID:   deviceID,
-		Type:       pc.Type,
-		RefID:      pc.RefID,
-		Tracks:     lo.Map(pc.Tracks, func(item TrackDetailed, index int) uuid.UUID { return item.ID }),
-		TrackOrder: pc.TrackOrder,
-		Queue:      lo.Map(pc.Queue, func(item TrackDetailed, index int) uuid.UUID { return item.ID }),
+		DeviceID:    deviceID,
+		PlayContext: pc,
 	}
 }
 

@@ -93,7 +93,7 @@ func (s ServerClient) consumeSSE(ctx context.Context, deviceID uuid.UUID, handle
 
 		if strings.HasPrefix(line, "data:") {
 			raw := strings.TrimSpace(line[5:])
-			var evt types.SSEvent[any]
+			var evt types.SSEvent
 			if err := json.Unmarshal([]byte(raw), &evt); err != nil {
 				s.log.ErrorContext(ctx, "Failed to unmarshal event", "error", err.Error())
 				continue

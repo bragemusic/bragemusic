@@ -1,6 +1,8 @@
 package types
 
 import (
+	"encoding/json"
+
 	"github.com/gofrs/uuid/v5"
 )
 
@@ -9,92 +11,103 @@ type (
 	SSENoData   struct{}
 )
 
-type SSEventBase struct {
-	ID   uuid.UUID   `json:"id"`
-	Type SSEventType `json:"type"`
-	Data any         `json:"data"`
+// type SSEventBase struct {
+// 	ID   uuid.UUID   `json:"id"`
+// 	Type SSEventType `json:"type"`
+// 	Data any         `json:"data"`
+// }
+
+type SSEvent struct {
+	ID   uuid.UUID       `json:"id"`
+	Type SSEventType     `json:"type"`
+	Data json.RawMessage `json:"data"`
 }
 
-type SSEvent[T any] struct {
-	ID   uuid.UUID   `json:"id"`
-	Type SSEventType `json:"type"`
-	Data T           `json:"data,omitempty"`
-}
+// func (e SSEvent[T]) Base() SSEventBase {
+// 	return SSEventBase{
+// 		ID:   e.ID,
+// 		Type: e.Type,
+// 		Data: e.Data,
+// 	}
+// }
 
-func (e SSEvent[T]) Base() SSEventBase {
-	return SSEventBase{
-		ID:   e.ID,
-		Type: e.Type,
-		Data: e.Data,
-	}
-}
-
-type (
-	SSEventClientConnected     = SSEvent[Device]
-	SSEventClientDisconnected  = SSEvent[Device]
-	SSEventPlayerPlayContext   = SSEvent[PlayContextDTO]
-	SSEventPlayerPlaybackState = SSEvent[PlaybackStateDTO]
-	SSEventPlayerStart         = SSEvent[PlayerState]
-	SSEventPlayerPlayPause     = SSEvent[SSENoData]
-)
+// type (
+// 	SSEventClientConnected     = SSEvent[Device]
+// 	SSEventClientDisconnected  = SSEvent[Device]
+// 	SSEventPlayerPlayContext   = SSEvent[PlayContextDTO]
+// 	SSEventPlayerPlaybackState = SSEvent[PlaybackStateDTO]
+// 	SSEventPlayerStart         = SSEvent[PlayerState]
+// 	SSEventPlayerPlayPause     = SSEvent[SSENoData]
+// )
 
 const (
-	SSEventTypeClientConnected     SSEventType = "client.connected"
-	SSEventTypeClientDisconnected  SSEventType = "client.disconnected"
+	SSEventTypeDeviceConnected     SSEventType = "device.connected"
+	SSEventTypeDeviceUpdated       SSEventType = "device.updated"
+	SSEventTypeDeviceDisconnected  SSEventType = "device.disconnected"
+	SSEventTypeDevicePlayContext   SSEventType = "device.playcontext"
+	SSEventTypeDevicePlaybackState SSEventType = "device.playbackstate"
 	SSEventTypePlayerPlayContext   SSEventType = "player.playcontext"
 	SSEventTypePlayerPlaybackState SSEventType = "player.playbackstate"
 	SSEventTypePlayerStart         SSEventType = "player.start"
 	SSEventTypePlayerPlayPause     SSEventType = "player.playpause"
 )
 
+func DecodeEventData[T any](evt SSEvent) (T, error) {
+	var v T
+	err := json.Unmarshal(evt.Data, &v)
+	return v, err
+}
+
 func newUUID() uuid.UUID {
 	id, _ := uuid.NewV4()
 	return id
 }
 
-func SSEClientConnected(d Device) SSEventClientConnected {
-	return SSEventClientConnected{
+func newSSEvent(eventType SSEventType, data any) SSEvent {
+	b, err := json.Marshal(data)
+	if err != nil {
+		panic("generating event of type " + string(eventType) + ". ERROR: " + err.Error())
+	}
+
+	return SSEvent{
 		ID:   newUUID(),
-		Type: SSEventTypeClientConnected,
-		Data: d,
+		Type: eventType,
+		Data: b,
 	}
 }
 
-func SSEClientDisconnected(d Device) SSEventClientDisconnected {
-	return SSEventClientDisconnected{
-		ID:   newUUID(),
-		Type: SSEventTypeClientDisconnected,
-		Data: d,
-	}
+func SSEDeviceConnected(d Device) SSEvent {
+	return newSSEvent(SSEventTypeDeviceConnected, d)
 }
 
-func SSEPlayerPlayContext(pc PlayContextDTO) SSEventPlayerPlayContext {
-	return SSEventPlayerPlayContext{
-		ID:   newUUID(),
-		Type: SSEventTypePlayerPlayContext,
-		Data: pc,
-	}
+func SSEDeviceUpdated(d Device) SSEvent {
+	return newSSEvent(SSEventTypeDeviceUpdated, d)
 }
 
-func SSEPlayerPlaybackState(ps PlaybackStateDTO) SSEventPlayerPlaybackState {
-	return SSEventPlayerPlaybackState{
-		ID:   newUUID(),
-		Type: SSEventTypePlayerPlaybackState,
-		Data: ps,
-	}
+func SSEDeviceDisconnected(d Device) SSEvent {
+	return newSSEvent(SSEventTypeDeviceDisconnected, d)
 }
 
-func SSEPlayerStart(pc PlayerState) SSEventPlayerStart {
-	return SSEventPlayerStart{
-		ID:   newUUID(),
-		Type: SSEventTypePlayerStart,
-		Data: pc,
-	}
+func SSEDevicePlayContext(pc PlayContextDTO) SSEvent {
+	return newSSEvent(SSEventTypeDevicePlayContext, pc)
 }
 
-func SSEPlayerPlayPause() SSEventPlayerPlayPause {
-	return SSEventPlayerPlayPause{
-		ID:   newUUID(),
-		Type: SSEventTypePlayerPlayPause,
-	}
+func SSEDevicePlaybackState(ps PlaybackStateDTO) SSEvent {
+	return newSSEvent(SSEventTypeDevicePlaybackState, ps)
+}
+
+func SSEPlayerPlayContext(pc PlayContextDTO) SSEvent {
+	return newSSEvent(SSEventTypePlayerPlayContext, pc)
+}
+
+func SSEPlayerPlaybackState(ps PlaybackStateDTO) SSEvent {
+	return newSSEvent(SSEventTypePlayerPlaybackState, ps)
+}
+
+func SSEPlayerStart(pc PlayerStateDTO) SSEvent {
+	return newSSEvent(SSEventTypePlayerStart, pc)
+}
+
+func SSEPlayerPlayPause() SSEvent {
+	return newSSEvent(SSEventTypePlayerPlayPause, nil)
 }

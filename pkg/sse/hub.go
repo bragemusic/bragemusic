@@ -13,9 +13,10 @@ import (
 	"github.com/bragemusic/core/pkg/routes"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
+	"github.com/samber/lo"
 )
 
-type EventHandler func(context.Context, types.SSEvent[any])
+type EventHandler func(context.Context, types.SSEvent)
 
 type ReqEvents struct {
 	// AlbumID uuid.UUID `path:"albumID" description:"ID of the wanted album"`
@@ -27,7 +28,7 @@ func (r ReqEvents) Validate() (validationMessages string, err error) {
 }
 
 type eventEnvelope struct {
-	event    types.SSEventBase
+	event    types.SSEvent
 	deviceID *uuid.UUID
 }
 
@@ -38,10 +39,10 @@ type client struct {
 }
 
 type Dispatcher interface {
-	Broadcast(types.SSEventBase) error
+	Broadcast(types.SSEvent) error
 	ActiveDevices(userID uuid.UUID) []uuid.UUID
-	SendToDevice(deviceID uuid.UUID, ev types.SSEventBase) error
-	SendToUser(userID uuid.UUID, ev types.SSEventBase) error
+	SendToDevice(deviceID uuid.UUID, ev types.SSEvent) error
+	SendToUser(userID uuid.UUID, ev types.SSEvent, excludeDevices ...uuid.UUID) error
 }
 
 type Hub struct {
@@ -66,7 +67,7 @@ func NewHub(db database.DeviceFace, slogHandler slog.Handler) *Hub {
 	}
 }
 
-func (h *Hub) Broadcast(ev types.SSEventBase) error {
+func (h *Hub) Broadcast(ev types.SSEvent) error {
 	if len(h.clients) == 0 {
 		return errors.New("no active clients")
 	}
@@ -77,7 +78,7 @@ func (h *Hub) Broadcast(ev types.SSEventBase) error {
 	return nil
 }
 
-func (h *Hub) SendToDevice(deviceID uuid.UUID, ev types.SSEventBase) error {
+func (h *Hub) SendToDevice(deviceID uuid.UUID, ev types.SSEvent) error {
 	found := false
 	for c := range h.clients {
 		if c.deviceID == deviceID {
@@ -97,11 +98,11 @@ func (h *Hub) SendToDevice(deviceID uuid.UUID, ev types.SSEventBase) error {
 	return nil
 }
 
-func (h *Hub) SendToUser(userID uuid.UUID, ev types.SSEventBase) error {
+func (h *Hub) SendToUser(userID uuid.UUID, ev types.SSEvent, excludeDevices ...uuid.UUID) error {
 	evEnvs := []eventEnvelope{}
 
 	for c := range h.clients {
-		if c.userID == userID {
+		if c.userID == userID && !lo.Contains(excludeDevices, c.deviceID) {
 			evEnvs = append(evEnvs, eventEnvelope{
 				event:    ev,
 				deviceID: &c.deviceID,
@@ -203,13 +204,13 @@ func (h *Hub) EventsHandler() routes.RouteFunc[ReqEvents, types.NoResponse] {
 			default:
 			}
 
-			if err = h.SendToUser(user.ID, types.SSEClientDisconnected(device).Base()); err != nil {
+			if err = h.SendToUser(user.ID, types.SSEDeviceConnected(device)); err != nil {
 				h.log.WarnContext(ctx, "could not send client disconnected sse")
 			}
 			h.log.InfoContext(ctx, "client disconnected", "device.name", device.Name, "user.email", user.Email)
 		}()
 
-		if err = h.SendToUser(user.ID, types.SSEClientConnected(device).Base()); err != nil {
+		if err = h.SendToUser(user.ID, types.SSEDeviceConnected(device)); err != nil {
 			h.log.WarnContext(ctx, "could not send client connected sse")
 		}
 
@@ -237,7 +238,7 @@ func (h *Hub) EventsHandler() routes.RouteFunc[ReqEvents, types.NoResponse] {
 	}
 }
 
-func sendEvent(w http.ResponseWriter, flusher http.Flusher, event types.SSEventBase) error {
+func sendEvent(w http.ResponseWriter, flusher http.Flusher, event types.SSEvent) error {
 	// Marshal the entire event to JSON
 	jsonBytes, err := json.Marshal(event)
 	if err != nil {
