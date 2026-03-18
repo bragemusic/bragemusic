@@ -610,7 +610,7 @@ func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFa
 	)
 
 	// FIXME: Only for visual clients
-	pc, err := playbackcontroller.New(ap, da, nil, slogHandler)
+	pc, err := playbackcontroller.New(ap, da, &sc, slogHandler)
 	if err != nil {
 		return nil, err
 	}

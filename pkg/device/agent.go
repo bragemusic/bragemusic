@@ -261,6 +261,15 @@ func (a *DeviceAgent) ListDevices(ctx context.Context) (devices []types.DeviceDe
 	return devices, nil
 }
 
+func (a *DeviceAgent) GetDevice(ctx context.Context, id uuid.UUID) (device types.DeviceDetailed, err error) {
+	device, found := a.getDevice(id)
+	if !found {
+		return types.DeviceDetailed{}, errors.New("device not found")
+	}
+
+	return device, nil
+}
+
 func NewAgent(slogHandler slog.Handler, sc *serverclient.ServerClient, userID uuid.UUID, meta types.DeviceBase, stateFilePath *string) *DeviceAgent {
 	da := &DeviceAgent{
 		log:                 slog.New(slogHandler).With("service", "device.agent"),

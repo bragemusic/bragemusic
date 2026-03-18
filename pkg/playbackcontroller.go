@@ -5,8 +5,8 @@ import (
 	"log/slog"
 
 	"github.com/bragemusic/core/pkg/audioplayer"
-	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/device"
+	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
@@ -21,7 +21,8 @@ type PlaybackController struct {
 	remoteDeviceID *uuid.UUID
 	localPlayer    audioplayer.AudioPlayerFace
 	deviceAgent    *device.DeviceAgent
-	db             database.DatabaseFace
+	// db             database.DatabaseFace
+	sc *serverclient.ServerClient
 
 	contextCallbacks  []func(context.Context, types.PlayContext)
 	playbackCallbacks []func(context.Context, types.PlaybackState)
@@ -48,16 +49,41 @@ func (p *PlaybackController) RegisterPlayCountCallback(f func(trackID uuid.UUID)
 }
 
 func (p *PlaybackController) ConnectDevice(ctx context.Context, id uuid.UUID) error {
+	device, err := p.deviceAgent.GetDevice(ctx, id)
+	if err != nil {
+		return err
+	}
+
 	if err := p.localPlayer.Stop(ctx); err != nil {
 		return err
 	}
 
 	p.remoteDeviceID = &id
+
+	for _, f := range p.playbackCallbacks {
+		f(ctx, device.PlayerState.Playback.PlaybackState)
+	}
+
+	for _, f := range p.contextCallbacks {
+		f(ctx, device.PlayerState.Context.PlayContext)
+	}
+
 	return nil
 }
 
 func (p *PlaybackController) DisconnectDevice(ctx context.Context) error {
 	p.remoteDeviceID = nil
+
+	ps := p.localPlayer.PlayerState()
+
+	for _, f := range p.playbackCallbacks {
+		f(ctx, ps.Playback)
+	}
+
+	for _, f := range p.contextCallbacks {
+		f(ctx, ps.Context)
+	}
+
 	return nil
 }
 
@@ -94,7 +120,15 @@ func (p *PlaybackController) Play(ctx context.Context) {
 }
 
 func (p *PlaybackController) PlayPause(ctx context.Context) {
-	p.localPlayer.PlayPause(ctx)
+	if p.remoteDeviceID == nil {
+		p.localPlayer.PlayPause(ctx)
+		return
+	}
+
+	if err := p.sc.DevicePlayPause(ctx, *p.remoteDeviceID); err != nil {
+		p.log.ErrorContext(ctx, "could not run command on remote device", "cmd", "play-pause")
+		return
+	}
 }
 
 func (p *PlaybackController) Stop(ctx context.Context) error {
@@ -145,13 +179,14 @@ func (p *PlaybackController) handleRemotePlaybackStates(ctx context.Context, e t
 	}
 }
 
-func New(ap audioplayer.AudioPlayerFace, da *device.DeviceAgent, db database.DatabaseFace, slogHandler slog.Handler) (PlaybackControllerFace, error) {
+func New(ap audioplayer.AudioPlayerFace, da *device.DeviceAgent, sc *serverclient.ServerClient, slogHandler slog.Handler) (PlaybackControllerFace, error) {
 	// var err error
 
 	pc := &PlaybackController{
-		localPlayer:       ap,
-		deviceAgent:       da,
-		db:                db,
+		localPlayer: ap,
+		deviceAgent: da,
+		sc:          sc,
+		// db:                db,
 		contextCallbacks:  []func(context.Context, types.PlayContext){},
 		playbackCallbacks: []func(context.Context, types.PlaybackState){},
 		log:               slog.New(slogHandler).With("service", "playbackcontroller"),
