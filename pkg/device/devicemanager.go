@@ -2,11 +2,15 @@ package device
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"time"
 
+	"github.com/bragemusic/core/pkg/auth"
+	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/sse"
 	"github.com/bragemusic/core/pkg/types"
@@ -19,13 +23,105 @@ type DeviceManager struct {
 	sseDispatch sse.Dispatcher
 	db          database.DeviceFace
 
-	log *slog.Logger
+	log  *slog.Logger
+	berr bragerr.BragErrFactory
 
 	playerStates map[uuid.UUID]types.PlayerStateDTO
 }
 
-// FIXME
+func (d DeviceManager) MiddlewareUserAccess(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		deviceID, err := utils.GetURLParameter[uuid.UUID](ctx, "deviceID")
+		if err != nil {
+			bragerr.HandleHttpResponse(ctx, d.berr.ParamWrongFormat(err, "deviceID", "uuid"), w, d.log)
+			return
+		}
+
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			bragerr.HandleHttpResponse(ctx, err, w, d.log)
+			return
+		}
+
+		hasAccess, err := d.hasAccess(ctx, deviceID, user.ID)
+		if err != nil {
+			bragerr.HandleHttpResponse(ctx, err, w, d.log)
+			return
+		}
+
+		if !hasAccess {
+			bragerr.HandleHttpResponse(ctx, d.berr.Unauthenticated(errors.New("user does not have access to device")), w, d.log)
+			return
+		}
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func (d DeviceManager) MiddlewareDeviceAccess(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		deviceID, err := utils.GetURLParameter[uuid.UUID](ctx, "deviceID")
+		if err != nil {
+			bragerr.HandleHttpResponse(ctx, d.berr.ParamWrongFormat(err, "deviceID", "uuid"), w, d.log)
+			return
+		}
+
+		user, err := auth.UserFromContext(ctx)
+		if err != nil {
+			bragerr.HandleHttpResponse(ctx, err, w, d.log)
+			return
+		}
+
+		tokenID, err := auth.TokenIDFromContext(ctx)
+		if err != nil {
+			bragerr.HandleHttpResponse(ctx, err, w, d.log)
+		}
+
+		hasAccess, err := d.hasDeviceAccess(ctx, deviceID, user.ID, tokenID)
+		if err != nil {
+			bragerr.HandleHttpResponse(ctx, err, w, d.log)
+			return
+		}
+
+		if !hasAccess {
+			bragerr.HandleHttpResponse(ctx, d.berr.Unauthenticated(errors.New("device does not have access to device")), w, d.log)
+			return
+		}
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
 func (d DeviceManager) hasAccess(ctx context.Context, deviceID, userID uuid.UUID) (bool, error) {
+	device, err := d.db.GetDevice(ctx, deviceID)
+	if err != nil {
+		return false, d.berr.DatabaseError(err, types.EntityDevice, &deviceID)
+	}
+
+	if device.UserID != userID {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func (d DeviceManager) hasDeviceAccess(ctx context.Context, deviceID, userID, tokenID uuid.UUID) (bool, error) {
+	device, err := d.db.GetDeviceFromTokenAndDeviceID(ctx, deviceID, tokenID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, d.berr.DatabaseError(err, types.EntityDevice, &deviceID)
+	}
+
+	if deviceID != device.ID || userID != device.UserID {
+		return false, nil
+	}
+
 	return true, nil
 }
 
@@ -35,15 +131,6 @@ func (d DeviceManager) isConnected(ctx context.Context, targetDeviceID, callingD
 }
 
 func (d DeviceManager) PlayerNextTrack(ctx context.Context, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
-	hasAccess, err := d.hasAccess(ctx, targetDeviceID, userID)
-	if err != nil {
-		return err
-	}
-
-	if !hasAccess {
-		return errors.New("FIXME no access")
-	}
-
 	isConnected, err := d.isConnected(ctx, targetDeviceID, callingDeviceID, userID)
 	if err != nil {
 		return err
@@ -61,15 +148,6 @@ func (d DeviceManager) PlayerNextTrack(ctx context.Context, targetDeviceID, call
 }
 
 func (d DeviceManager) PlayerPlayPause(ctx context.Context, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
-	hasAccess, err := d.hasAccess(ctx, targetDeviceID, userID)
-	if err != nil {
-		return err
-	}
-
-	if !hasAccess {
-		return errors.New("FIXME no access")
-	}
-
 	isConnected, err := d.isConnected(ctx, targetDeviceID, callingDeviceID, userID)
 	if err != nil {
 		return err
@@ -87,15 +165,6 @@ func (d DeviceManager) PlayerPlayPause(ctx context.Context, targetDeviceID, call
 }
 
 func (d DeviceManager) PlayerSetState(ctx context.Context, ps types.PlayerState, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
-	hasAccess, err := d.hasAccess(ctx, targetDeviceID, userID)
-	if err != nil {
-		return err
-	}
-
-	if !hasAccess {
-		return errors.New("FIXME no access")
-	}
-
 	isConnected, err := d.isConnected(ctx, targetDeviceID, callingDeviceID, userID)
 	if err != nil {
 		return err
@@ -113,8 +182,6 @@ func (d DeviceManager) PlayerSetState(ctx context.Context, ps types.PlayerState,
 }
 
 func (d DeviceManager) UpdatePlayerPlayContext(ctx context.Context, pc types.PlayContextDTO, deviceID, userID uuid.UUID) error {
-	// FIXME: security
-
 	state, found := d.playerStates[deviceID]
 	if !found {
 		state = types.PlayerStateDTO{}
@@ -133,8 +200,6 @@ func (d DeviceManager) UpdatePlayerPlayContext(ctx context.Context, pc types.Pla
 }
 
 func (d DeviceManager) UpdatePlayerPlaybackState(ctx context.Context, ps types.PlaybackStateDTO, deviceID, userID uuid.UUID) error {
-	// FIXME: security
-
 	state, found := d.playerStates[deviceID]
 	if !found {
 		state = types.PlayerStateDTO{}
@@ -153,18 +218,6 @@ func (d DeviceManager) UpdatePlayerPlaybackState(ctx context.Context, ps types.P
 }
 
 func (d DeviceManager) ListActiveDevices(ctx context.Context, userID uuid.UUID) ([]types.DeviceDetailed, error) {
-	// d.sseDispatch.Broadcast(sse.Event{
-	// 	ID:   userID,
-	// 	Type: "kalaskula broadcast",
-	// 	Data: map[string]string{"kaka": "gott"},
-	// })
-
-	// d.sseDispatch.SendToDevice(uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111112")), sse.Event{
-	// 	ID:   userID,
-	// 	Type: "kalaskula till 2an",
-	// 	Data: map[string]string{"kaka": "gott, mkt"},
-	// })
-
 	devices, err := d.db.ListUsersDevices(ctx, userID)
 	if err != nil {
 		// FIXME: bragerr
@@ -174,8 +227,6 @@ func (d DeviceManager) ListActiveDevices(ctx context.Context, userID uuid.UUID) 
 	devicesDetailed := lo.Map(devices, func(item types.Device, index int) types.DeviceDetailed {
 		return types.DeviceDetailed{Device: item}
 	})
-
-	// NOTE: Should probably add playstater here somwhoe. Do a DeviceDetailed type
 
 	for _, adID := range d.sseDispatch.ActiveDevices(userID) {
 		for idx := range devicesDetailed {
@@ -271,6 +322,7 @@ func NewManager(sd sse.Dispatcher, db database.DeviceFace, slogHandler slog.Hand
 		sseDispatch:  sd,
 		db:           db,
 		log:          slog.New(slogHandler).With("service", "device.manager"),
+		berr:         bragerr.NewFactory("device.manager"),
 		playerStates: map[uuid.UUID]types.PlayerStateDTO{},
 	}
 }

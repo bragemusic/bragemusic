@@ -11,16 +11,40 @@ import (
 )
 
 func (s *Server) deviceRoutes() []routes.RouteHandler {
-	return []routes.RouteHandler{
-		routes.New("GET", "/{deviceID}/events", s.sseHub.EventsHandler(), nil, routes.RouteMeta{
-			Summary:             "Subscribe to SSE events.",
-			Description:         "Streams events from the server to the client.",
-			ExpectedDescription: "Streamed event data",
-			Tags:                []string{},
-			Errors:              []routes.RouteErrorMeta{},
-			ExpectedStatus:      http.StatusOK,
-		}),
+	r := []routes.RouteHandler{}
+	r = append(r, s.deviceStandardAuthRoutes()...)
 
+	deviceAvailable := s.deviceDeviceAvailableRoutes()
+	userAvailable := s.deviceUserAvailableRoutes()
+
+	devicdMW := routes.RouteMiddleware{
+		Name:        "Device Authenticated",
+		Description: "Only the device has access to itself on this route",
+		Func:        s.devicemgr.MiddlewareDeviceAccess,
+	}
+
+	userMW := routes.RouteMiddleware{
+		Name:        "User Authenticated",
+		Description: "Only the user has access to their own devices on this route",
+		Func:        s.devicemgr.MiddlewareUserAccess,
+	}
+
+	for idx := range deviceAvailable {
+		deviceAvailable[idx] = deviceAvailable[idx].AddMiddleware(devicdMW)
+	}
+
+	for idx := range userAvailable {
+		userAvailable[idx] = userAvailable[idx].AddMiddleware(userMW)
+	}
+
+	r = append(r, deviceAvailable...)
+	r = append(r, userAvailable...)
+
+	return r
+}
+
+func (s *Server) deviceStandardAuthRoutes() []routes.RouteHandler {
+	return []routes.RouteHandler{
 		routes.New("GET", "/", s.listDevices(), nil, routes.RouteMeta{
 			Summary:             "List user's devices.",
 			Description:         "List user's devices. Can filter for only active or all.",
@@ -38,7 +62,42 @@ func (s *Server) deviceRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusCreated,
 		}),
+	}
+}
 
+func (s *Server) deviceDeviceAvailableRoutes() []routes.RouteHandler {
+	return []routes.RouteHandler{
+		routes.New("GET", "/{deviceID}/events", s.sseHub.EventsHandler(), nil, routes.RouteMeta{
+			Summary:             "Subscribe to SSE events.",
+			Description:         "Streams events from the server to the client.",
+			ExpectedDescription: "Streamed event data",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/{deviceID}/playcontext", s.deviceUpdatePlayerPlayContext(), nil, routes.RouteMeta{
+			Summary:             "Update the device current play context.",
+			Description:         "Update the playcontext for the selected device. Can only be accessed if the device ID is belonging to the token the user is logged in with.",
+			ExpectedDescription: "PlayContext updated",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/{deviceID}/playbackstate", s.deviceUpdatePlayerPlaybackState(), nil, routes.RouteMeta{
+			Summary:             "Update the device current playback state.",
+			Description:         "Update the playback statefor the selected device. Can only be accessed if the device ID is belonging to the token the user is logged in with.",
+			ExpectedDescription: "PlaybackState updated",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+	}
+}
+
+func (s *Server) deviceUserAvailableRoutes() []routes.RouteHandler {
+	return []routes.RouteHandler{
 		routes.New("POST", "/{deviceID}/player/next", s.devicePlayerNextTrack(), nil, routes.RouteMeta{
 			Summary:             "Sends a next track command to player.",
 			Description:         "Sends a command to tell the selected device to go to the next track. If the device does not support playback error is returned.",
@@ -61,24 +120,6 @@ func (s *Server) deviceRoutes() []routes.RouteHandler {
 			Summary:             "Sends a playstate command to player.",
 			Description:         "Sends a command to tell the selected device to start a new playstate. If the device does not support playback error is returned.",
 			ExpectedDescription: "Command sent",
-			Tags:                []string{},
-			Errors:              []routes.RouteErrorMeta{},
-			ExpectedStatus:      http.StatusOK,
-		}),
-
-		routes.New("POST", "/{deviceID}/playcontext", s.deviceUpdatePlayerPlayContext(), nil, routes.RouteMeta{
-			Summary:             "Update the device current play context.",
-			Description:         "Update the playcontext for the selected device. Can only be accessed if the device ID is belonging to the token the user is logged in with.",
-			ExpectedDescription: "PlayContext updated",
-			Tags:                []string{},
-			Errors:              []routes.RouteErrorMeta{},
-			ExpectedStatus:      http.StatusOK,
-		}),
-
-		routes.New("POST", "/{deviceID}/playbackstate", s.deviceUpdatePlayerPlaybackState(), nil, routes.RouteMeta{
-			Summary:             "Update the device current playback state.",
-			Description:         "Update the playback statefor the selected device. Can only be accessed if the device ID is belonging to the token the user is logged in with.",
-			ExpectedDescription: "PlaybackState updated",
 			Tags:                []string{},
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,

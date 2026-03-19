@@ -30,6 +30,7 @@ const (
 	EntityRating          EntityType = "rating"
 	EntityLike            EntityType = "like"
 	EntityEntityEvent     EntityType = "entity_event"
+	EntityDevice          EntityType = "device"
 
 	EntityEventDelete EntityEventType = "delete"
 	EntityEventCreate EntityEventType = "create"
