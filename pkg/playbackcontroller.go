@@ -106,7 +106,40 @@ func (p *PlaybackController) DisconnectDevice(ctx context.Context) error {
 }
 
 func (p *PlaybackController) PlayerState() types.PlayerState {
-	return p.localPlayer.PlayerState()
+	if p.remoteDeviceID == nil {
+		return p.localPlayer.PlayerState()
+	}
+
+	device, err := p.deviceAgent.GetDevice(context.Background(), *p.remoteDeviceID)
+	if err != nil {
+		p.log.Error("could not get remote device", "error", err.Error())
+		return types.PlayerState{}
+	}
+
+	psdto := device.PlayerState
+
+	if psdto == nil {
+		psdto = &types.PlayerStateDTO{
+			Playback: types.PlaybackStateDTO{
+				DeviceID: *p.remoteDeviceID,
+				PlaybackState: types.PlaybackState{
+					Shuffle:     false,
+					Repeat:      types.RepeatOff,
+					Playing:     false,
+					ProgressMS:  0,
+					TrackSource: types.TrackSourceContext,
+					TrackIndex:  0,
+				},
+			},
+		}
+	}
+
+	ps := types.PlayerState{
+		Playback: psdto.Playback.PlaybackState,
+		Context:  psdto.Context.PlayContext,
+	}
+
+	return ps
 }
 
 func (p *PlaybackController) LoadAndStartTracks(ctx context.Context, state types.PlayerState) (err error) {
@@ -115,14 +148,6 @@ func (p *PlaybackController) LoadAndStartTracks(ctx context.Context, state types
 	}
 
 	return p.sc.DeviceSetPlayerState(ctx, *p.remoteDeviceID, state)
-}
-
-func (p *PlaybackController) SetRepeat(ctx context.Context, r types.RepeatType) {
-	p.localPlayer.SetRepeat(ctx, r)
-}
-
-func (p *PlaybackController) SetShuffle(ctx context.Context, s bool) {
-	p.localPlayer.SetShuffle(ctx, s)
 }
 
 func (p *PlaybackController) NextTrack(ctx context.Context) (err error) {
@@ -156,6 +181,14 @@ func (p *PlaybackController) PlayPause(ctx context.Context) {
 		p.log.ErrorContext(ctx, "could not run command on remote device", "cmd", "play-pause")
 		return
 	}
+}
+
+func (p *PlaybackController) SetRepeat(ctx context.Context, r types.RepeatType) {
+	p.localPlayer.SetRepeat(ctx, r)
+}
+
+func (p *PlaybackController) SetShuffle(ctx context.Context, s bool) {
+	p.localPlayer.SetShuffle(ctx, s)
 }
 
 func (p *PlaybackController) Stop(ctx context.Context) error {
