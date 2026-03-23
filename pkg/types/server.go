@@ -72,3 +72,7 @@ type RespDevicesRegister struct {
 type SetDevicePlayerRepeatReq struct {
 	Type RepeatType `json:"type" description:"Type of repeat"`
 }
+
+type SetDevicePlayerShuffleReq struct {
+	Active bool `json:"active" description:"Shuffle is active"`
+}

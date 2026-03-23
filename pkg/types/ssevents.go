@@ -49,6 +49,7 @@ const (
 	SSEventTypePlayerPlayContext   SSEventType = "player.playcontext"
 	SSEventTypePlayerPlaybackState SSEventType = "player.playbackstate"
 	SSEventTypePlayerSetRepeat     SSEventType = "player.setrepeat"
+	SSEventTypePlayerSetShuffle    SSEventType = "player.setshuffle"
 	SSEventTypePlayerSetState      SSEventType = "player.setstate"
 	SSEventTypePlayerNextTrack     SSEventType = "player.nexttrack"
 	SSEventTypePlayerPlayPause     SSEventType = "player.playpause"
@@ -109,6 +110,10 @@ func SSEPlayerPlaybackState(ps PlaybackStateDTO) SSEvent {
 
 func SSEPlayerSetRepeat(rt RepeatType) SSEvent {
 	return newSSEvent(SSEventTypePlayerSetRepeat, rt)
+}
+
+func SSEPlayerSetShuffle(a bool) SSEvent {
+	return newSSEvent(SSEventTypePlayerSetShuffle, a)
 }
 
 func SSEPlayerSetState(pc PlayerState) SSEvent {

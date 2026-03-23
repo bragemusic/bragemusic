@@ -518,6 +518,13 @@ func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent) {
 			return
 		}
 		c.SetRepeat(ctx, rt)
+	case types.SSEventTypePlayerSetShuffle:
+		s, err := types.DecodeEventData[bool](e)
+		if err != nil {
+			c.log.ErrorContext(ctx, "could not decode playerstate data in event", "event.type", e.Type, "event.id", e.ID.String(), "event.data", e.Data)
+			return
+		}
+		c.SetShuffle(ctx, s)
 	case types.SSEventTypePlayerSetState:
 		ps, err := types.DecodeEventData[types.PlayerState](e)
 		if err != nil {

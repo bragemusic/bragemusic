@@ -64,6 +64,23 @@ func (s ServerClient) DevicePlayerSetRepeat(ctx context.Context, deviceID uuid.U
 	return nil
 }
 
+func (s ServerClient) DevicePlayerSetShuffle(ctx context.Context, deviceID uuid.UUID, active bool) (err error) {
+	u, err := url.JoinPath(s.baseUrl, append(DEVICES_PATH, deviceID.String(), "player", "shuffle")...)
+	if err != nil {
+		return err
+	}
+
+	req := types.SetDevicePlayerShuffleReq{
+		Active: active,
+	}
+
+	if err := s.doPostJson(ctx, u, req, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s ServerClient) DeviceSetPlayerState(ctx context.Context, deviceID uuid.UUID, pc types.PlayerState) (err error) {
 	u, err := url.JoinPath(s.baseUrl, append(DEVICES_PATH, deviceID.String(), "player", "state")...)
 	if err != nil {

@@ -210,6 +210,23 @@ func (d DeviceManager) PlayerSetRepeat(ctx context.Context, repeatType types.Rep
 	return nil
 }
 
+func (d DeviceManager) PlayerSetShuffle(ctx context.Context, active bool, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
+	isConnected, err := d.isConnected(ctx, targetDeviceID, callingDeviceID, userID)
+	if err != nil {
+		return err
+	}
+
+	if !isConnected {
+		return errors.New("FIXME not connected")
+	}
+
+	if err = d.sseDispatch.SendToDevice(targetDeviceID, types.SSEPlayerSetShuffle(active)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (d DeviceManager) PlayerSetState(ctx context.Context, ps types.PlayerState, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
 	isConnected, err := d.isConnected(ctx, targetDeviceID, callingDeviceID, userID)
 	if err != nil {
