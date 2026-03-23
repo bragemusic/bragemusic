@@ -93,3 +93,16 @@ func (s ServerClient) DeviceSetPlayerState(ctx context.Context, deviceID uuid.UU
 
 	return nil
 }
+
+func (s ServerClient) DevicePlayerStop(ctx context.Context, deviceID uuid.UUID) (err error) {
+	u, err := url.JoinPath(s.baseUrl, append(DEVICES_PATH, deviceID.String(), "player", "stop")...)
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPostJson(ctx, u, nil, nil); err != nil {
+		return err
+	}
+
+	return nil
+}

@@ -213,7 +213,11 @@ func (p *PlaybackController) SetShuffle(ctx context.Context, s bool) {
 }
 
 func (p *PlaybackController) Stop(ctx context.Context) error {
-	return p.localPlayer.Stop(ctx)
+	if p.remoteDeviceID == nil {
+		return p.localPlayer.Stop(ctx)
+	}
+
+	return p.sc.DevicePlayerStop(ctx, *p.remoteDeviceID)
 }
 
 func (p *PlaybackController) AddTrackToQueue(ctx context.Context, track types.TrackDetailed) {

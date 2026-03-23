@@ -536,6 +536,10 @@ func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent) {
 			c.log.ErrorContext(ctx, "could not load state", "error", err.Error())
 			return
 		}
+	case types.SSEventTypePlayerStop:
+		if err := c.Stop(ctx); err != nil {
+			c.log.ErrorContext(ctx, "could not execute remote command", "command", e.Type, "error", err.Error())
+		}
 	}
 }
 

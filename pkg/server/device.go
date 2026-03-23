@@ -144,6 +144,15 @@ func (s *Server) deviceUserAvailableRoutes() []routes.RouteHandler {
 			ExpectedStatus:      http.StatusOK,
 		}),
 
+		routes.New("POST", "/{deviceID}/player/stop", s.devicePlayerStop(), nil, routes.RouteMeta{
+			Summary:             "Sends a stop command to player.",
+			Description:         "Sends a command to tell the selected device to stop playback. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
 		routes.New("POST", "/{deviceID}/player/state", s.devicePlayerSetState(), nil, routes.RouteMeta{
 			Summary:             "Sends a playstate command to player.",
 			Description:         "Sends a command to tell the selected device to start a new playstate. If the device does not support playback error is returned.",
@@ -293,6 +302,24 @@ func (s *Server) devicePlayerSetShuffle() routes.RouteFunc[ReqDevicesPlayerSetSh
 		}
 
 		if err := s.devicemgr.PlayerSetShuffle(ctx, req.Active, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) devicePlayerStop() routes.RouteFunc[ReqDevicesGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		callingDeviceID, err := device.CallingDeviceIDFromContext(ctx)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		if err := s.devicemgr.PlayerStop(ctx, req.DeviceID, callingDeviceID, user.ID); err != nil {
 			return types.Response[types.NoResponse]{}, err
 		}
 
