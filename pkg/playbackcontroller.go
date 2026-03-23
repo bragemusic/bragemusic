@@ -189,7 +189,15 @@ func (p *PlaybackController) PlayPause(ctx context.Context) {
 }
 
 func (p *PlaybackController) SetRepeat(ctx context.Context, r types.RepeatType) {
-	p.localPlayer.SetRepeat(ctx, r)
+	if p.remoteDeviceID == nil {
+		p.localPlayer.SetRepeat(ctx, r)
+		return
+	}
+
+	if err := p.sc.DevicePlayerSetRepeat(ctx, *p.remoteDeviceID, r); err != nil {
+		p.log.ErrorContext(ctx, "could not run command on remote device", "cmd", "set-repeat")
+		return
+	}
 }
 
 func (p *PlaybackController) SetShuffle(ctx context.Context, s bool) {

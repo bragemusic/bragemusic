@@ -502,11 +502,22 @@ func (c *Client) LoginToken(ctx context.Context, token string) (types.UserDetail
 func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent) {
 	switch e.Type {
 	case types.SSEventTypePlayerNextTrack:
-		c.NextTrack(ctx)
+		if err := c.NextTrack(ctx); err != nil {
+			c.log.ErrorContext(ctx, "could not execute remote command", "command", e.Type, "error", err.Error())
+		}
 	case types.SSEventTypePlayerPlayPause:
 		c.PlayPause(ctx)
 	case types.SSEventTypePlayerPreviousTrack:
-		c.PreviousTrack(ctx)
+		if err := c.PreviousTrack(ctx); err != nil {
+			c.log.ErrorContext(ctx, "could not execute remote command", "command", e.Type, "error", err.Error())
+		}
+	case types.SSEventTypePlayerSetRepeat:
+		rt, err := types.DecodeEventData[types.RepeatType](e)
+		if err != nil {
+			c.log.ErrorContext(ctx, "could not decode playerstate data in event", "event.type", e.Type, "event.id", e.ID.String(), "event.data", e.Data)
+			return
+		}
+		c.SetRepeat(ctx, rt)
 	case types.SSEventTypePlayerSetState:
 		ps, err := types.DecodeEventData[types.PlayerState](e)
 		if err != nil {

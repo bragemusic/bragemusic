@@ -193,6 +193,23 @@ func (d DeviceManager) PlayerPreviousTrack(ctx context.Context, targetDeviceID, 
 	return nil
 }
 
+func (d DeviceManager) PlayerSetRepeat(ctx context.Context, repeatType types.RepeatType, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
+	isConnected, err := d.isConnected(ctx, targetDeviceID, callingDeviceID, userID)
+	if err != nil {
+		return err
+	}
+
+	if !isConnected {
+		return errors.New("FIXME not connected")
+	}
+
+	if err = d.sseDispatch.SendToDevice(targetDeviceID, types.SSEPlayerSetRepeat(repeatType)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (d DeviceManager) PlayerSetState(ctx context.Context, ps types.PlayerState, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
 	isConnected, err := d.isConnected(ctx, targetDeviceID, callingDeviceID, userID)
 	if err != nil {

@@ -126,6 +126,15 @@ func (s *Server) deviceUserAvailableRoutes() []routes.RouteHandler {
 			ExpectedStatus:      http.StatusOK,
 		}),
 
+		routes.New("POST", "/{deviceID}/player/repeat", s.devicePlayerSetRepeat(), nil, routes.RouteMeta{
+			Summary:             "Sends a set repeat command to player.",
+			Description:         "Sends a command to tell the selected device to set repeat state. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
 		routes.New("POST", "/{deviceID}/player/state", s.devicePlayerSetState(), nil, routes.RouteMeta{
 			Summary:             "Sends a playstate command to player.",
 			Description:         "Sends a command to tell the selected device to start a new playstate. If the device does not support playback error is returned.",
@@ -239,6 +248,24 @@ func (s *Server) devicePlayerPreviousTrack() routes.RouteFunc[ReqDevicesGet, typ
 		}
 
 		if err := s.devicemgr.PlayerPreviousTrack(ctx, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) devicePlayerSetRepeat() routes.RouteFunc[ReqDevicesPlayerSetRepeat, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesPlayerSetRepeat, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		callingDeviceID, err := device.CallingDeviceIDFromContext(ctx)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		if err := s.devicemgr.PlayerSetRepeat(ctx, req.Type, req.DeviceID, callingDeviceID, user.ID); err != nil {
 			return types.Response[types.NoResponse]{}, err
 		}
 

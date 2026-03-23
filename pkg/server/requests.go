@@ -241,6 +241,15 @@ func (r ReqDevicesGet) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqDevicesPlayerSetRepeat struct {
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
+	types.SetDevicePlayerRepeatReq
+}
+
+func (r ReqDevicesPlayerSetRepeat) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqDevicesUpdatePlayContext struct {
 	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
 	types.PlayContextDTO

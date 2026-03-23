@@ -68,3 +68,7 @@ type LoginResp struct {
 type RespDevicesRegister struct {
 	DeviceID uuid.UUID `json:"id"`
 }
+
+type SetDevicePlayerRepeatReq struct {
+	Type RepeatType `json:"type" description:"Type of repeat"`
+}
