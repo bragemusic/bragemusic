@@ -221,7 +221,15 @@ func (p *PlaybackController) Stop(ctx context.Context) error {
 }
 
 func (p *PlaybackController) AddTrackToQueue(ctx context.Context, track types.TrackDetailed) {
-	p.localPlayer.AddTrackToQueue(ctx, track)
+	if p.remoteDeviceID == nil {
+		p.localPlayer.AddTrackToQueue(ctx, track)
+		return
+	}
+
+	if err := p.sc.DevicePlayerAddToQueue(ctx, *p.remoteDeviceID, track); err != nil {
+		p.log.ErrorContext(ctx, "could not run command on remote device", "cmd", "add-to-queue")
+		return
+	}
 }
 
 func (p *PlaybackController) handleRemotePlayContexts(ctx context.Context, e types.SSEvent) {

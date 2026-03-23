@@ -46,6 +46,7 @@ const (
 	SSEventTypeDeviceDisconnected  SSEventType = "device.disconnected"
 	SSEventTypeDevicePlayContext   SSEventType = "device.playcontext"
 	SSEventTypeDevicePlaybackState SSEventType = "device.playbackstate"
+	SSEventTypePlayerAddToQueue    SSEventType = "player.addtoqueue"
 	SSEventTypePlayerPlayContext   SSEventType = "player.playcontext"
 	SSEventTypePlayerPlaybackState SSEventType = "player.playbackstate"
 	SSEventTypePlayerSetRepeat     SSEventType = "player.setrepeat"
@@ -99,6 +100,10 @@ func SSEDevicePlayContext(pc PlayContextDTO) SSEvent {
 
 func SSEDevicePlaybackState(ps PlaybackStateDTO) SSEvent {
 	return newSSEvent(SSEventTypeDevicePlaybackState, ps)
+}
+
+func SSEPlayerAddToQueue(t TrackDetailed) SSEvent {
+	return newSSEvent(SSEventTypePlayerAddToQueue, t)
 }
 
 func SSEPlayerPlayContext(pc PlayContextDTO) SSEvent {

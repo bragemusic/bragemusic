@@ -501,6 +501,14 @@ func (c *Client) LoginToken(ctx context.Context, token string) (types.UserDetail
 
 func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent) {
 	switch e.Type {
+	case types.SSEventTypePlayerAddToQueue:
+		track, err := types.DecodeEventData[types.TrackDetailed](e)
+		if err != nil {
+			c.log.ErrorContext(ctx, "could not decode playerstate data in event", "event.type", e.Type, "event.id", e.ID.String(), "event.data", e.Data)
+			return
+		}
+
+		c.PlaybackControllerFace.AddTrackToQueue(ctx, track)
 	case types.SSEventTypePlayerNextTrack:
 		if err := c.NextTrack(ctx); err != nil {
 			c.log.ErrorContext(ctx, "could not execute remote command", "command", e.Type, "error", err.Error())

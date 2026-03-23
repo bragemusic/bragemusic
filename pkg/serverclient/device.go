@@ -47,6 +47,19 @@ func (s ServerClient) DevicePreviousTrack(ctx context.Context, deviceID uuid.UUI
 	return nil
 }
 
+func (s ServerClient) DevicePlayerAddToQueue(ctx context.Context, deviceID uuid.UUID, track types.TrackDetailed) (err error) {
+	u, err := url.JoinPath(s.baseUrl, append(DEVICES_PATH, deviceID.String(), "player", "queue")...)
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPostJson(ctx, u, track, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s ServerClient) DevicePlayerSetRepeat(ctx context.Context, deviceID uuid.UUID, repeatType types.RepeatType) (err error) {
 	u, err := url.JoinPath(s.baseUrl, append(DEVICES_PATH, deviceID.String(), "player", "repeat")...)
 	if err != nil {

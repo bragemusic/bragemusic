@@ -261,6 +261,23 @@ func (d DeviceManager) PlayerStop(ctx context.Context, targetDeviceID, callingDe
 	return nil
 }
 
+func (d DeviceManager) PlayerAddToQueue(ctx context.Context, track types.TrackDetailed, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
+	isConnected, err := d.isConnected(ctx, targetDeviceID, callingDeviceID, userID)
+	if err != nil {
+		return err
+	}
+
+	if !isConnected {
+		return errors.New("FIXME not connected")
+	}
+
+	if err = d.sseDispatch.SendToDevice(targetDeviceID, types.SSEPlayerAddToQueue(track)); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (d DeviceManager) UpdatePlayerPlayContext(ctx context.Context, pc types.PlayContextDTO, deviceID, userID uuid.UUID) error {
 	state, found := d.playerStates[deviceID]
 	if !found {

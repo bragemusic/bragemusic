@@ -286,6 +286,15 @@ func (r ReqDevicesPlayerSetState) Validate() (validationMessages string, err err
 	return "", nil
 }
 
+type ReqDevicesPlayerAddToQueue struct {
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
+	types.TrackDetailed
+}
+
+func (r ReqDevicesPlayerAddToQueue) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`
