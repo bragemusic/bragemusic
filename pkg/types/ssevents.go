@@ -51,6 +51,7 @@ const (
 	SSEventTypePlayerSetState      SSEventType = "player.setstate"
 	SSEventTypePlayerNextTrack     SSEventType = "player.nexttrack"
 	SSEventTypePlayerPlayPause     SSEventType = "player.playpause"
+	SSEventTypePlayerPreviousTrack SSEventType = "player.previoustrack"
 )
 
 func DecodeEventData[T any](evt SSEvent) (T, error) {
@@ -115,4 +116,8 @@ func SSEPlayerNextTrack() SSEvent {
 
 func SSEPlayerPlayPause() SSEvent {
 	return newSSEvent(SSEventTypePlayerPlayPause, nil)
+}
+
+func SSEPlayerPreviousTrack() SSEvent {
+	return newSSEvent(SSEventTypePlayerPreviousTrack, nil)
 }

@@ -505,6 +505,8 @@ func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent) {
 		c.NextTrack(ctx)
 	case types.SSEventTypePlayerPlayPause:
 		c.PlayPause(ctx)
+	case types.SSEventTypePlayerPreviousTrack:
+		c.PreviousTrack(ctx)
 	case types.SSEventTypePlayerSetState:
 		ps, err := types.DecodeEventData[types.PlayerState](e)
 		if err != nil {

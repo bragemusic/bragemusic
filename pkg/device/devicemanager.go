@@ -56,6 +56,18 @@ func (d DeviceManager) MiddlewareUserAccess(next http.Handler) http.Handler {
 			return
 		}
 
+		tokenID, err := auth.TokenIDFromContext(ctx)
+		if err != nil {
+			bragerr.HandleHttpResponse(ctx, err, w, d.log)
+		}
+
+		device, err := d.db.GetDeviceFromTokenID(ctx, tokenID)
+		if err != nil {
+			bragerr.HandleHttpResponse(ctx, err, w, d.log)
+		}
+
+		ctx = UpgradeContextWithCallingDeviceID(ctx, device.ID)
+
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
@@ -158,6 +170,23 @@ func (d DeviceManager) PlayerPlayPause(ctx context.Context, targetDeviceID, call
 	}
 
 	if err = d.sseDispatch.SendToDevice(targetDeviceID, types.SSEPlayerPlayPause()); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d DeviceManager) PlayerPreviousTrack(ctx context.Context, targetDeviceID, callingDeviceID, userID uuid.UUID) error {
+	isConnected, err := d.isConnected(ctx, targetDeviceID, callingDeviceID, userID)
+	if err != nil {
+		return err
+	}
+
+	if !isConnected {
+		return errors.New("FIXME not connected")
+	}
+
+	if err = d.sseDispatch.SendToDevice(targetDeviceID, types.SSEPlayerPreviousTrack()); err != nil {
 		return err
 	}
 

@@ -160,7 +160,12 @@ func (p *PlaybackController) NextTrack(ctx context.Context) (err error) {
 }
 
 func (p *PlaybackController) PreviousTrack(ctx context.Context) (err error) {
-	return p.localPlayer.PreviousTrack(ctx)
+	if p.remoteDeviceID == nil {
+		p.localPlayer.PreviousTrack(ctx)
+		return
+	}
+
+	return p.sc.DevicePreviousTrack(ctx, *p.remoteDeviceID)
 }
 
 // func (p *PlaybackController) Pause(ctx context.Context) {

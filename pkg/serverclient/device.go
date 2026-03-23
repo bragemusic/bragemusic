@@ -34,6 +34,19 @@ func (s ServerClient) DevicePlayPause(ctx context.Context, deviceID uuid.UUID) (
 	return nil
 }
 
+func (s ServerClient) DevicePreviousTrack(ctx context.Context, deviceID uuid.UUID) (err error) {
+	u, err := url.JoinPath(s.baseUrl, append(DEVICES_PATH, deviceID.String(), "player", "previous")...)
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPostJson(ctx, u, nil, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s ServerClient) DeviceSetPlayerState(ctx context.Context, deviceID uuid.UUID, pc types.PlayerState) (err error) {
 	u, err := url.JoinPath(s.baseUrl, append(DEVICES_PATH, deviceID.String(), "player", "state")...)
 	if err != nil {
