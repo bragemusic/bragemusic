@@ -291,14 +291,11 @@ func (p *PlaybackController) handleDeviceDisconnection(ctx context.Context, e ty
 	}
 }
 
-func New(ap audioplayer.AudioPlayerFace, da *device.DeviceAgent, sc *serverclient.ServerClient, slogHandler slog.Handler) (PlaybackControllerFace, error) {
-	// var err error
-
+func New(ap audioplayer.AudioPlayerFace, da *device.DeviceAgent, sc *serverclient.ServerClient, slogHandler slog.Handler) PlaybackControllerFace {
 	pc := &PlaybackController{
-		localPlayer: ap,
-		deviceAgent: da,
-		sc:          sc,
-		// db:                db,
+		localPlayer:       ap,
+		deviceAgent:       da,
+		sc:                sc,
 		contextCallbacks:  []func(context.Context, types.PlayContext){},
 		playbackCallbacks: []func(context.Context, types.PlaybackState){},
 		log:               slog.New(slogHandler).With("service", "playbackcontroller"),
@@ -307,31 +304,6 @@ func New(ap audioplayer.AudioPlayerFace, da *device.DeviceAgent, sc *serverclien
 	da.SubscribeToEventTypes(pc.handleRemotePlayContexts, types.SSEventTypePlayerPlayContext)
 	da.SubscribeToEventTypes(pc.handleRemotePlaybackStates, types.SSEventTypePlayerPlaybackState)
 	da.SubscribeToEventTypes(pc.handleDeviceDisconnection, types.SSEventTypeDeviceDisconnected)
-	// ap := &AudioPlayer{
-	// 	ai:           ai,
-	// 	ar:           ar,
-	// 	currentFile:  nil,
-	// 	musicDirPath: cfg.MusicDirPath,
-	// 	log:          slog.New(slogHandler).With("service", "audioplayer"),
-	// 	state: types.PlayerState{
-	// 		Playback: types.PlaybackState{
-	// 			Shuffle:     false,
-	// 			Repeat:      types.RepeatOff,
-	// 			TrackSource: types.TrackSourceContext,
-	// 		},
-	// 	},
-	// }
 
-	// ai.RegisterErrorCallback(ap.handleError)
-
-	// playerName := "BrageMusic-" + strings.ReplaceAll(cfg.PlayerName, " ", "")
-	// ap.mp, err = mpris.New(playerName, ap.Play, ap.Pause, ap.PlayPause, ap.PreviousTrack, ap.NextTrack)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// ap.progressTicker = time.NewTicker(1 * time.Second)
-	// ap.startProgressPrinter()
-
-	return pc, nil
+	return pc
 }

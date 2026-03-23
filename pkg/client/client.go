@@ -565,40 +565,6 @@ func (c *Client) handlePlaybackStateCallbacks(ctx context.Context, ps types.Play
 	}
 }
 
-// func (c *Client) RegisterPlayContextCallback(f func(context.Context, types.PlayContext)) {
-// 	c.contextCallbacks = append(c.contextCallbacks, f)
-// 	c.AudioPlayer.RegisterPlayContextCallback(f)
-// }
-
-// func (c *Client) RegisterPlaybackStateCallback(f func(context.Context, types.PlaybackState)) {
-// 	c.playbackCallbacks = append(c.playbackCallbacks, f)
-// 	c.AudioPlayer.RegisterPlaybackStateCallback(f)
-// }
-
-// func (c *Client) ConnectToDevice(ctx context.Context, deviceID uuid.UUID) error {
-// 	if err := c.AudioPlayer.Stop(ctx); err != nil {
-// 		return err
-// 	}
-
-// 	c.activeRemoteDevice = &deviceID
-
-// 	// Här tänker jag att vi ska swappa ut audioplayer mot en remote
-// 	// ap := &English{}
-// 	// remote := Spanish{}
-
-// 	// var g Greeter
-// 	// g = eng
-// 	// fmt.Println(g.Greet()) // Hello
-
-// 	// g = spa
-// 	// fmt.Println(g.Greet()) // Hola
-
-// 	// g = eng
-// 	// fmt.Println(g.Greet()) // Hello
-
-// 	return nil
-// }
-
 func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
 	var cf clientFace
 	var ar audioreader.AudioReader
@@ -657,10 +623,7 @@ func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFa
 	)
 
 	// FIXME: Only for visual clients
-	pc, err := playbackcontroller.New(ap, da, &sc, slogHandler)
-	if err != nil {
-		return nil, err
-	}
+	pc := playbackcontroller.New(ap, da, &sc, slogHandler)
 
 	c := &Client{
 		clientFace:             cf,
