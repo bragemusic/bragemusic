@@ -119,3 +119,16 @@ func (s ServerClient) DevicePlayerStop(ctx context.Context, deviceID uuid.UUID) 
 
 	return nil
 }
+
+func (s ServerClient) DeviceDeleteToken(ctx context.Context, deviceID uuid.UUID) error {
+	u, err := url.JoinPath(s.baseUrl, append(DEVICES_PATH, deviceID.String(), "token")...)
+	if err != nil {
+		return err
+	}
+
+	if err := s.doDelete(ctx, u); err != nil {
+		return err
+	}
+
+	return nil
+}

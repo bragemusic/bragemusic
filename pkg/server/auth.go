@@ -13,6 +13,8 @@ func (s *Server) auth() http.Handler {
 
 	r.Post("/login", s.login())
 
+	r.With(s.authPkg.Middleware).Mount("/tokens", s.buildMount(s.tokenRoutes()))
+
 	return r
 }
 

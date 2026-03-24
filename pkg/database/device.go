@@ -19,6 +19,7 @@ type DeviceFace interface {
 	GetDevice(ctx context.Context, deviceID uuid.UUID) (types.Device, error)
 	GetDeviceFromTokenID(ctx context.Context, tokenID uuid.UUID) (types.Device, error)
 	GetDeviceFromTokenAndDeviceID(ctx context.Context, deviceID, tokenID uuid.UUID) (device types.Device, err error)
+	GetDeviceTokenFromDeviceID(ctx context.Context, deviceID uuid.UUID) (types.DeviceToken, error)
 	ListUsersDevices(ctx context.Context, userID uuid.UUID) (devices []types.Device, err error)
 	LinkDeviceToken(ctx context.Context, deviceID, tokenID uuid.UUID) error
 	UpdateDevice(ctx context.Context, device types.Device) error
@@ -144,6 +145,23 @@ func (d Database) GetDeviceFromTokenID(ctx context.Context, tokenID uuid.UUID) (
 	}
 
 	return device, nil
+}
+
+func (d Database) GetDeviceTokenFromDeviceID(ctx context.Context, deviceID uuid.UUID) (types.DeviceToken, error) {
+	query := `
+		SELECT *
+		FROM device_tokens
+		WHERE device_id = ?
+		LIMIT 1;
+	`
+
+	var dt types.DeviceToken
+	err := sqlx.GetContext(ctx, d.ext, &dt, query, deviceID)
+	if err != nil {
+		return types.DeviceToken{}, err
+	}
+
+	return dt, nil
 }
 
 func (d Database) LinkDeviceToken(ctx context.Context, deviceID, tokenID uuid.UUID) error {

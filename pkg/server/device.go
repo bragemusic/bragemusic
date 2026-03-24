@@ -169,6 +169,15 @@ func (s *Server) deviceUserAvailableRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
+
+		routes.New("DELETE", "/{deviceID}/token", s.deviceTokenDelete(), nil, routes.RouteMeta{
+			Summary:             "Delete token used by the device",
+			Description:         "The token currently used by the device is removed from the server and access will be denied",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusNoContent,
+		}),
 	}
 }
 
@@ -396,6 +405,24 @@ func (s *Server) devicePlayerAddToQueue() routes.RouteFunc[ReqDevicesPlayerAddTo
 		return types.Response[types.NoResponse]{
 			Payload: types.NoResponse{},
 			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) deviceTokenDelete() routes.RouteFunc[ReqDevicesGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		deviceToken, err := s.devicemgr.GetDeviceToken(ctx, req.DeviceID, user.ID)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		if err := s.authPkg.RemoveToken(ctx, deviceToken.TokenID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusNoContent,
 		}, nil
 	}
 }

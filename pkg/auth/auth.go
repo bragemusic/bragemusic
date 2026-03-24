@@ -237,6 +237,24 @@ func (a Auth) CreateLoginToken(ctx context.Context, email, password string, long
 	return token, expiresIn, nil
 }
 
+func (a Auth) RemoveToken(ctx context.Context, tokenID, userID uuid.UUID) error {
+	token, err := a.db.GetToken(ctx, tokenID)
+	if err != nil {
+		return a.berr.DatabaseError(err, types.EntityToken, &tokenID)
+	}
+
+	// NOTE: In the future we can add a better check. Maybe admins should be able to delete any token in the system
+	if token.UserID != userID {
+		return a.berr.ItemAccessDenied(errors.New("user is not permitted to delete token"), types.EntityToken, tokenID)
+	}
+
+	if err := a.db.RemoveToken(ctx, tokenID); err != nil {
+		return a.berr.DatabaseError(err, types.EntityToken, &tokenID)
+	}
+
+	return nil
+}
+
 func (a Auth) generateToken(ctx context.Context, userID uuid.UUID, tokenType types.TokenType, name *string) (token string, expiresIn int, err error) {
 	t := types.Token{
 		UserID:    userID,

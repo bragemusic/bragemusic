@@ -414,6 +414,24 @@ func (d DeviceManager) RegisterOrUpdateDevice(ctx context.Context, id *uuid.UUID
 	return newID, nil
 }
 
+func (d DeviceManager) GetDeviceToken(ctx context.Context, deviceID, userID uuid.UUID) (types.DeviceToken, error) {
+	device, err := d.db.GetDevice(ctx, deviceID)
+	if err != nil {
+		return types.DeviceToken{}, err
+	}
+
+	if device.UserID != userID {
+		return types.DeviceToken{}, d.berr.ItemAccessDenied(errors.New("user is not the owner of the device"), types.EntityDevice, deviceID)
+	}
+
+	dt, err := d.db.GetDeviceTokenFromDeviceID(ctx, deviceID)
+	if err != nil {
+		return types.DeviceToken{}, d.berr.DatabaseError(err, types.EntityDeviceToken, nil)
+	}
+
+	return dt, nil
+}
+
 func NewManager(sd sse.Dispatcher, db database.DeviceFace, slogHandler slog.Handler) DeviceManager {
 	return DeviceManager{
 		sseDispatch:  sd,

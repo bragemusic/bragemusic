@@ -295,6 +295,14 @@ func (r ReqDevicesPlayerAddToQueue) Validate() (validationMessages string, err e
 	return "", nil
 }
 
+type ReqTokensBase struct {
+	TokenID uuid.UUID `path:"tokenID" description:"ID of the wanted token"`
+}
+
+func (r ReqTokensBase) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`

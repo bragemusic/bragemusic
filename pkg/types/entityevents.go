@@ -31,6 +31,8 @@ const (
 	EntityLike            EntityType = "like"
 	EntityEntityEvent     EntityType = "entity_event"
 	EntityDevice          EntityType = "device"
+	EntityDeviceToken     EntityType = "device_token"
+	EntityToken           EntityType = "token"
 
 	EntityEventDelete EntityEventType = "delete"
 	EntityEventCreate EntityEventType = "create"

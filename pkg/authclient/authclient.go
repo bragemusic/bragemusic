@@ -240,6 +240,10 @@ func (ac *AuthClient) GetCachedUsers(ctx context.Context) (users []types.UserDet
 	return users, nil
 }
 
+func (ac *AuthClient) RemoveToken(ctx context.Context, id uuid.UUID) error {
+	return ac.sc.DeleteToken(ctx, id)
+}
+
 func (ac *AuthClient) removeToken(ctx context.Context, userID uuid.UUID) error {
 	ac.sc.SetAuthToken("")
 

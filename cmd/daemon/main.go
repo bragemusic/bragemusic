@@ -40,7 +40,7 @@ func main() {
 		logger.ErrorContext(ctx, "could not create client", "error", err.Error())
 	}
 
-	token := "brg_v1_VtfPBMEtN4otYzPslFFtxr2CcYcZSYveaK5v5txHI9Q"
+	token := "brg_v1_uAyw6DSR2i3g0orGai7_SiiQqkdqwn7bYNqzD3WxEMk"
 
 	user, err := c.LoginToken(ctx, token)
 	if err != nil {

@@ -104,6 +104,9 @@ type AuthFace interface {
 
 	// ServerStatus retrieves the current server API information and availability state.
 	ServerStatus(ctx context.Context) (types.ServerApiInfo, error)
+
+	// RemoveToken deletes the token specified by the ID from the server
+	RemoveToken(ctx context.Context, id uuid.UUID) error
 }
 
 // AudioPlayerFace defines audio playback control and playback state
@@ -283,6 +286,7 @@ type JobManagerFace interface {
 type DeviceManagerFace interface {
 	ListDevices(ctx context.Context) (devices []types.DeviceDetailed, err error)
 	SubscribeToEventTypes(handler sse.EventHandler, eventType ...types.SSEventType)
+	DeleteDeviceToken(ctx context.Context, deviceID uuid.UUID) error
 }
 
 // ClientFace defines the high-level client interface that aggregates

@@ -36,6 +36,8 @@ type AuthFace interface {
 
 	CreateToken(ctx context.Context, t types.Token) (uuid.UUID, error)
 	GetTokenFromHash(ctx context.Context, hash string) (token types.Token, err error)
+	GetToken(ctx context.Context, id uuid.UUID) (token types.Token, err error)
+	RemoveToken(ctx context.Context, id uuid.UUID) error
 
 	GetUserDetails(ctx context.Context, userID uuid.UUID) (user types.UserDetails, err error)
 }
@@ -421,6 +423,44 @@ func (d Database) GetTokenFromHash(ctx context.Context, hash string) (token type
 	}
 
 	return
+}
+
+func (d Database) GetToken(ctx context.Context, id uuid.UUID) (token types.Token, err error) {
+	query := `
+        SELECT *
+        FROM tokens
+        WHERE id = ?
+        LIMIT 1;
+    `
+
+	err = sqlx.GetContext(ctx, d.ext, &token, query, id)
+	if err != nil {
+		return types.Token{}, err
+	}
+
+	return
+}
+
+func (d Database) RemoveToken(ctx context.Context, id uuid.UUID) error {
+	query := `
+        DELETE FROM tokens WHERE id = :id;
+    `
+
+	res, err := d.ext.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	ra, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if ra == 0 {
+		return ErrNoRowDeleted
+	}
+
+	return nil
 }
 
 func (d Database) GetUserDetails(ctx context.Context, userID uuid.UUID) (user types.UserDetails, err error) {
