@@ -305,6 +305,14 @@ func (a *DeviceAgent) DeleteDevice(ctx context.Context, deviceID uuid.UUID) erro
 	return a.sc.DeviceDelete(ctx, deviceID)
 }
 
+func (a *DeviceAgent) DeleteDeviceAndToken(ctx context.Context, deviceID uuid.UUID) error {
+	if err := a.sc.DeviceDeleteToken(ctx, deviceID); err != nil {
+		return err
+	}
+
+	return a.sc.DeviceDelete(ctx, deviceID)
+}
+
 func NewAgent(slogHandler slog.Handler, sc *serverclient.ServerClient, userID uuid.UUID, meta types.DeviceBase, stateFilePath *string) *DeviceAgent {
 	da := &DeviceAgent{
 		log:                 slog.New(slogHandler).With("service", "device.agent"),

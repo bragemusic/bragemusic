@@ -288,6 +288,7 @@ type DeviceManagerFace interface {
 	SubscribeToEventTypes(handler sse.EventHandler, eventType ...types.SSEventType)
 	DeleteDevice(ctx context.Context, deviceID uuid.UUID) error
 	DeleteDeviceToken(ctx context.Context, deviceID uuid.UUID) error
+	DeleteDeviceAndToken(ctx context.Context, deviceID uuid.UUID) error
 }
 
 // ClientFace defines the high-level client interface that aggregates
