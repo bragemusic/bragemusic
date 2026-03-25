@@ -155,14 +155,12 @@ type DatabaseFace interface {
 
 	AuthFace
 	ImportFace
+	DeviceFace
 }
 
 type executor interface {
-	sqlx.Execer
-	sqlx.ExecerContext
-	sqlx.QueryerContext
-	sqlx.Queryer
-	sqlx.Ext
+	Begin(ctx context.Context) (DatabaseFace, error)
+	driver.Tx
 }
 
 type Database struct {

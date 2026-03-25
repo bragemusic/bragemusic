@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -36,6 +37,8 @@ type RouteHandler interface {
 	Roles() []types.UserRole
 	Handler(log, errLog *slog.Logger, berr *bragerr.BragErrFactory) http.Handler
 	Docs(refl *openapi31.Reflector, basePath string) error
+	AddMiddleware(RouteMiddleware) RouteHandler
+	Middlewares() []RouteMiddleware
 }
 
 type RouteMeta struct {
@@ -53,12 +56,28 @@ type RouteErrorMeta struct {
 	Status      int
 }
 
+type RouteMiddleware struct {
+	Name        string
+	Description string
+	Func        func(next http.Handler) http.Handler
+}
+
 type RouteObject[Req Validator, Resp any] struct {
 	handlerFunc RouteFunc[Req, Resp]
 	method      string
 	path        string
 	roles       []types.UserRole
 	meta        RouteMeta
+	middlewares []RouteMiddleware
+}
+
+func (ro RouteObject[Req, Resp]) AddMiddleware(rm RouteMiddleware) RouteHandler {
+	ro.middlewares = append(ro.middlewares, rm)
+	return ro
+}
+
+func (ro RouteObject[Req, Resp]) Middlewares() []RouteMiddleware {
+	return ro.middlewares
 }
 
 func (ro RouteObject[Req, Resp]) Roles() []types.UserRole {
@@ -101,8 +120,10 @@ func (ro RouteObject[Req, Resp]) Handler(log, errLog *slog.Logger, berr *bragerr
 		if r.Method == "POST" || r.Method == "PUT" || r.Method == "PATCH" {
 			if !strings.Contains(ct, "multipart/form-data") {
 				if err = json.NewDecoder(r.Body).Decode(&reqStruct); err != nil {
-					bragerr.HandleHttpResponse(ctx, err, w, errLog)
-					return
+					if err != io.EOF {
+						bragerr.HandleHttpResponse(ctx, err, w, errLog)
+						return
+					}
 				}
 			}
 		}

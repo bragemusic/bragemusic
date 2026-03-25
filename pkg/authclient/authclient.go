@@ -129,6 +129,19 @@ func (ac *AuthClient) Login(ctx context.Context, username, password string, long
 	return user, err
 }
 
+func (ac *AuthClient) LoginToken(ctx context.Context, token string) (types.UserDetails, error) {
+	ac.sc.SetAuthToken(token)
+
+	user, err := ac.sc.GetUser(ctx)
+	if err != nil {
+		return types.UserDetails{}, err
+	}
+
+	ac.UpdateServerStatusCallbacks(ctx)
+
+	return user, err
+}
+
 func (ac *AuthClient) LogoutServerUser(ctx context.Context, userID uuid.UUID) error {
 	if err := ac.removeToken(ctx, userID); err != nil {
 		return err
@@ -227,6 +240,10 @@ func (ac *AuthClient) GetCachedUsers(ctx context.Context) (users []types.UserDet
 	return users, nil
 }
 
+func (ac *AuthClient) RemoveToken(ctx context.Context, id uuid.UUID) error {
+	return ac.sc.DeleteToken(ctx, id)
+}
+
 func (ac *AuthClient) removeToken(ctx context.Context, userID uuid.UUID) error {
 	ac.sc.SetAuthToken("")
 
@@ -247,7 +264,6 @@ func (ac *AuthClient) saveToken(ctx context.Context, token string, userID uuid.U
 	}
 
 	if err := os.WriteFile(path, []byte(token), 0o600); err != nil {
-		fmt.Println("kaka")
 		return err
 	}
 

@@ -13,9 +13,11 @@ import (
 	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/bragerr"
+	"github.com/bragemusic/core/pkg/device"
 	"github.com/bragemusic/core/pkg/importer"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
+	"github.com/bragemusic/core/pkg/sse"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
@@ -27,16 +29,18 @@ type (
 )
 
 type Server struct {
-	log      *slog.Logger
-	errLog   *slog.Logger
-	mediamgr *mediamanager.MediaManager
-	authPkg  *auth.Auth
-	importer *importer.Importer
-	jobmgr   *jobmanager.JobManager
-	config   Config
-	berr     bragerr.BragErrFactory
-	httpSrv  *http.Server
-	ready    atomic.Bool
+	log       *slog.Logger
+	errLog    *slog.Logger
+	mediamgr  *mediamanager.MediaManager
+	devicemgr *device.DeviceManager
+	authPkg   *auth.Auth
+	importer  *importer.Importer
+	jobmgr    *jobmanager.JobManager
+	sseHub    *sse.Hub
+	config    Config
+	berr      bragerr.BragErrFactory
+	httpSrv   *http.Server
+	ready     atomic.Bool
 }
 
 func (s *Server) Handler() http.Handler {
@@ -134,6 +138,11 @@ func (s *Server) Start(ctx context.Context) error {
 	})
 
 	g.Go(func() error {
+		s.sseHub.Run(ctx)
+		return nil
+	})
+
+	g.Go(func() error {
 		<-ctx.Done()
 
 		s.log.InfoContext(ctx, "shutdown initiated")
@@ -167,15 +176,17 @@ func (s *Server) Start(ctx context.Context) error {
 // 	return nil
 // }
 
-func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, c Config) Server {
+func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, sseHub *sse.Hub, d *device.DeviceManager, c Config) Server {
 	return Server{
-		log:      slog.New(slogHandler).With("service", "server"),
-		errLog:   slog.New(slogHandler),
-		mediamgr: m,
-		config:   c,
-		authPkg:  a,
-		importer: i,
-		jobmgr:   j,
-		berr:     bragerr.NewFactory("server"),
+		log:       slog.New(slogHandler).With("service", "server"),
+		errLog:    slog.New(slogHandler),
+		mediamgr:  m,
+		config:    c,
+		authPkg:   a,
+		importer:  i,
+		jobmgr:    j,
+		sseHub:    sseHub,
+		devicemgr: d,
+		berr:      bragerr.NewFactory("server"),
 	}
 }

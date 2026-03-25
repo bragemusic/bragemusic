@@ -14,11 +14,18 @@ func (s *Server) buildMount(ro []routes.RouteHandler) http.Handler {
 	r := chi.NewRouter()
 
 	for _, route := range ro {
-		if len(route.Roles()) > 0 {
-			r.With(s.authPkg.RoleCheckMiddleware(route.Roles()...)).Method(route.Method(), route.Path(), route.Handler(s.log, s.errLog, &s.berr))
-		} else {
-			r.Method(route.Method(), route.Path(), route.Handler(s.log, s.errLog, &s.berr))
+		mws := []func(http.Handler) http.Handler{}
+
+		for _, mw := range route.Middlewares() {
+			mws = append(mws, mw.Func)
 		}
+
+		if len(route.Roles()) > 0 {
+			mws = append(mws, s.authPkg.RoleCheckMiddleware(route.Roles()...))
+			r.With(s.authPkg.RoleCheckMiddleware(route.Roles()...)).Method(route.Method(), route.Path(), route.Handler(s.log, s.errLog, &s.berr))
+		}
+
+		r.With(mws...).Method(route.Method(), route.Path(), route.Handler(s.log, s.errLog, &s.berr))
 	}
 
 	return r
@@ -51,6 +58,8 @@ func (s *Server) api() http.Handler {
 	r.Mount("/sync", s.buildMount(s.syncRoutes()))
 	r.Mount("/search", s.buildMount(s.searchRoutes()))
 	r.Mount("/tracks", s.buildMount(s.trackRoutes()))
+
+	r.Mount("/devices", s.buildMount(s.deviceRoutes()))
 
 	return r
 }

@@ -9,28 +9,42 @@ package client
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
+	playbackcontroller "github.com/bragemusic/core/pkg"
 	"github.com/bragemusic/core/pkg/audiointerface"
 	"github.com/bragemusic/core/pkg/audioplayer"
 	"github.com/bragemusic/core/pkg/audioreader"
 	"github.com/bragemusic/core/pkg/authclient"
 	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/device"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/serverclient"
+	"github.com/bragemusic/core/pkg/sse"
 	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 
 type Config struct {
-	ConfigPath    string
-	ImagePath     string
-	MusicDirPath  string
-	PlayerName    string
-	ServerBaseURL string
+	ConfigPath      string
+	ImagePath       string
+	MusicDirPath    string
+	PlayerName      string
+	ServerBaseURL   string
+	ClientType      types.DeviceType
+	ClientInterface types.DeviceInterface
+	ClientIcon      types.DeviceIcon
+	StateFilePath   *string
+}
+
+type IdentityFace interface {
+	ClientID() uuid.UUID
+	ClientName() string
+	ClientType() types.DeviceType
 }
 
 // SyncFace defines functionality for synchronizing server data
@@ -82,12 +96,17 @@ type AuthFace interface {
 	// If longLivedToken is true, a persistent authentication token is requested.
 	Login(ctx context.Context, username, password string, longLivedToken bool) (types.UserDetails, error)
 
+	LoginToken(ctx context.Context, token string) (types.UserDetails, error)
+
 	// LogoutServerUser logs out the currently authenticated server user
 	// and invalidates any associated server session.
 	LogoutServerUser(ctx context.Context) error
 
 	// ServerStatus retrieves the current server API information and availability state.
 	ServerStatus(ctx context.Context) (types.ServerApiInfo, error)
+
+	// RemoveToken deletes the token specified by the ID from the server
+	RemoveToken(ctx context.Context, id uuid.UUID) error
 }
 
 // AudioPlayerFace defines audio playback control and playback state
@@ -106,23 +125,16 @@ type AudioPlayerFace interface {
 	// AddTrackToQueue adds a track to the current playback queue.
 	AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error
 
-	// RegisterPlayContextChangeCallback registers a callback that is invoked
+	// RegisterPlayContextCallback registers a callback that is invoked
 	// whenever the play context (album, playlist, queue, etc.) changes.
-	RegisterPlayContextChangeCallback(f func(audioplayer.PlayContext))
+	RegisterPlayContextCallback(f func(context.Context, types.PlayContext))
 
-	// RegisterPlayPauseCallback registers a callback that is invoked whenever
-	// playback transitions between playing and paused states.
-	RegisterPlayPauseCallback(f func(isPlaying bool))
-
-	// RegisterProgressCallback registers a callback that is invoked periodically
-	// with the current playback position in milliseconds.
-	RegisterProgressCallback(f func(ms int64))
+	// RegisterPlaybackStateCallback registers a callback that is invoked
+	// whenever the playback state (playing, shuffle, repeat, etc.) changes.
+	RegisterPlaybackStateCallback(f func(context.Context, types.PlaybackState))
 
 	// NextTrack skips to the next track in the current play context.
 	NextTrack(ctx context.Context) (err error)
-
-	// PlayContext returns the current playback context.
-	PlayContext() audioplayer.PlayContext
 
 	// PlayPause toggles playback between playing and paused states.
 	PlayPause(ctx context.Context)
@@ -131,10 +143,16 @@ type AudioPlayerFace interface {
 	PreviousTrack(ctx context.Context) (err error)
 
 	// SetRepeat sets the repeat mode for playback.
-	SetRepeat(ctx context.Context, r audioplayer.RepeatType)
+	SetRepeat(ctx context.Context, r types.RepeatType)
 
 	// SetShuffle enables or disables shuffle mode for playback.
 	SetShuffle(ctx context.Context, s bool)
+
+	// PlayerState returns the current player state.
+	PlayerState() types.PlayerState
+
+	ConnectDevice(ctx context.Context, id uuid.UUID) error
+	DisconnectDevice(ctx context.Context) error
 }
 
 // MetadataFace defines access to and modification of music library metadata,
@@ -178,6 +196,9 @@ type MetadataFace interface {
 
 	// CountTracks returns the total number of tracks.
 	CountTracks(ctx context.Context) (int, error)
+
+	// GetTrackDetailed returns the detailed version of the wanted track
+	GetTrackDetailed(ctx context.Context, trackID, albumID uuid.UUID) (track types.TrackDetailed, err error)
 
 	// ListTracksDetailedByAlbum returns detailed track metadata for a given album.
 	ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.UUID) ([]types.TrackDetailed, error)
@@ -262,13 +283,21 @@ type JobManagerFace interface {
 	RunJob(ctx context.Context, jobType types.JobType) error
 }
 
+type DeviceManagerFace interface {
+	ListDevices(ctx context.Context) (devices []types.DeviceDetailed, err error)
+	SubscribeToEventTypes(handler sse.EventHandler, eventType ...types.SSEventType)
+	DeleteDevice(ctx context.Context, deviceID uuid.UUID) error
+	DeleteDeviceToken(ctx context.Context, deviceID uuid.UUID) error
+	DeleteDeviceAndToken(ctx context.Context, deviceID uuid.UUID) error
+}
+
 // ClientFace defines the high-level client interface that aggregates
 // synchronization, authentication, playback, metadata, and job management
 // functionality.
 //
 // It represents the main entry point for interacting with the system from
 // a client perspective.
-type ClientFace interface {
+type clientFace interface {
 	// RegisterEventCallback registers a callback that is invoked whenever
 	// a client-level evant is emitted. Messages may represent events,
 	// warnings, or informational notifications originating from the client.
@@ -276,15 +305,25 @@ type ClientFace interface {
 
 	SyncFace
 	AuthFace
-	AudioPlayerFace
 	MetadataFace
 	JobManagerFace
 }
 
-type ClientSync struct {
+type ClientFace interface {
+	SubscribeToClientEvents(handler sse.EventHandler)
+	clientFace
+	IdentityFace
+	AudioPlayerFace
+	DeviceManagerFace
+
+	// hit ska åtminstone auth och audioplayer flyttas. Det är delat mellan sync och streaming. Typ iaf. Får lösa så att auth är det.
+	// 	Sen ska clientface generarea en clientSync/Stream när det loggas in en användare, så slipper vi pekar på user o en massa skit
+}
+
+type clientSync struct {
 	*syncer.Syncer
 	authclient.AuthClient
-	*audioplayer.AudioPlayer
+	// *audioplayer.AudioPlayer
 	*mediamanager.MediaManager
 	*jobmanager.JobManager
 
@@ -299,9 +338,9 @@ type ClientSync struct {
 	user           *types.UserDetails
 }
 
-type ClientStreaming struct {
+type clientStreaming struct {
 	authclient.AuthClient
-	*audioplayer.AudioPlayer
+	// *audioplayer.AudioPlayer
 	*jobmanager.JobManager
 	*syncer.NoSync
 
@@ -315,64 +354,251 @@ type ClientStreaming struct {
 	user           *types.UserDetails
 }
 
-func NewSyncClient(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
-	sc := serverclient.New(config.ServerBaseURL, slogHandler)
-	mm := mediamanager.New(slogHandler, nil, nil, config.MusicDirPath, config.ImagePath)
-	sy := syncer.New(&sc, nil, config.MusicDirPath, config.ImagePath, slogHandler)
+type Client struct {
+	clientFace
+	*Identity
+	playbackcontroller.PlaybackControllerFace
 
-	pa, err := audiointerface.NewPortAudio(slogHandler)
-	if err != nil {
-		return nil, err
-	}
+	*device.DeviceAgent
 
-	ar := audioreader.NewLocalReader(config.MusicDirPath)
+	activeRemoteDevice *uuid.UUID
 
-	apCfg := audioplayer.Config{
-		PlayerName:   config.PlayerName,
-		MusicDirPath: config.MusicDirPath,
-	}
+	contextCallbacks  []func(context.Context, types.PlayContext)
+	playbackCallbacks []func(context.Context, types.PlaybackState)
 
-	ap, err := audioplayer.New(apCfg, pa, ar, slogHandler)
-	if err != nil {
-		return nil, err
-	}
-
-	jm := jobmanager.New(slogHandler)
-
-	c := &ClientSync{
-		config:       config,
-		log:          slog.New(slogHandler).With("service", "client"),
-		Syncer:       &sy,
-		AuthClient:   authclient.New(&sc, slogHandler),
-		AudioPlayer:  ap,
-		MediaManager: &mm,
-		JobManager:   &jm,
-		sc:           &sc,
-		berr:         bragerr.NewFactory("client"),
-	}
-
-	ap.RegisterPlayCountCallback(c.updatePlayCount)
-	c.RegisterUserCallback(sy.SetUser)
-	c.RegisterUserCallback(c.setUser)
-	c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
-
-	jm.RegisterJob(ctx, jobmanager.JobDefinition{
-		Type:     types.JobAuthClientServerStatus,
-		CronExpr: "*/10 * * * * *",
-		Run:      c.AuthClient.UpdateServerStatus,
-	})
-
-	jm.RegisterJob(ctx, jobmanager.JobDefinition{
-		Type:     types.JobSyncerDaemon,
-		CronExpr: "*/10 * * * *",
-		Run:      c.Syncer.Sync,
-	})
-
-	return c, nil
+	sc  *serverclient.ServerClient
+	log *slog.Logger
 }
 
-func NewStreamingClient(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
+func (c *Client) SubscribeToClientEvents(handler sse.EventHandler) {
+	c.DeviceAgent.SubscribeToClientEvents(handler)
+}
+
+func (c *Client) StartPlayerWithAlbum(ctx context.Context, albumID uuid.UUID, trackNumber int) error {
+	tracks, err := c.ListTracksDetailedByAlbum(ctx, albumID)
+	if err != nil {
+		return err
+	}
+
+	pState := types.PlayerState{
+		Playback: types.PlaybackState{
+			TrackIndex: trackNumber,
+		},
+		Context: types.PlayContext{
+			Type:   types.PlayContextAlbum,
+			RefID:  albumID,
+			Tracks: tracks,
+		},
+	}
+
+	err = c.PlaybackControllerFace.LoadAndStartTracks(ctx, pState)
+	if err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "started player", "albumID", albumID.String(), "trackNumber", trackNumber)
+
+	return nil
+}
+
+func (c *Client) StartPlayerWithLikedTracks(ctx context.Context, trackNumber int) error {
+	tracks, err := c.ListLikedTracks(ctx)
+	if err != nil {
+		return err
+	}
+
+	pState := types.PlayerState{
+		Playback: types.PlaybackState{
+			TrackIndex: trackNumber,
+		},
+		Context: types.PlayContext{
+			Type:   types.PlayContextLikedTracks,
+			RefID:  uuid.Nil,
+			Tracks: tracks,
+		},
+	}
+
+	err = c.PlaybackControllerFace.LoadAndStartTracks(ctx, pState)
+	if err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "started player", "type", "liked tracks", "trackNumber", trackNumber)
+
+	return nil
+}
+
+func (c *Client) StartPlayerWithPlaylist(ctx context.Context, playlistID uuid.UUID, trackNumber int, sortBy database.SortBy, sortOrder database.SortOrder) error {
+	tracks, err := c.ListPlaylistTracks(ctx, playlistID, sortBy, sortOrder)
+	if err != nil {
+		return err
+	}
+
+	pState := types.PlayerState{
+		Playback: types.PlaybackState{
+			TrackIndex: trackNumber,
+		},
+		Context: types.PlayContext{
+			Type:   types.PlayContextPlaylist,
+			RefID:  playlistID,
+			Tracks: tracks,
+		},
+	}
+
+	err = c.PlaybackControllerFace.LoadAndStartTracks(ctx, pState)
+	if err != nil {
+		return err
+	}
+
+	c.log.InfoContext(ctx, "started player", "playlistID", playlistID.String(), "trackNumber", trackNumber)
+
+	return nil
+}
+
+func (c *Client) updatePlayCount(trackID uuid.UUID) {
+	// FIXME: Do we need context here?
+	ctx := context.TODO()
+
+	err := c.AddPlayCount(ctx, trackID)
+	if err != nil {
+		c.log.ErrorContext(ctx, "could not add play count", "error", err.Error())
+		return
+	}
+	c.log.DebugContext(ctx, "added play count", "track_id", trackID)
+
+	// c.emitEvent(types.ClientEventEntitiesUpdated, nil)
+}
+
+func (c *Client) AddTrackToQueue(ctx context.Context, trackID, albumID uuid.UUID) error {
+	track, err := c.GetTrackDetailed(ctx, trackID, albumID)
+	if err != nil {
+		return err
+	}
+
+	c.PlaybackControllerFace.AddTrackToQueue(ctx, track)
+	return nil
+}
+
+// FIXME ONLY FOR TEST
+func (c *Client) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
+	err := c.clientFace.LoginLocalUser(ctx, userID)
+	if err != nil {
+		return err
+	}
+	err = c.SubscribeDeviceEvents(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// FIXME ONLY FOR TEST
+func (c *Client) LoginToken(ctx context.Context, token string) (types.UserDetails, error) {
+	user, err := c.clientFace.LoginToken(ctx, token)
+	if err != nil {
+		return types.UserDetails{}, err
+	}
+	err = c.SubscribeDeviceEvents(ctx)
+	if err != nil {
+		return types.UserDetails{}, err
+	}
+	return user, nil
+}
+
+func (c *Client) handlePlayerEvents(ctx context.Context, e types.SSEvent) {
+	switch e.Type {
+	case types.SSEventTypePlayerAddToQueue:
+		track, err := types.DecodeEventData[types.TrackDetailed](e)
+		if err != nil {
+			c.log.ErrorContext(ctx, "could not decode playerstate data in event", "event.type", e.Type, "event.id", e.ID.String(), "event.data", e.Data)
+			return
+		}
+
+		c.PlaybackControllerFace.AddTrackToQueue(ctx, track)
+	case types.SSEventTypePlayerNextTrack:
+		if err := c.NextTrack(ctx); err != nil {
+			c.log.ErrorContext(ctx, "could not execute remote command", "command", e.Type, "error", err.Error())
+		}
+	case types.SSEventTypePlayerPlayPause:
+		c.PlayPause(ctx)
+	case types.SSEventTypePlayerPreviousTrack:
+		if err := c.PreviousTrack(ctx); err != nil {
+			c.log.ErrorContext(ctx, "could not execute remote command", "command", e.Type, "error", err.Error())
+		}
+	case types.SSEventTypePlayerSetRepeat:
+		rt, err := types.DecodeEventData[types.RepeatType](e)
+		if err != nil {
+			c.log.ErrorContext(ctx, "could not decode playerstate data in event", "event.type", e.Type, "event.id", e.ID.String(), "event.data", e.Data)
+			return
+		}
+		c.SetRepeat(ctx, rt)
+	case types.SSEventTypePlayerSetShuffle:
+		s, err := types.DecodeEventData[bool](e)
+		if err != nil {
+			c.log.ErrorContext(ctx, "could not decode playerstate data in event", "event.type", e.Type, "event.id", e.ID.String(), "event.data", e.Data)
+			return
+		}
+		c.SetShuffle(ctx, s)
+	case types.SSEventTypePlayerSetState:
+		ps, err := types.DecodeEventData[types.PlayerState](e)
+		if err != nil {
+			c.log.ErrorContext(ctx, "could not decode playerstate data in event", "event.type", e.Type, "event.id", e.ID.String(), "event.data", e.Data)
+			return
+		}
+
+		if err = c.LoadAndStartTracks(ctx, ps); err != nil {
+			c.log.ErrorContext(ctx, "could not load state", "error", err.Error())
+			return
+		}
+	case types.SSEventTypePlayerStop:
+		if err := c.Stop(ctx); err != nil {
+			c.log.ErrorContext(ctx, "could not execute remote command", "command", e.Type, "error", err.Error())
+		}
+	}
+}
+
+func (c *Client) handlePlayContextCallbacks(ctx context.Context, pc types.PlayContext) {
+	err := c.sc.UpdatePlayContext(ctx, pc)
+	if err != nil {
+		c.log.ErrorContext(ctx, "could not send playcontext to server", "error", err.Error())
+	}
+}
+
+func (c *Client) handlePlaybackStateCallbacks(ctx context.Context, ps types.PlaybackState) {
+	err := c.sc.UpdatePlaybackState(ctx, ps)
+	if err != nil {
+		c.log.ErrorContext(ctx, "could not send playback state to server", "error", err.Error())
+	}
+}
+
+func New(ctx context.Context, config Config, slogHandler slog.Handler) (ClientFace, error) {
+	var cf clientFace
+	var ar audioreader.AudioReader
+	var err error
+
 	sc := serverclient.New(config.ServerBaseURL, slogHandler)
+
+	switch config.ClientType {
+	case types.DeviceTypeStreaming:
+		cf, err = newStreamingClient(ctx, config, &sc, slogHandler)
+		if err != nil {
+			return nil, err
+		}
+		ar = audioreader.NewServerReader(&sc, slogHandler)
+	case types.DeviceTypeSync:
+		cf, err = newSyncClient(ctx, config, &sc, slogHandler)
+		if err != nil {
+			return nil, err
+		}
+		ar = audioreader.NewLocalReader(config.MusicDirPath)
+	default:
+		return nil, errors.New("type not implemented")
+	}
+
+	id, err := NewIdentity("lucas test")
+	if err != nil {
+		return nil, err
+	}
 
 	pa, err := audiointerface.NewPortAudio(slogHandler)
 	if err != nil {
@@ -384,35 +610,47 @@ func NewStreamingClient(ctx context.Context, config Config, slogHandler slog.Han
 		MusicDirPath: config.MusicDirPath,
 	}
 
-	ar := audioreader.NewServerReader(&sc, slogHandler)
-
 	ap, err := audioplayer.New(apCfg, pa, ar, slogHandler)
 	if err != nil {
 		return nil, err
 	}
 
-	jm := jobmanager.New(slogHandler)
+	// FIXME: Needs to make another client structure. With authed starting the real clients
+	da := device.NewAgent(slogHandler, &sc, uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111")), types.DeviceBase{
+		Name:             config.PlayerName,
+		Type:             config.ClientType,
+		Interface:        config.ClientInterface,
+		Icon:             config.ClientIcon,
+		SupportsPlayback: true,
+		Platform:         "linux",
+		Version:          "1.2.0",
+	},
+		config.StateFilePath,
+	)
 
-	c := &ClientStreaming{
-		config:       config,
-		log:          slog.New(slogHandler).With("service", "client"),
-		AuthClient:   authclient.New(&sc, slogHandler),
-		AudioPlayer:  ap,
-		JobManager:   &jm,
-		ServerClient: &sc,
-		NoSync:       &syncer.NoSync{},
-		berr:         bragerr.NewFactory("client"),
+	// FIXME: Only for visual clients
+	pc := playbackcontroller.New(ap, da, &sc, slogHandler)
+
+	c := &Client{
+		clientFace:             cf,
+		Identity:               &id,
+		PlaybackControllerFace: pc,
+		sc:                     &sc,
+		log:                    slog.New(slogHandler).With("service", "client"),
+		DeviceAgent:            da,
+		activeRemoteDevice:     nil,
+		contextCallbacks:       []func(context.Context, types.PlayContext){},
+		playbackCallbacks:      []func(context.Context, types.PlaybackState){},
 	}
 
+	// if err := da.SubscribeDeviceEvents(ctx); err != nil {
+	// 	return nil, err
+	// }
 	ap.RegisterPlayCountCallback(c.updatePlayCount)
-	c.RegisterUserCallback(c.setUser)
-	// c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
+	ap.RegisterPlayContextCallback(c.handlePlayContextCallbacks)
+	ap.RegisterPlaybackStateCallback(c.handlePlaybackStateCallbacks)
 
-	jm.RegisterJob(ctx, jobmanager.JobDefinition{
-		Type:     types.JobAuthClientServerStatus,
-		CronExpr: "*/10 * * * * *",
-		Run:      c.AuthClient.UpdateServerStatus,
-	})
+	da.SubscribeToEventCategory(c.handlePlayerEvents, "player")
 
 	return c, nil
 }

@@ -1,0 +1,451 @@
+package server
+
+import (
+	"context"
+	"net/http"
+
+	"github.com/bragemusic/core/pkg/auth"
+	"github.com/bragemusic/core/pkg/device"
+	"github.com/bragemusic/core/pkg/routes"
+	"github.com/bragemusic/core/pkg/types"
+)
+
+func (s *Server) deviceRoutes() []routes.RouteHandler {
+	r := []routes.RouteHandler{}
+	r = append(r, s.deviceStandardAuthRoutes()...)
+
+	deviceAvailable := s.deviceDeviceAvailableRoutes()
+	userAvailable := s.deviceUserAvailableRoutes()
+
+	devicdMW := routes.RouteMiddleware{
+		Name:        "Device Authenticated",
+		Description: "Only the device has access to itself on this route",
+		Func:        s.devicemgr.MiddlewareDeviceAccess,
+	}
+
+	userMW := routes.RouteMiddleware{
+		Name:        "User Authenticated",
+		Description: "Only the user has access to their own devices on this route",
+		Func:        s.devicemgr.MiddlewareUserAccess,
+	}
+
+	for idx := range deviceAvailable {
+		deviceAvailable[idx] = deviceAvailable[idx].AddMiddleware(devicdMW)
+	}
+
+	for idx := range userAvailable {
+		userAvailable[idx] = userAvailable[idx].AddMiddleware(userMW)
+	}
+
+	r = append(r, deviceAvailable...)
+	r = append(r, userAvailable...)
+
+	return r
+}
+
+func (s *Server) deviceStandardAuthRoutes() []routes.RouteHandler {
+	return []routes.RouteHandler{
+		routes.New("GET", "/", s.listDevices(), nil, routes.RouteMeta{
+			Summary:             "List user's devices.",
+			Description:         "List user's devices. Can filter for only active or all.",
+			ExpectedDescription: "Device data",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/", s.registerDevice(), nil, routes.RouteMeta{
+			Summary:             "Register or update a device.",
+			Description:         "Registers a device if not existing, otherwise updates the exisiting one.",
+			ExpectedDescription: "Succesfull registration",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusCreated,
+		}),
+	}
+}
+
+func (s *Server) deviceDeviceAvailableRoutes() []routes.RouteHandler {
+	return []routes.RouteHandler{
+		routes.New("GET", "/{deviceID}/events", s.sseHub.EventsHandler(), nil, routes.RouteMeta{
+			Summary:             "Subscribe to SSE events.",
+			Description:         "Streams events from the server to the client.",
+			ExpectedDescription: "Streamed event data",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/{deviceID}/playcontext", s.deviceUpdatePlayerPlayContext(), nil, routes.RouteMeta{
+			Summary:             "Update the device current play context.",
+			Description:         "Update the playcontext for the selected device. Can only be accessed if the device ID is belonging to the token the user is logged in with.",
+			ExpectedDescription: "PlayContext updated",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/{deviceID}/playbackstate", s.deviceUpdatePlayerPlaybackState(), nil, routes.RouteMeta{
+			Summary:             "Update the device current playback state.",
+			Description:         "Update the playback statefor the selected device. Can only be accessed if the device ID is belonging to the token the user is logged in with.",
+			ExpectedDescription: "PlaybackState updated",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+	}
+}
+
+func (s *Server) deviceUserAvailableRoutes() []routes.RouteHandler {
+	return []routes.RouteHandler{
+		routes.New("POST", "/{deviceID}/player/next", s.devicePlayerNextTrack(), nil, routes.RouteMeta{
+			Summary:             "Sends a next track command to player.",
+			Description:         "Sends a command to tell the selected device to go to the next track. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/{deviceID}/player/play-pause", s.devicePlayerPlayPause(), nil, routes.RouteMeta{
+			Summary:             "Sends a play/pause command to player.",
+			Description:         "Sends a command to tell the selected device to play or pause. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/{deviceID}/player/previous", s.devicePlayerPreviousTrack(), nil, routes.RouteMeta{
+			Summary:             "Sends a previous track command to player.",
+			Description:         "Sends a command to tell the selected device to go to the previous track. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/{deviceID}/player/repeat", s.devicePlayerSetRepeat(), nil, routes.RouteMeta{
+			Summary:             "Sends a set repeat command to player.",
+			Description:         "Sends a command to tell the selected device to set repeat state. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/{deviceID}/player/shuffle", s.devicePlayerSetShuffle(), nil, routes.RouteMeta{
+			Summary:             "Sends a set shuffle command to player.",
+			Description:         "Sends a command to tell the selected device to set shuffle state. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/{deviceID}/player/stop", s.devicePlayerStop(), nil, routes.RouteMeta{
+			Summary:             "Sends a stop command to player.",
+			Description:         "Sends a command to tell the selected device to stop playback. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/{deviceID}/player/state", s.devicePlayerSetState(), nil, routes.RouteMeta{
+			Summary:             "Sends a playstate command to player.",
+			Description:         "Sends a command to tell the selected device to start a new playstate. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("POST", "/{deviceID}/player/queue", s.devicePlayerAddToQueue(), nil, routes.RouteMeta{
+			Summary:             "Add a track to the queue",
+			Description:         "Sends a command to tell the selected device to add a track to its queue. If the device does not support playback error is returned.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+
+		routes.New("DELETE", "/{deviceID}", s.deviceDelete(), nil, routes.RouteMeta{
+			Summary:             "Delete device by ID",
+			Description:         "Delete the selected device.",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusNoContent,
+		}),
+
+		routes.New("DELETE", "/{deviceID}/token", s.deviceTokenDelete(), nil, routes.RouteMeta{
+			Summary:             "Delete token used by the device",
+			Description:         "The token currently used by the device is removed from the server and access will be denied",
+			ExpectedDescription: "Command sent",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusNoContent,
+		}),
+	}
+}
+
+// FIXME: The routes object should probably be divided in to 3 parts:
+// - listdevices, registerdevice (standard auth)
+// - play-pause, start track, next track and so on: deviceID is owned by the user
+// - update playcontext, playback state: deviceID is the one that correspondes with the used token. This might require unique on the device - token relationship.
+
+func (s *Server) listDevices() routes.RouteFunc[ReqNoContent, types.ListPayload[types.DeviceDetailed]] {
+	return func(ctx context.Context, req ReqNoContent, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[types.DeviceDetailed]], err error) {
+		d, err := s.devicemgr.ListActiveDevices(ctx, user.ID)
+		if err != nil {
+			return types.Response[types.ListPayload[types.DeviceDetailed]]{}, err
+		}
+
+		return types.Response[types.ListPayload[types.DeviceDetailed]]{
+			Payload: types.ListPayload[types.DeviceDetailed]{
+				Items: d,
+				Count: len(d),
+			},
+			Status: http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) registerDevice() routes.RouteFunc[ReqDevicesRegister, types.RespDevicesRegister] {
+	return func(ctx context.Context, req ReqDevicesRegister, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.RespDevicesRegister], err error) {
+		tokenID, err := auth.TokenIDFromContext(ctx)
+		if err != nil {
+			return types.Response[types.RespDevicesRegister]{}, err
+		}
+
+		device := types.Device{
+			DeviceBase: req.DeviceBase,
+			UserID:     user.ID,
+			LastIP:     "must.add.ip.here",
+		}
+
+		id, err := s.devicemgr.RegisterOrUpdateDevice(ctx, req.ID, tokenID, user.ID, device)
+		if err != nil {
+			return types.Response[types.RespDevicesRegister]{}, err
+		}
+
+		if req.ID == nil {
+			return types.Response[types.RespDevicesRegister]{
+				Payload: types.RespDevicesRegister{
+					DeviceID: id,
+				},
+				Status: http.StatusCreated,
+			}, nil
+		} else {
+			return types.Response[types.RespDevicesRegister]{
+				Payload: types.RespDevicesRegister{
+					DeviceID: id,
+				},
+				Status: http.StatusOK,
+			}, nil
+		}
+	}
+}
+
+func (s *Server) devicePlayerNextTrack() routes.RouteFunc[ReqDevicesGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		callingDeviceID, err := device.CallingDeviceIDFromContext(ctx)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		if err := s.devicemgr.PlayerNextTrack(ctx, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) devicePlayerPlayPause() routes.RouteFunc[ReqDevicesGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		callingDeviceID, err := device.CallingDeviceIDFromContext(ctx)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		if err := s.devicemgr.PlayerPlayPause(ctx, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) devicePlayerPreviousTrack() routes.RouteFunc[ReqDevicesGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		callingDeviceID, err := device.CallingDeviceIDFromContext(ctx)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		if err := s.devicemgr.PlayerPreviousTrack(ctx, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) devicePlayerSetRepeat() routes.RouteFunc[ReqDevicesPlayerSetRepeat, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesPlayerSetRepeat, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		callingDeviceID, err := device.CallingDeviceIDFromContext(ctx)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		if err := s.devicemgr.PlayerSetRepeat(ctx, req.Type, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) devicePlayerSetShuffle() routes.RouteFunc[ReqDevicesPlayerSetShuffle, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesPlayerSetShuffle, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		callingDeviceID, err := device.CallingDeviceIDFromContext(ctx)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		if err := s.devicemgr.PlayerSetShuffle(ctx, req.Active, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) devicePlayerStop() routes.RouteFunc[ReqDevicesGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		callingDeviceID, err := device.CallingDeviceIDFromContext(ctx)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		if err := s.devicemgr.PlayerStop(ctx, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) deviceUpdatePlayerPlayContext() routes.RouteFunc[ReqDevicesUpdatePlayContext, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesUpdatePlayContext, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		if err := s.devicemgr.UpdatePlayerPlayContext(ctx, req.PlayContextDTO, req.DeviceID, user.ID); err != nil {
+			return resp, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) deviceUpdatePlayerPlaybackState() routes.RouteFunc[ReqDevicesUpdatePlaybackState, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesUpdatePlaybackState, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		if err := s.devicemgr.UpdatePlayerPlaybackState(ctx, req.PlaybackStateDTO, req.DeviceID, user.ID); err != nil {
+			return resp, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) devicePlayerSetState() routes.RouteFunc[ReqDevicesPlayerSetState, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesPlayerSetState, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		callingDeviceID, err := device.CallingDeviceIDFromContext(ctx)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		if err := s.devicemgr.PlayerSetState(ctx, req.PlayerState, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) devicePlayerAddToQueue() routes.RouteFunc[ReqDevicesPlayerAddToQueue, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesPlayerAddToQueue, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		callingDeviceID, err := device.CallingDeviceIDFromContext(ctx)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		if err := s.devicemgr.PlayerAddToQueue(ctx, req.TrackDetailed, req.DeviceID, callingDeviceID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) deviceDelete() routes.RouteFunc[ReqDevicesGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		err = s.devicemgr.DeleteDevice(ctx, req.DeviceID, user.ID)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusNoContent,
+		}, nil
+	}
+}
+
+func (s *Server) deviceTokenDelete() routes.RouteFunc[ReqDevicesGet, types.NoResponse] {
+	return func(ctx context.Context, req ReqDevicesGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		deviceToken, err := s.devicemgr.GetDeviceToken(ctx, req.DeviceID, user.ID)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		if err := s.authPkg.RemoveToken(ctx, deviceToken.TokenID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusNoContent,
+		}, nil
+	}
+}

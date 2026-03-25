@@ -1,6 +1,8 @@
 package types
 
-import "log/slog"
+import (
+	"log/slog"
+)
 
 type (
 	ClientEvent string
@@ -32,7 +34,8 @@ const (
 
 	ClientEventEntitiesUpdated ClientEvent = "entities.updated"
 
-	ClientEventPlayerContextChange ClientEvent = "player.contextchange"
+	ClientEventPlayerContextChange  ClientEvent = "player.contextchange"
+	ClientEventPlayerPlaybackChange ClientEvent = "player.playbackchange"
 
 	ClientEventUserUpdated ClientEvent = "user.updated"
 )

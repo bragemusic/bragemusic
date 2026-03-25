@@ -225,6 +225,84 @@ func (r ReqLikesGet) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqDevicesRegister struct {
+	types.ReqDevicesRegister
+}
+
+func (r ReqDevicesRegister) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqDevicesGet struct {
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
+}
+
+func (r ReqDevicesGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqDevicesPlayerSetRepeat struct {
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
+	types.SetDevicePlayerRepeatReq
+}
+
+func (r ReqDevicesPlayerSetRepeat) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqDevicesPlayerSetShuffle struct {
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
+	types.SetDevicePlayerShuffleReq
+}
+
+func (r ReqDevicesPlayerSetShuffle) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqDevicesUpdatePlayContext struct {
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
+	types.PlayContextDTO
+}
+
+func (r ReqDevicesUpdatePlayContext) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqDevicesUpdatePlaybackState struct {
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
+	types.PlaybackStateDTO
+}
+
+func (r ReqDevicesUpdatePlaybackState) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqDevicesPlayerSetState struct {
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
+	types.PlayerState
+}
+
+func (r ReqDevicesPlayerSetState) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqDevicesPlayerAddToQueue struct {
+	DeviceID uuid.UUID `path:"deviceID" description:"ID of the wanted device"`
+	types.TrackDetailed
+}
+
+func (r ReqDevicesPlayerAddToQueue) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqTokensBase struct {
+	TokenID uuid.UUID `path:"tokenID" description:"ID of the wanted token"`
+}
+
+func (r ReqTokensBase) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`
