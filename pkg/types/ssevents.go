@@ -42,8 +42,9 @@ type SSEvent struct {
 
 const (
 	SSEventTypeDeviceConnected     SSEventType = "device.connected"
-	SSEventTypeDeviceUpdated       SSEventType = "device.updated"
 	SSEventTypeDeviceDisconnected  SSEventType = "device.disconnected"
+	SSEventTypeDeviceUpdated       SSEventType = "device.updated"
+	SSEventTypeDeviceDeleted       SSEventType = "device.deleted"
 	SSEventTypeDevicePlayContext   SSEventType = "device.playcontext"
 	SSEventTypeDevicePlaybackState SSEventType = "device.playbackstate"
 	SSEventTypePlayerAddToQueue    SSEventType = "player.addtoqueue"
@@ -88,6 +89,10 @@ func SSEDeviceConnected(d Device) SSEvent {
 
 func SSEDeviceUpdated(d Device) SSEvent {
 	return newSSEvent(SSEventTypeDeviceUpdated, d)
+}
+
+func SSEDeviceDeleted(id uuid.UUID) SSEvent {
+	return newSSEvent(SSEventTypeDeviceDeleted, id)
 }
 
 func SSEDeviceDisconnected(d Device) SSEvent {

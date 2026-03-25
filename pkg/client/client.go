@@ -286,6 +286,7 @@ type JobManagerFace interface {
 type DeviceManagerFace interface {
 	ListDevices(ctx context.Context) (devices []types.DeviceDetailed, err error)
 	SubscribeToEventTypes(handler sse.EventHandler, eventType ...types.SSEventType)
+	DeleteDevice(ctx context.Context, deviceID uuid.UUID) error
 	DeleteDeviceToken(ctx context.Context, deviceID uuid.UUID) error
 }
 

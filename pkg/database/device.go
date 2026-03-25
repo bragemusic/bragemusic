@@ -20,6 +20,7 @@ type DeviceFace interface {
 	GetDeviceFromTokenID(ctx context.Context, tokenID uuid.UUID) (types.Device, error)
 	GetDeviceFromTokenAndDeviceID(ctx context.Context, deviceID, tokenID uuid.UUID) (device types.Device, err error)
 	GetDeviceTokenFromDeviceID(ctx context.Context, deviceID uuid.UUID) (types.DeviceToken, error)
+	DeleteDevice(ctx context.Context, id uuid.UUID) error
 	ListUsersDevices(ctx context.Context, userID uuid.UUID) (devices []types.Device, err error)
 	LinkDeviceToken(ctx context.Context, deviceID, tokenID uuid.UUID) error
 	UpdateDevice(ctx context.Context, device types.Device) error
@@ -162,6 +163,28 @@ func (d Database) GetDeviceTokenFromDeviceID(ctx context.Context, deviceID uuid.
 	}
 
 	return dt, nil
+}
+
+func (d Database) DeleteDevice(ctx context.Context, id uuid.UUID) error {
+	query := `
+        DELETE FROM devices WHERE id = :id;
+    `
+
+	res, err := d.ext.ExecContext(ctx, query, id)
+	if err != nil {
+		return err
+	}
+
+	ra, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if ra == 0 {
+		return ErrNoRowDeleted
+	}
+
+	return nil
 }
 
 func (d Database) LinkDeviceToken(ctx context.Context, deviceID, tokenID uuid.UUID) error {

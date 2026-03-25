@@ -33,14 +33,16 @@ type eventEnvelope struct {
 }
 
 type client struct {
-	deviceID uuid.UUID
-	userID   uuid.UUID
-	events   chan eventEnvelope
+	deviceID   uuid.UUID
+	userID     uuid.UUID
+	events     chan eventEnvelope
+	disconnect chan struct{}
 }
 
 type Dispatcher interface {
 	Broadcast(types.SSEvent) error
 	ActiveDevices(userID uuid.UUID) []uuid.UUID
+	DisconnectDevice(id uuid.UUID)
 	SendToDevice(deviceID uuid.UUID, ev types.SSEvent) error
 	SendToUser(userID uuid.UUID, ev types.SSEvent, excludeDevices ...uuid.UUID) error
 }
@@ -121,6 +123,19 @@ func (h *Hub) SendToUser(userID uuid.UUID, ev types.SSEvent, excludeDevices ...u
 	return nil
 }
 
+func (h *Hub) DisconnectDevice(id uuid.UUID) {
+	for c := range h.clients {
+		if c.deviceID == id {
+			select {
+			case c.disconnect <- struct{}{}:
+			default: // already signaled
+				h.log.Warn("disconnect signal already sent to device", "id", id)
+			}
+			return
+		}
+	}
+}
+
 func (h *Hub) ActiveDevices(userID uuid.UUID) (d []uuid.UUID) {
 	for c := range h.clients {
 		if c.userID == userID {
@@ -190,9 +205,10 @@ func (h *Hub) EventsHandler() routes.RouteFunc[ReqEvents, types.NoResponse] {
 		}
 
 		client := &client{
-			deviceID: device.ID,
-			userID:   user.ID,
-			events:   make(chan eventEnvelope, 16),
+			deviceID:   device.ID,
+			userID:     user.ID,
+			events:     make(chan eventEnvelope, 16),
+			disconnect: make(chan struct{}, 1),
 		}
 
 		h.log.InfoContext(ctx, "new client subscription", "device.name", device.Name, "user.email", user.Email)
@@ -220,6 +236,10 @@ func (h *Hub) EventsHandler() routes.RouteFunc[ReqEvents, types.NoResponse] {
 			select {
 
 			case <-ctx.Done():
+				return
+
+			case <-client.disconnect:
+				h.log.InfoContext(ctx, "server wants client to disconnect", "device.name", device.Name, "user.email", user.Email)
 				return
 
 			case e, ok := <-client.events:

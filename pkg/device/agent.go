@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -125,6 +126,18 @@ func (a *DeviceAgent) handleDeviceEvents(ctx context.Context, e types.SSEvent) {
 		a.log.InfoContext(ctx, "client disconnecteted", "device.name", d.Name)
 		return
 
+	case types.SSEventTypeDeviceDeleted:
+		id, err := types.DecodeEventData[uuid.UUID](e)
+		if err != nil {
+			a.log.ErrorContext(ctx, "could not decode device data in event", "event.type", e.Type, "event.id", e.ID.String(), "event.data", e.Data)
+			return
+		}
+
+		a.deleteDevice(id)
+
+		a.log.InfoContext(ctx, "client deleted", "device.id", id)
+		return
+
 	case types.SSEventTypePlayerPlayContext:
 		pc, err := types.DecodeEventData[types.PlayContextDTO](e)
 		if err != nil {
@@ -232,7 +245,21 @@ func (a *DeviceAgent) SubscribeDeviceEvents(ctx context.Context) error {
 
 	newDeviceID, err := a.sc.RegisterDevice(ctx, deviceID, a.deviceMeta)
 	if err != nil {
-		return err
+		serr, ok := err.(serverclient.ErrStatus)
+		if !ok {
+			return err
+		}
+
+		if serr.Status != http.StatusNotFound {
+			return err
+		}
+
+		newDeviceID, err = a.sc.RegisterDevice(ctx, nil, a.deviceMeta)
+		if err != nil {
+			return err
+		}
+
+		a.log.InfoContext(ctx, "device does not exist on server. New ID has been given", "old_id", deviceID, "new_id", newDeviceID)
 	}
 
 	if err := a.saveLocalDeviceID(a.userID, newDeviceID); err != nil {
@@ -272,6 +299,10 @@ func (a *DeviceAgent) GetDevice(ctx context.Context, id uuid.UUID) (device types
 
 func (a *DeviceAgent) DeleteDeviceToken(ctx context.Context, deviceID uuid.UUID) error {
 	return a.sc.DeviceDeleteToken(ctx, deviceID)
+}
+
+func (a *DeviceAgent) DeleteDevice(ctx context.Context, deviceID uuid.UUID) error {
+	return a.sc.DeviceDelete(ctx, deviceID)
 }
 
 func NewAgent(slogHandler slog.Handler, sc *serverclient.ServerClient, userID uuid.UUID, meta types.DeviceBase, stateFilePath *string) *DeviceAgent {

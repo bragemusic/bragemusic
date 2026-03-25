@@ -352,8 +352,7 @@ func (d DeviceManager) RegisterOrUpdateDevice(ctx context.Context, id *uuid.UUID
 	if id != nil {
 		existing, err := tx.GetDevice(ctx, *id)
 		if err != nil {
-			// FIXME: bragerr
-			return uuid.Nil, err
+			return uuid.Nil, d.berr.DatabaseError(err, types.EntityDevice, id)
 		}
 
 		if existing.UserID != userID {
@@ -430,6 +429,30 @@ func (d DeviceManager) GetDeviceToken(ctx context.Context, deviceID, userID uuid
 	}
 
 	return dt, nil
+}
+
+func (d DeviceManager) DeleteDevice(ctx context.Context, deviceID, userID uuid.UUID) error {
+	device, err := d.db.GetDevice(ctx, deviceID)
+	if err != nil {
+		return err
+	}
+
+	if device.UserID != userID {
+		return d.berr.ItemAccessDenied(errors.New("user is not the owner of the device"), types.EntityDevice, deviceID)
+	}
+
+	if err := d.db.DeleteDevice(ctx, deviceID); err != nil {
+		return d.berr.DatabaseError(err, types.EntityDevice, &deviceID)
+	}
+
+	d.sseDispatch.DisconnectDevice(deviceID)
+
+	err = d.sseDispatch.SendToUser(userID, types.SSEDeviceDeleted(deviceID))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func NewManager(sd sse.Dispatcher, db database.DeviceFace, slogHandler slog.Handler) DeviceManager {
