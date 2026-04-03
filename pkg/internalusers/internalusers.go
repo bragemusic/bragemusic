@@ -7,8 +7,8 @@ import (
 
 var MetaSyncer = uuid.Must(uuid.FromString("00000000-0000-0000-0000-000000000001"))
 
-func GetIntenalUsers() []types.User {
-	return []types.User{
+func GetIntenalUsers() []types.UserDetails {
+	return []types.UserDetails{
 		{
 			ID:       MetaSyncer,
 			Email:    "",

@@ -289,8 +289,8 @@ func (c clientSync) ListEntityEvents(ctx context.Context) ([]types.EntityEvent, 
 	return c.sc.ListEntityEvents(ctx)
 }
 
-func (c clientSync) ListUsers(ctx context.Context) ([]types.User, error) {
-	return c.sc.ListUsers(ctx)
+func (c clientSync) ListUsers(ctx context.Context, includeMachineUsers bool) ([]types.UserDetails, error) {
+	return c.sc.ListUsers(ctx, includeMachineUsers)
 }
 
 func (c clientSync) ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error {

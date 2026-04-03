@@ -247,7 +247,7 @@ type MetadataFace interface {
 	ListEntityEvents(ctx context.Context) ([]types.EntityEvent, error)
 
 	// ListUsers returns all users known to the system.
-	ListUsers(ctx context.Context) ([]types.User, error)
+	ListUsers(ctx context.Context, includeMachineUsers bool) ([]types.UserDetails, error)
 
 	// SearchFull performs a full-text search across supported entities
 	// and returns matching search items.

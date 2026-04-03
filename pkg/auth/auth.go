@@ -39,7 +39,7 @@ func (a Auth) GetUserFromContext(ctx context.Context) (types.UserDetails, error)
 	return user, err
 }
 
-func (a Auth) ListUsers(ctx context.Context) ([]types.User, error) {
+func (a Auth) ListUsers(ctx context.Context) ([]types.UserDetails, error) {
 	users, err := a.db.ListUsers(ctx)
 	return users, err
 }
