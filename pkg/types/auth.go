@@ -17,7 +17,10 @@ const (
 	UserRoleRead          UserRole = "read"
 	UserRoleWrite         UserRole = "write"
 	UserRoleImporterWrite UserRole = "importer:write"
-	UserRoleUsersGet      UserRole = "users:get"
+	UserRoleUsersRead     UserRole = "users:read"
+	UserRoleUsersCreate   UserRole = "users:create"
+	UserRoleUsersUpdate   UserRole = "users:update"
+	UserRoleUsersDelete   UserRole = "users:delete"
 
 	AuthLocal AuthProvider = "local"
 
@@ -26,6 +29,17 @@ const (
 	TokenClient        TokenType = "client"
 	TokenMachine       TokenType = "machine"
 )
+
+var AllUserRoles = []UserRole{
+	UserRoleAdmin,
+	UserRoleRead,
+	UserRoleWrite,
+	UserRoleImporterWrite,
+	UserRoleUsersRead,
+	UserRoleUsersCreate,
+	UserRoleUsersUpdate,
+	UserRoleUsersDelete,
+}
 
 type UserDetails struct {
 	ID        uuid.UUID    `db:"id" json:"id" ts_type:"string"`

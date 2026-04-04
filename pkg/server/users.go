@@ -11,7 +11,7 @@ import (
 
 func (s *Server) userRoutes() []routes.RouteHandler {
 	return []routes.RouteHandler{
-		routes.New("GET", "/", s.listUsers(), []types.UserRole{types.UserRoleAdmin, types.UserRoleUsersGet}, routes.RouteMeta{
+		routes.New("GET", "/", s.listUsers(), []types.UserRole{types.UserRoleAdmin, types.UserRoleUsersRead}, routes.RouteMeta{
 			Summary:             "List all users.",
 			Description:         "List all users on the server, including backend machine users.",
 			ExpectedDescription: "List of users",
@@ -19,6 +19,29 @@ func (s *Server) userRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
+
+		routes.New("POST", "/", s.createUser(), []types.UserRole{types.UserRoleAdmin, types.UserRoleUsersCreate}, routes.RouteMeta{
+			Summary:             "Create a new user.",
+			Description:         "Create a new user with a local auth provider",
+			ExpectedDescription: "User created",
+			Tags:                []string{"Users"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusNoContent,
+		}),
+	}
+}
+
+func (s *Server) createUser() routes.RouteFunc[ReqUsersCreate, types.NoResponse] {
+	return func(ctx context.Context, req ReqUsersCreate, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		err = s.authPkg.CreateUser(ctx, req.Email, req.Username, req.Password, req.Roles)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusNoContent,
+		}, nil
 	}
 }
 

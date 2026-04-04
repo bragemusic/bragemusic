@@ -76,3 +76,10 @@ type SetDevicePlayerRepeatReq struct {
 type SetDevicePlayerShuffleReq struct {
 	Active bool `json:"active" description:"Shuffle is active"`
 }
+
+type CreateUserReq struct {
+	Email    string     `json:"email"`
+	Username string     `json:"username"`
+	Password string     `json:"password"`
+	Roles    []UserRole `json:"roles"`
+}

@@ -39,3 +39,18 @@ func (s ServerClient) DeleteToken(ctx context.Context, tokenID uuid.UUID) error 
 
 	return nil
 }
+
+func (s ServerClient) ListUserRoles(ctx context.Context) ([]types.UserRole, error) {
+	u, err := url.JoinPath(s.baseUrl, "auth", "user-roles")
+	if err != nil {
+		return nil, err
+	}
+
+	resp := types.ListPayload[types.UserRole]{}
+
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Items, nil
+}

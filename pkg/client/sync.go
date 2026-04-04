@@ -289,8 +289,16 @@ func (c clientSync) ListEntityEvents(ctx context.Context) ([]types.EntityEvent, 
 	return c.sc.ListEntityEvents(ctx)
 }
 
+func (c clientSync) CreateUser(ctx context.Context, email, username, password string, roles []types.UserRole) error {
+	return c.sc.CreateUser(ctx, email, username, password, roles)
+}
+
 func (c clientSync) ListUsers(ctx context.Context, includeMachineUsers bool) ([]types.UserDetails, error) {
 	return c.sc.ListUsers(ctx, includeMachineUsers)
+}
+
+func (c clientSync) ListUserRoles(ctx context.Context) ([]types.UserRole, error) {
+	return c.sc.ListUserRoles(ctx)
 }
 
 func (c clientSync) ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error {
