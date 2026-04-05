@@ -14,6 +14,7 @@ func (s *Server) auth() http.Handler {
 	r.Post("/login", s.login())
 
 	r.With(s.authPkg.Middleware).Mount("/tokens", s.buildMount(s.tokenRoutes()))
+	r.With(s.authPkg.Middleware).Mount("/user-roles", s.buildMount(s.userRoleRoutes()))
 
 	return r
 }

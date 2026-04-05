@@ -246,9 +246,6 @@ type MetadataFace interface {
 	// ListEntityEvents returns metadata-related entity events.
 	ListEntityEvents(ctx context.Context) ([]types.EntityEvent, error)
 
-	// ListUsers returns all users known to the system.
-	ListUsers(ctx context.Context) ([]types.User, error)
-
 	// SearchFull performs a full-text search across supported entities
 	// and returns matching search items.
 	SearchFull(ctx context.Context, searchTerm string) (si []types.SearchItem, err error)
@@ -271,6 +268,23 @@ type MetadataFace interface {
 
 	// CountLikedTracks returns the total number of tracks liked by the authenticated user.
 	CountLikedTracks(ctx context.Context) (cnt int, err error)
+}
+
+type AccessFace interface {
+	// CreateUser creates a new user on the server.
+	CreateUser(ctx context.Context, email, username, password string, roles []types.UserRole) error
+
+	// DeleteUser removes the selected user from the server. This action cannot be reversed.
+	DeleteUser(ctx context.Context, id uuid.UUID) error
+
+	// ListUsers returns all users known to the system.
+	ListUsers(ctx context.Context, includeMachineUsers bool) ([]types.UserDetails, error)
+
+	// ListUserRoles returns a list of available user roles
+	ListUserRoles(ctx context.Context) ([]types.UserRole, error)
+
+	// UpdateUser updates the selected user's information. If password is not nil, it will be changed.
+	UpdateUser(ctx context.Context, userID uuid.UUID, email, username string, password *string, roles []types.UserRole) error
 }
 
 // JobManagerFace defines background job execution and scheduling functionality.
@@ -307,6 +321,7 @@ type clientFace interface {
 	AuthFace
 	MetadataFace
 	JobManagerFace
+	AccessFace
 }
 
 type ClientFace interface {

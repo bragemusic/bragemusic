@@ -19,7 +19,7 @@ type AuthFace interface {
 	UpdateUser(ctx context.Context, user types.User) error
 	RemoveUser(ctx context.Context, userID uuid.UUID) error
 	GetUserFromEmail(ctx context.Context, email string) (types.User, error)
-	ListUsers(ctx context.Context) (users []types.User, err error)
+	ListUsers(ctx context.Context) ([]types.UserDetails, error)
 
 	CreateAuthIdentity(ctx context.Context, ai types.AuthIdentity) (uuid.UUID, error)
 	GetAuthIdentityForUser(ctx context.Context, userID uuid.UUID) (ai types.AuthIdentity, err error)
@@ -144,18 +144,75 @@ func (d Database) GetUserFromEmail(ctx context.Context, email string) (user type
 	return
 }
 
-func (d Database) ListUsers(ctx context.Context) (users []types.User, err error) {
-	query := `
-        SELECT *
-        FROM users
-        ;
-    `
-	err = sqlx.SelectContext(ctx, d.ext, &users, query)
+func (d Database) ListUsers(ctx context.Context) ([]types.UserDetails, error) {
+	// 1. Fetch users + primary provider
+	queryUsers := `
+		SELECT
+			u.id,
+			u.email,
+			u.username,
+			u.created_at,
+			ai.provider
+		FROM users u
+		LEFT JOIN auth_identities ai
+			ON ai.user_id = u.id
+		GROUP BY u.id
+		ORDER BY u.created_at DESC;
+	`
+
+	var users []types.UserDetails
+	err := sqlx.SelectContext(ctx, d.ext, &users, queryUsers)
 	if err != nil {
 		return nil, err
 	}
 
-	return
+	if len(users) == 0 {
+		return users, nil
+	}
+
+	// 2. Collect user IDs
+	userIDs := make([]uuid.UUID, 0, len(users))
+	for _, u := range users {
+		userIDs = append(userIDs, u.ID)
+	}
+
+	// 3. Fetch all roles in one query
+	queryRoles := `
+		SELECT user_id, role
+		FROM user_scopes
+		WHERE user_id IN (?);
+	`
+
+	query, args, err := sqlx.In(queryRoles, userIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	query = d.ext.Rebind(query)
+
+	type roleRow struct {
+		UserID uuid.UUID      `db:"user_id"`
+		Role   types.UserRole `db:"role"`
+	}
+
+	var rows []roleRow
+	err = sqlx.SelectContext(ctx, d.ext, &rows, query, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	// 4. Map roles → users
+	roleMap := make(map[uuid.UUID][]types.UserRole)
+	for _, r := range rows {
+		roleMap[r.UserID] = append(roleMap[r.UserID], r.Role)
+	}
+
+	// 5. Assign roles
+	for i := range users {
+		users[i].Roles = roleMap[users[i].ID]
+	}
+
+	return users, nil
 }
 
 func (d Database) GetAuthIdentityForUser(ctx context.Context, userID uuid.UUID) (ai types.AuthIdentity, err error) {

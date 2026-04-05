@@ -8,21 +8,6 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (s ServerClient) ListUsers(ctx context.Context) (users []types.User, err error) {
-	u, err := url.JoinPath(s.baseUrl, "api", "admin", "users")
-	if err != nil {
-		return nil, err
-	}
-
-	resp := types.ListPayload[types.User]{}
-
-	if err := s.doGetJson(ctx, u, &resp); err != nil {
-		return nil, err
-	}
-
-	return resp.Items, nil
-}
-
 func (s ServerClient) Login(ctx context.Context, email, password string, longLivedToken bool) (resp types.LoginResp, err error) {
 	u, err := url.JoinPath(s.baseUrl, "auth", "login")
 	if err != nil {
@@ -53,4 +38,19 @@ func (s ServerClient) DeleteToken(ctx context.Context, tokenID uuid.UUID) error 
 	}
 
 	return nil
+}
+
+func (s ServerClient) ListUserRoles(ctx context.Context) ([]types.UserRole, error) {
+	u, err := url.JoinPath(s.baseUrl, "auth", "user-roles")
+	if err != nil {
+		return nil, err
+	}
+
+	resp := types.ListPayload[types.UserRole]{}
+
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Items, nil
 }
