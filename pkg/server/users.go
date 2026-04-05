@@ -19,11 +19,18 @@ func (s *Server) userRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
-
 		routes.New("POST", "/", s.createUser(), []types.UserRole{types.UserRoleAdmin, types.UserRoleUsersCreate}, routes.RouteMeta{
 			Summary:             "Create a new user.",
 			Description:         "Create a new user with a local auth provider",
 			ExpectedDescription: "User created",
+			Tags:                []string{"Users"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusNoContent,
+		}),
+		routes.New("POST", "/{userID}", s.updateUser(), []types.UserRole{types.UserRoleAdmin, types.UserRoleUsersUpdate}, routes.RouteMeta{
+			Summary:             "Edit an existing user.",
+			Description:         "Edit an exisiting user's information. Password is optional, every other pieces of information must be provided.",
+			ExpectedDescription: "User updated",
 			Tags:                []string{"Users"},
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusNoContent,
@@ -72,6 +79,20 @@ func (s *Server) listUsers() routes.RouteFunc[ReqUsersList, types.ListPayload[ty
 				Count: len(users),
 			},
 			Status: http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) updateUser() routes.RouteFunc[ReqUsersUpdate, types.NoResponse] {
+	return func(ctx context.Context, req ReqUsersUpdate, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		err = s.authPkg.UpdateUser(ctx, req.UserID, req.Email, req.Username, req.Password, req.Roles)
+		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusNoContent,
 		}, nil
 	}
 }

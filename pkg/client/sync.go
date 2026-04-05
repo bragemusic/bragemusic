@@ -301,6 +301,10 @@ func (c clientSync) ListUserRoles(ctx context.Context) ([]types.UserRole, error)
 	return c.sc.ListUserRoles(ctx)
 }
 
+func (c clientSync) UpdateUser(ctx context.Context, userID uuid.UUID, email, username string, password *string, roles []types.UserRole) error {
+	return c.sc.UpdateUser(ctx, userID, email, username, password, roles)
+}
+
 func (c clientSync) ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error {
 	r, err := os.Open(filename)
 	if err != nil {

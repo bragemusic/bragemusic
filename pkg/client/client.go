@@ -279,6 +279,9 @@ type AccessFace interface {
 
 	// ListUserRoles returns a list of available user roles
 	ListUserRoles(ctx context.Context) ([]types.UserRole, error)
+
+	// UpdateUser updates the selected user's information. If password is not nil, it will be changed.
+	UpdateUser(ctx context.Context, userID uuid.UUID, email, username string, password *string, roles []types.UserRole) error
 }
 
 // JobManagerFace defines background job execution and scheduling functionality.

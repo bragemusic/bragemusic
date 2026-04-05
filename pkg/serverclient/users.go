@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/bragemusic/core/pkg/types"
+	"github.com/gofrs/uuid/v5"
 )
 
 func (s ServerClient) CreateUser(ctx context.Context, email, username, password string, roles []types.UserRole) error {
@@ -52,4 +53,24 @@ func (s ServerClient) ListUsers(ctx context.Context, includeMachineUsers bool) (
 	}
 
 	return resp.Items, nil
+}
+
+func (s ServerClient) UpdateUser(ctx context.Context, userID uuid.UUID, email, username string, password *string, roles []types.UserRole) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "users", userID.String())
+	if err != nil {
+		return err
+	}
+
+	req := types.UpdateUserReq{
+		Email:    email,
+		Username: username,
+		Password: password,
+		Roles:    roles,
+	}
+
+	if err := s.doPostJson(ctx, u, req, nil); err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -322,6 +322,15 @@ func (r ReqUsersCreate) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqUsersUpdate struct {
+	UserID uuid.UUID `path:"userID" description:"ID of the wanted user"`
+	types.UpdateUserReq
+}
+
+func (r ReqUsersUpdate) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`

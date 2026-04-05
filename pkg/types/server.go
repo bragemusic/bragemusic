@@ -83,3 +83,10 @@ type CreateUserReq struct {
 	Password string     `json:"password"`
 	Roles    []UserRole `json:"roles"`
 }
+
+type UpdateUserReq struct {
+	Email    string     `json:"email"`
+	Username string     `json:"username"`
+	Password *string    `json:"password"`
+	Roles    []UserRole `json:"roles"`
+}
