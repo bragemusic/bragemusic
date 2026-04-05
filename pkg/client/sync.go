@@ -293,6 +293,10 @@ func (c clientSync) CreateUser(ctx context.Context, email, username, password st
 	return c.sc.CreateUser(ctx, email, username, password, roles)
 }
 
+func (c clientSync) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	return c.sc.DeleteUser(ctx, id)
+}
+
 func (c clientSync) ListUsers(ctx context.Context, includeMachineUsers bool) ([]types.UserDetails, error) {
 	return c.sc.ListUsers(ctx, includeMachineUsers)
 }

@@ -28,6 +28,19 @@ func (s ServerClient) CreateUser(ctx context.Context, email, username, password 
 	return nil
 }
 
+func (s ServerClient) DeleteUser(ctx context.Context, id uuid.UUID) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "users", id.String())
+	if err != nil {
+		return err
+	}
+
+	if err := s.doDelete(ctx, u); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s ServerClient) ListUsers(ctx context.Context, includeMachineUsers bool) (users []types.UserDetails, err error) {
 	u, err := url.JoinPath(s.baseUrl, "api", "users")
 	if err != nil {

@@ -303,6 +303,14 @@ func (r ReqTokensBase) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqUsersBase struct {
+	UserID uuid.UUID `path:"userID" description:"ID of the wanted user"`
+}
+
+func (r ReqUsersBase) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqUsersList struct {
 	IncludeMachineUsers bool               `query:"machineUsers" description:"Include internal machine users as well. These are not proper users, and cannot be modified."`
 	Count               bool               `query:"count" description:"Only return the count, not the payload."`

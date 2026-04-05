@@ -35,6 +35,14 @@ func (s *Server) userRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusNoContent,
 		}),
+		routes.New("DELETE", "/{userID}", s.deleteUser(), []types.UserRole{types.UserRoleAdmin, types.UserRoleUsersDelete}, routes.RouteMeta{
+			Summary:             "Delete an existing user.",
+			Description:         "Delete an exisiting user from the server. This action cannot be reversed.",
+			ExpectedDescription: "User deleted",
+			Tags:                []string{"Users"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusNoContent,
+		}),
 	}
 }
 
@@ -42,6 +50,19 @@ func (s *Server) createUser() routes.RouteFunc[ReqUsersCreate, types.NoResponse]
 	return func(ctx context.Context, req ReqUsersCreate, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
 		err = s.authPkg.CreateUser(ctx, req.Email, req.Username, req.Password, req.Roles)
 		if err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusNoContent,
+		}, nil
+	}
+}
+
+func (s *Server) deleteUser() routes.RouteFunc[ReqUsersBase, types.NoResponse] {
+	return func(ctx context.Context, req ReqUsersBase, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		if err := s.authPkg.RemoveUser(ctx, req.UserID); err != nil {
 			return types.Response[types.NoResponse]{}, err
 		}
 

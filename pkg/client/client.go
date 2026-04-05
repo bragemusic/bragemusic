@@ -274,6 +274,9 @@ type AccessFace interface {
 	// CreateUser creates a new user on the server.
 	CreateUser(ctx context.Context, email, username, password string, roles []types.UserRole) error
 
+	// DeleteUser removes the selected user from the server. This action cannot be reversed.
+	DeleteUser(ctx context.Context, id uuid.UUID) error
+
 	// ListUsers returns all users known to the system.
 	ListUsers(ctx context.Context, includeMachineUsers bool) ([]types.UserDetails, error)
 
