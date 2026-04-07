@@ -26,7 +26,7 @@ type Syncer struct {
 	imgDir                  string
 	serverAvailable         bool
 	syncInProgress          bool
-	user                    *types.UserDetails
+	user                    types.UserDetails
 	syncInProgressCallbacks []func(bool)
 }
 
@@ -38,15 +38,7 @@ func (s Syncer) SupportsSync() bool {
 	return true
 }
 
-func (s *Syncer) SetUser(user *types.UserDetails) {
-	s.user = user
-}
-
 func (s *Syncer) Sync(ctx context.Context) error {
-	if s.user == nil {
-		return errors.New("no user in context")
-	}
-
 	err := s.sync(ctx, s.user.ID)
 	if err != nil {
 		return err
@@ -617,12 +609,13 @@ func (s *Syncer) SetDatabase(db database.DatabaseFace) {
 	s.db = db
 }
 
-func New(sc *serverclient.ServerClient, db database.DatabaseFace, musicDir, imgDir string, slogHandler slog.Handler) Syncer {
+func New(sc *serverclient.ServerClient, user types.UserDetails, db database.DatabaseFace, musicDir, imgDir string, slogHandler slog.Handler) Syncer {
 	return Syncer{
 		sc:       sc,
 		db:       db,
 		musicDir: musicDir,
 		imgDir:   imgDir,
 		log:      slog.New(slogHandler).With("service", "syncer"),
+		user:     user,
 	}
 }

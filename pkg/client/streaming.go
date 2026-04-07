@@ -2,11 +2,9 @@ package client
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"os"
 
-	"github.com/bragemusic/core/pkg/authclient"
 	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/serverclient"
@@ -23,51 +21,6 @@ func (c *clientStreaming) emitEvent(event types.ClientEvent, payload any) {
 	for _, f := range c.eventCallbacks {
 		f(event, payload)
 	}
-}
-
-func (c *clientStreaming) setUser(user *types.UserDetails) {
-	c.user = user
-}
-
-func (c clientStreaming) GetUser() *types.UserDetails {
-	return c.user
-}
-
-func (c *clientStreaming) Login(ctx context.Context, username, password string, longLivedToken bool) (types.UserDetails, error) {
-	return c.AuthClient.Login(ctx, username, password, longLivedToken)
-}
-
-func (c *clientStreaming) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
-	c.log.InfoContext(ctx, "logging in local user", "id", userID.String())
-
-	user, err := c.AuthClient.LoginLocalUser(ctx, userID, false)
-	if err != nil {
-		return err
-	}
-
-	c.AuthClient.UserCallback(&user)
-	c.ServerStatus(ctx)
-
-	return nil
-}
-
-func (c *clientStreaming) LoginCachedServerUser(ctx context.Context, password string, longLivedToken bool) error {
-	if c.user == nil {
-		return c.berr.NoUserInContext(errors.New("could not login cached user"))
-	}
-
-	return c.AuthClient.LoginCachedServerUser(ctx, *c.user, password, longLivedToken)
-}
-
-func (c *clientStreaming) LogoutLocalUser(ctx context.Context) {
-	c.AuthClient.UserCallback(nil)
-}
-
-func (c *clientStreaming) LogoutServerUser(ctx context.Context) error {
-	if c.user == nil {
-		return c.berr.NoUserInContext(errors.New("could not logout server user"))
-	}
-	return c.AuthClient.LogoutServerUser(ctx, c.user.ID)
 }
 
 func (c clientStreaming) ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error {
@@ -207,47 +160,23 @@ func (c clientStreaming) UploadPlaylistImage(ctx context.Context, id uuid.UUID, 
 	return nil
 }
 
-func newStreamingClient(ctx context.Context, config Config, sc *serverclient.ServerClient, slogHandler slog.Handler) (clientFace, error) {
-	// sc := serverclient.New(config.ServerBaseURL, slogHandler)
-
-	// pa, err := audiointerface.NewPortAudio(slogHandler)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// apCfg := audioplayer.Config{
-	// 	PlayerName:   config.PlayerName,
-	// 	MusicDirPath: config.MusicDirPath,
-	// }
-
-	// ar := audioreader.NewServerReader(&sc, slogHandler)
-
-	// ap, err := audioplayer.New(apCfg, pa, ar, slogHandler)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	jm := jobmanager.New(slogHandler)
-
+func newStreamingClient(ctx context.Context, config Config, jm *jobmanager.JobManager, sc *serverclient.ServerClient, user types.UserDetails, slogHandler slog.Handler) (clientFace, error) {
 	c := &clientStreaming{
 		config:       config,
 		log:          slog.New(slogHandler).With("service", "client"),
-		AuthClient:   authclient.New(sc, slogHandler),
-		JobManager:   &jm,
+		JobManager:   jm,
 		ServerClient: sc,
+		user:         user,
 		NoSync:       &syncer.NoSync{},
 		berr:         bragerr.NewFactory("client"),
 	}
 
-	// ap.RegisterPlayCountCallback(c.updatePlayCount)
-	c.RegisterUserCallback(c.setUser)
-	// c.AuthClient.RegisterUpdateServerStatusCallback(c.updateServerStatusCallback)
-
-	jm.RegisterJob(ctx, jobmanager.JobDefinition{
-		Type:     types.JobAuthClientServerStatus,
-		CronExpr: "*/10 * * * * *",
-		Run:      c.AuthClient.UpdateServerStatus,
-	})
+	// FIXME: Live somewhere else
+	// jm.RegisterJob(ctx, jobmanager.JobDefinition{
+	// 	Type:     types.JobAuthClientServerStatus,
+	// 	CronExpr: "*/10 * * * * *",
+	// 	Run:      c.AuthClient.UpdateServerStatus,
+	// })
 
 	return c, nil
 }

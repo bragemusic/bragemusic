@@ -38,4 +38,6 @@ const (
 	ClientEventPlayerPlaybackChange ClientEvent = "player.playbackchange"
 
 	ClientEventUserUpdated ClientEvent = "user.updated"
+
+	ClientEventAuthLoggedIn ClientEvent = "auth.loggedin"
 )

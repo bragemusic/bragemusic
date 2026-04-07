@@ -23,4 +23,5 @@ type AudioPlayerFace interface {
 	PlayPause(ctx context.Context)
 	Stop(ctx context.Context) error
 	AddTrackToQueue(ctx context.Context, track types.TrackDetailed)
+	Close(context.Context) error
 }
