@@ -4,86 +4,35 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/adrg/xdg"
-	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 
 type AuthClient struct {
-	sc                          *serverclient.ServerClient
-	log                         *slog.Logger
-	serverStatus                types.ServerApiInfo
-	serverAvailableCallbacks    []func(types.ServerApiInfo)
-	userCallbacks               []func(*types.UserDetails)
-	updateServerStatusCallbacks []func(context.Context)
+	sc            *serverclient.ServerClient
+	log           *slog.Logger
+	userCallbacks []func(*types.UserDetails)
+}
+
+func (ac *AuthClient) ServerClient() *serverclient.ServerClient {
+	return ac.sc
 }
 
 func (ac *AuthClient) RegisterUserCallback(f func(*types.UserDetails)) {
 	ac.userCallbacks = append(ac.userCallbacks, f)
 }
 
-func (ac *AuthClient) RegisterUpdateServerStatusCallback(f func(context.Context)) {
-	ac.updateServerStatusCallbacks = append(ac.updateServerStatusCallbacks, f)
-}
-
-func (ac *AuthClient) RegisterServerAvailabilityCallback(f func(types.ServerApiInfo)) {
-	ac.serverAvailableCallbacks = append(ac.serverAvailableCallbacks, f)
-}
-
 func (ac *AuthClient) UserCallback(user *types.UserDetails) {
 	for _, f := range ac.userCallbacks {
 		f(user)
 	}
-}
-
-func (ac *AuthClient) UpdateServerStatusCallbacks(ctx context.Context) {
-	for _, f := range ac.updateServerStatusCallbacks {
-		f(ctx)
-	}
-}
-
-func (ac *AuthClient) UpdateServerStatus(ctx context.Context) error {
-	h, err := ac.sc.CheckStatus(ctx)
-	if err != nil {
-		h = types.ServerApiInfo{
-			ServerInfo: types.ServerInfo{
-				Status: types.HealthzUnavailable,
-			},
-		}
-	}
-
-	ac.serverStatus = h
-
-	for _, f := range ac.serverAvailableCallbacks {
-		f(h)
-	}
-	if err != nil {
-		return err
-	}
-
-	if h.Application != config.SERVER_APP_NAME {
-		return fmt.Errorf("expected server application name differs. '%s' != expected '%s'", h.Application, config.SERVER_APP_NAME)
-	}
-
-	if h.Status == types.HealthzUnavailable {
-		return fmt.Errorf("server status is not running. '%s'", h.Status)
-	}
-	return nil
-}
-
-func (ac *AuthClient) ServerStatus(ctx context.Context) (types.ServerApiInfo, error) {
-	if err := ac.UpdateServerStatus(ctx); err != nil {
-		return types.ServerApiInfo{}, err
-	}
-	return ac.serverStatus, nil
 }
 
 func (ac *AuthClient) LoginCachedServerUser(ctx context.Context, user types.UserDetails, password string, longLivedToken bool) error {
@@ -97,8 +46,6 @@ func (ac *AuthClient) LoginCachedServerUser(ctx context.Context, user types.User
 	if err = ac.saveToken(ctx, loginResp.Token, user.ID); err != nil {
 		return err
 	}
-
-	ac.UpdateServerStatusCallbacks(ctx)
 
 	return nil
 }
@@ -124,8 +71,6 @@ func (ac *AuthClient) Login(ctx context.Context, username, password string, long
 		return types.UserDetails{}, err
 	}
 
-	ac.UpdateServerStatusCallbacks(ctx)
-
 	return user, err
 }
 
@@ -137,8 +82,6 @@ func (ac *AuthClient) LoginToken(ctx context.Context, token string) (types.UserD
 		return types.UserDetails{}, err
 	}
 
-	ac.UpdateServerStatusCallbacks(ctx)
-
 	return user, err
 }
 
@@ -146,8 +89,6 @@ func (ac *AuthClient) LogoutServerUser(ctx context.Context, userID uuid.UUID) er
 	if err := ac.removeToken(ctx, userID); err != nil {
 		return err
 	}
-
-	ac.UpdateServerStatusCallbacks(ctx)
 
 	return nil
 }
@@ -193,8 +134,6 @@ func (ac *AuthClient) LoginLocalUser(ctx context.Context, userID uuid.UUID, runC
 	if runCallback {
 		ac.UserCallback(&user)
 	}
-
-	ac.UpdateServerStatusCallbacks(ctx)
 
 	return user, nil
 }

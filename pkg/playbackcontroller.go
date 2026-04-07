@@ -220,6 +220,10 @@ func (p *PlaybackController) Stop(ctx context.Context) error {
 	return p.sc.DevicePlayerStop(ctx, *p.remoteDeviceID)
 }
 
+func (p *PlaybackController) Close(ctx context.Context) error {
+	return p.localPlayer.Close(ctx)
+}
+
 func (p *PlaybackController) AddTrackToQueue(ctx context.Context, track types.TrackDetailed) {
 	if p.remoteDeviceID == nil {
 		p.localPlayer.AddTrackToQueue(ctx, track)

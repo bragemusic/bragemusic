@@ -41,6 +41,7 @@ type AudioPlayer struct {
 	musicDirPath       string
 	playCountReported  bool
 	log                *slog.Logger
+	parentCtx          context.Context
 }
 
 func (a *AudioPlayer) RegisterErrorCallback(f func(context.Context, error)) {
@@ -185,6 +186,9 @@ func (a *AudioPlayer) startProgressPrinter() {
 	go func() {
 		for {
 			select {
+			case <-a.parentCtx.Done():
+				a.log.Info("closing progress printer")
+				return
 			case <-a.progressTicker.C:
 				if a.ai.IsPlaying() {
 					ms := a.ai.PlayedMS()
@@ -325,7 +329,19 @@ func (a *AudioPlayer) handleError(ctx context.Context, err error) {
 	}
 }
 
-func New(cfg Config, ai audiointerface.AudioInterface, ar audioreader.AudioReader, slogHandler slog.Handler) (AudioPlayerFace, error) {
+func (a *AudioPlayer) Close(ctx context.Context) error {
+	if err := a.Stop(ctx); err != nil {
+		return err
+	}
+
+	if err := a.mp.Close(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func New(parentCtx context.Context, cfg Config, ai audiointerface.AudioInterface, ar audioreader.AudioReader, slogHandler slog.Handler) (AudioPlayerFace, error) {
 	var err error
 
 	ap := &AudioPlayer{
@@ -341,6 +357,7 @@ func New(cfg Config, ai audiointerface.AudioInterface, ar audioreader.AudioReade
 				TrackSource: types.TrackSourceContext,
 			},
 		},
+		parentCtx: parentCtx,
 	}
 
 	ai.RegisterErrorCallback(ap.handleError)

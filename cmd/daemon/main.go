@@ -35,20 +35,13 @@ func main() {
 		ClientInterface: types.DeviceInterfaceDaemon,
 		StateFilePath:   utils.Ptr("/home/lucas/dev/brage/daemondata"),
 	}
-	c, err := client.New(ctx, cCfg, slogHandler)
+
+	token := "brg_v1_QL2xWxJ2bmHMyyOC0y5h6g2pKe04pYEQctV4iqTJHxI"
+
+	_, err := client.NewFromToken(ctx, token, cCfg, slogHandler)
 	if err != nil {
 		logger.ErrorContext(ctx, "could not create client", "error", err.Error())
 	}
-
-	token := "brg_v1_-zz6YnydWCWHl1yir7byVrMuh4ZfW0flaPk3DvDSXoM"
-
-	user, err := c.LoginToken(ctx, token)
-	if err != nil {
-		logger.ErrorContext(ctx, "could not log in", "error", err.Error())
-		return
-	}
-
-	logger.InfoContext(ctx, "successfully logged in", "user.name", user.Username, "user.email", user.Email)
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)

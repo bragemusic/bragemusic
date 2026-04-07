@@ -169,6 +169,13 @@ func (m *Mpris) SetTrack(track *types.TrackDetailed) {
 	m.p.SetTrack(track)
 }
 
+func (m *Mpris) Close() error {
+	if m.conn != nil {
+		m.conn.Close()
+	}
+	return nil
+}
+
 func New(playerName string, playFunc, pauseFunc, playPauseFunc func(ctx context.Context), prevFunc, nextFunc func(context.Context) error) (mp Mpris, err error) {
 	mp = Mpris{
 		p: &Player{
