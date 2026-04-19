@@ -26,6 +26,7 @@ require (
 )
 
 require (
+	github.com/BurntSushi/toml v1.6.0
 	github.com/adhocore/gronx v1.19.6
 	github.com/adrg/xdg v0.5.3
 	github.com/amacneil/dbmate/v2 v2.28.0

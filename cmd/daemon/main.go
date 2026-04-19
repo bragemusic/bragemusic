@@ -36,11 +36,12 @@ func main() {
 		StateFilePath:   utils.Ptr("/home/lucas/dev/brage/daemondata"),
 	}
 
-	token := "brg_v1_QL2xWxJ2bmHMyyOC0y5h6g2pKe04pYEQctV4iqTJHxI"
+	token := "brg_v1_0tGpTjU3NsmF9nPFZHDKud7efyHDlyQTKKs7CqneET0"
 
 	_, err := client.NewFromToken(ctx, token, cCfg, slogHandler)
 	if err != nil {
 		logger.ErrorContext(ctx, "could not create client", "error", err.Error())
+		return
 	}
 
 	sigCh := make(chan os.Signal, 1)
