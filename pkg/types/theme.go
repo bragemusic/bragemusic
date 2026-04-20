@@ -11,7 +11,7 @@ const constantCSS = `
   /* not used, set to same as default */
   --field-background: var(--default);
   /* not used, guess its for placeholder text in forms */
-  --field-placeholder: --var(--default-foreground);
+  --field-placeholder: var(--default-foreground);
   /* color on focused objects. Set to same as accent */
   --focus: var(--accent);
   /* descriptive texts. Table headers, field description, list headers */
@@ -79,6 +79,11 @@ type Theme struct {
 	Name        string      `toml:"name" desc:"The name of the theme. Used in the GUI for human readable selection."`
 	ColorScheme ColorScheme `toml:"color_scheme" desc:"Define if your color scheme is light or dark. Nothing else is accepted."`
 	Colors      ThemeColors `toml:"colors" desc:"Definition of all colors of the theme."`
+}
+
+type ThemeDescription struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func (t Theme) Validate(themeName string) error {
