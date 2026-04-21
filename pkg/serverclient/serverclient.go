@@ -36,6 +36,10 @@ func (s *ServerClient) SetAuthToken(token string) {
 	s.authToken = token
 }
 
+func (s *ServerClient) AuthToken() string {
+	return s.authToken
+}
+
 func (s ServerClient) do(ctx context.Context, req *http.Request) (*http.Response, error) {
 	if s.authToken != "" {
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", s.authToken))

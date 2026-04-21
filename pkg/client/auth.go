@@ -25,6 +25,10 @@ type Auth struct {
 	log      *slog.Logger
 }
 
+func (a *Auth) ServerClient() *serverclient.ServerClient {
+	return a.sc
+}
+
 func (a *Auth) GetUser() *types.UserDetails {
 	return a.user
 }
