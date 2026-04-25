@@ -6,6 +6,6 @@ db/schema.sql
 
 importDir
 
-assets/dist/*.html
-assets/dist/assets/*.css
-assets/dist/assets/*.js
+assets/frontend/*.html
+assets/frontend/assets/*.css
+assets/frontend/assets/*.js

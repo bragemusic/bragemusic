@@ -63,7 +63,7 @@ func (s *Server) Handler() http.Handler {
 }
 
 func (s *Server) frontend() http.HandlerFunc {
-	sub, err := fs.Sub(assets.DistFS, "dist")
+	sub, err := fs.Sub(assets.DistFS, "frontend")
 	if err != nil {
 		panic(err)
 	}
