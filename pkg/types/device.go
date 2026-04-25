@@ -41,7 +41,7 @@ type DeviceBase struct {
 }
 
 type ReqDevicesRegister struct {
-	ID *uuid.UUID `json:"id"`
+	ID *uuid.UUID `json:"id" ts_type:"string"`
 	DeviceBase
 }
 
