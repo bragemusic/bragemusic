@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"time"
 
+	"github.com/bragemusic/core/assets"
 	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/bragerr"
@@ -47,6 +50,8 @@ func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Use(LoggerMiddleware(*s.log, []string{"/healthz"}))
 
+	r.Get("/*", s.frontend())
+
 	r.Get("/healthz", s.healthz())
 	r.Get("/readyz", s.readyz())
 	r.Get("/info", s.info())
@@ -55,6 +60,38 @@ func (s *Server) Handler() http.Handler {
 	r.Mount("/auth", s.auth())
 
 	return r
+}
+
+func (s *Server) frontend() http.HandlerFunc {
+	sub, err := fs.Sub(assets.DistFS, "dist")
+	if err != nil {
+		panic(err)
+	}
+
+	fsys := http.FS(sub)
+	fileServer := http.FileServer(fsys)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/")
+
+		// Let assets pass through directly
+		if strings.HasPrefix(path, "assets/") {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// Check if file exists
+		f, err := fsys.Open(path)
+		if err == nil {
+			f.Close()
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// Fallback to SPA
+		r.URL.Path = "/"
+		fileServer.ServeHTTP(w, r)
+	}
 }
 
 func (s *Server) healthz() http.HandlerFunc {
