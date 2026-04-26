@@ -12,7 +12,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bragemusic/core/assets"
 	"github.com/bragemusic/core/internal/config"
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/bragerr"
@@ -40,6 +39,7 @@ type Server struct {
 	importer  *importer.Importer
 	jobmgr    *jobmanager.JobManager
 	sseHub    *sse.Hub
+	distFs    fs.FS
 	config    Config
 	berr      bragerr.BragErrFactory
 	httpSrv   *http.Server
@@ -50,7 +50,7 @@ func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Use(LoggerMiddleware(*s.log, []string{"/healthz"}))
 
-	r.Get("/*", s.frontend())
+	r.Get("/*", s.frontend(s.distFs))
 
 	r.Get("/healthz", s.healthz())
 	r.Get("/readyz", s.readyz())
@@ -62,13 +62,8 @@ func (s *Server) Handler() http.Handler {
 	return r
 }
 
-func (s *Server) frontend() http.HandlerFunc {
-	sub, err := fs.Sub(assets.DistFS, "frontend")
-	if err != nil {
-		panic(err)
-	}
-
-	fsys := http.FS(sub)
+func (s *Server) frontend(distFs fs.FS) http.HandlerFunc {
+	fsys := http.FS(distFs)
 	fileServer := http.FileServer(fsys)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -213,7 +208,7 @@ func (s *Server) Start(ctx context.Context) error {
 // 	return nil
 // }
 
-func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, sseHub *sse.Hub, d *device.DeviceManager, c Config) Server {
+func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, sseHub *sse.Hub, d *device.DeviceManager, distFs fs.FS, c Config) Server {
 	return Server{
 		log:       slog.New(slogHandler).With("service", "server"),
 		errLog:    slog.New(slogHandler),
@@ -224,6 +219,7 @@ func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i
 		jobmgr:    j,
 		sseHub:    sseHub,
 		devicemgr: d,
+		distFs:    distFs,
 		berr:      bragerr.NewFactory("server"),
 	}
 }
