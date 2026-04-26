@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -37,6 +39,7 @@ type Server struct {
 	importer  *importer.Importer
 	jobmgr    *jobmanager.JobManager
 	sseHub    *sse.Hub
+	distFs    fs.FS
 	config    Config
 	berr      bragerr.BragErrFactory
 	httpSrv   *http.Server
@@ -47,6 +50,8 @@ func (s *Server) Handler() http.Handler {
 	r := chi.NewRouter()
 	r.Use(LoggerMiddleware(*s.log, []string{"/healthz"}))
 
+	r.Get("/*", s.frontend(s.distFs))
+
 	r.Get("/healthz", s.healthz())
 	r.Get("/readyz", s.readyz())
 	r.Get("/info", s.info())
@@ -55,6 +60,33 @@ func (s *Server) Handler() http.Handler {
 	r.Mount("/auth", s.auth())
 
 	return r
+}
+
+func (s *Server) frontend(distFs fs.FS) http.HandlerFunc {
+	fsys := http.FS(distFs)
+	fileServer := http.FileServer(fsys)
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/")
+
+		// Let assets pass through directly
+		if strings.HasPrefix(path, "assets/") {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// Check if file exists
+		f, err := fsys.Open(path)
+		if err == nil {
+			f.Close()
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+
+		// Fallback to SPA
+		r.URL.Path = "/"
+		fileServer.ServeHTTP(w, r)
+	}
 }
 
 func (s *Server) healthz() http.HandlerFunc {
@@ -176,7 +208,7 @@ func (s *Server) Start(ctx context.Context) error {
 // 	return nil
 // }
 
-func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, sseHub *sse.Hub, d *device.DeviceManager, c Config) Server {
+func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, j *jobmanager.JobManager, sseHub *sse.Hub, d *device.DeviceManager, distFs fs.FS, c Config) Server {
 	return Server{
 		log:       slog.New(slogHandler).With("service", "server"),
 		errLog:    slog.New(slogHandler),
@@ -187,6 +219,7 @@ func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i
 		jobmgr:    j,
 		sseHub:    sseHub,
 		devicemgr: d,
+		distFs:    distFs,
 		berr:      bragerr.NewFactory("server"),
 	}
 }

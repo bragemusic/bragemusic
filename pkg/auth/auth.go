@@ -20,6 +20,7 @@ var (
 	ErrTokenNotValid      = errors.New("token not valid")
 	ErrInvalidCredentials = errors.New("invalid user credentials")
 	ErrNoAuthHeader       = errors.New("no authorization header")
+	ErrNoAuthCookie       = errors.New("no auth cookie")
 	ErrInvalidScheme      = errors.New("invalid authorization scheme")
 	ErrInvalidToken       = errors.New("invalid token format")
 )
@@ -326,6 +327,18 @@ func (a Auth) validateToken(ctx context.Context, token types.Token) error {
 	return nil
 }
 
+func (a Auth) tokenFromCookie(ctx context.Context, cookieName string, r *http.Request) (string, error) {
+	c, err := r.Cookie(cookieName)
+	if err != nil {
+		if err == http.ErrNoCookie {
+			return "", ErrNoAuthCookie
+		}
+		return "", err
+	}
+
+	return c.Value, nil
+}
+
 func (a Auth) tokenFromHeader(ctx context.Context, authHeader string) (string, error) {
 	if authHeader == "" {
 		return "", ErrNoAuthHeader
@@ -348,10 +361,19 @@ func (a Auth) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
-		token, err := a.tokenFromHeader(ctx, r.Header.Get("Authorization"))
-		if err != nil {
-			bragerr.HandleHttpResponse(ctx, a.berr.Unauthenticated(err), w, a.log)
-			return
+		token, headerErr := a.tokenFromHeader(ctx, r.Header.Get("Authorization"))
+		if headerErr != nil {
+			if errors.Is(headerErr, ErrNoAuthHeader) {
+				var cookieErr error
+				token, cookieErr = a.tokenFromCookie(ctx, "brage_session_token", r)
+				if cookieErr != nil {
+					bragerr.HandleHttpResponse(ctx, a.berr.Unauthenticated(cookieErr), w, a.log)
+					return
+				}
+			} else {
+				bragerr.HandleHttpResponse(ctx, a.berr.Unauthenticated(headerErr), w, a.log)
+				return
+			}
 		}
 
 		user, tokenID, err := a.getUserFromTokenString(ctx, token)

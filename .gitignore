@@ -5,3 +5,7 @@ db/schema.sql
 .env.local
 
 importDir
+
+assets/frontend/*.html
+assets/frontend/assets/*.css
+assets/frontend/assets/*.js

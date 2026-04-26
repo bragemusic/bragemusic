@@ -3,6 +3,7 @@ package server
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/go-chi/chi/v5"
@@ -32,6 +33,13 @@ func (s *Server) login() http.HandlerFunc {
 		if err != nil {
 			return Response{}, err
 		}
+
+		http.SetCookie(w, &http.Cookie{
+			Name:    "brage_session_token",
+			Path:    "/",
+			Value:   token,
+			Expires: time.Now().Add(time.Duration(expiresIn) * time.Second),
+		})
 
 		resp := types.LoginResp{
 			Token:     token,
