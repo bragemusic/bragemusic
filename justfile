@@ -5,9 +5,6 @@ clean-data:
     rm -r ../data/music/*
     rm ../data/config/data.db
 
-serve:
-    go run -tags fts5 cmd/server/main.go
-
 import:
     go run -tags fts5 cmd/importer/main.go
 
