@@ -13,6 +13,7 @@ type Paths struct {
 	ImageDir        string `toml:"image_dir" desc:"Dir where image assets are stored."`
 	MusicDir        string `toml:"music_dir" desc:"Dir where music files are stored."`
 	ImportDir       string `toml:"import_dir" desc:"Dir where imported albums and tracks will be saved before processing."`
+	ManualImportDir string `toml:"manual_import_dir" desc:"Dir where the importer is looking for manually added bulk imports."`
 	BackupImportDir string `toml:"backup_import_dir" desc:"Dir where imported albums and tracks will be saved after processing."`
 }
 
@@ -79,6 +80,10 @@ func verify(cfg Config) error {
 
 	if cfg.Paths.ImportDir == "" {
 		errs = append(errs, errors.New("Paths.ImportDir not set"))
+	}
+
+	if cfg.Paths.ManualImportDir == "" {
+		errs = append(errs, errors.New("Paths.ManualImportDir not set"))
 	}
 
 	if cfg.Paths.BackupImportDir == "" {

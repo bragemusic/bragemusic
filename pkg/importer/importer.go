@@ -26,6 +26,7 @@ import (
 
 type Config struct {
 	ImportDirPath          string
+	ManualImportDirPath    string
 	FinishedImportsDirPath string
 	MusicDirPath           string
 	ImageDirPath           string
@@ -34,6 +35,7 @@ type Config struct {
 
 type Importer struct {
 	importDir       string
+	manualImportDir string
 	postImportDir   string
 	musicDir        string
 	imageDir        string
@@ -69,96 +71,86 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 		return err
 	}
 
-	ie, found, err := i.db.GetUnclaimedImport(ctx)
-	if err != nil {
-		return i.berr.DatabaseError(err, types.EntityImport, nil)
-	}
-
-	if !found {
-		i.log.DebugContext(ctx, "no items found for processing")
-		return nil
-	}
-
-	path := filepath.Join(i.importDir, ie.Filename)
-
-	if err = i.db.SetImportState(ctx, ie.ID, types.ImportStateRunning); err != nil {
-		return i.berr.DatabaseError(err, types.EntityImport, &ie.ID)
-	}
-
-	switch ie.Type {
-	case types.ImportTypeAlbum:
-		err = i.importAlbum(ctx, path, ie.Owner, ie.MusicBrainzID)
-	case types.ImportTypeTrack:
-		err = i.importTrack(ctx, path)
-	}
-
-	if err != nil {
-		if dberr := i.db.SetImportState(ctx, ie.ID, types.ImportStateError); dberr != nil {
-			return i.berr.DatabaseError(dberr, types.EntityImport, &ie.ID)
+	for {
+		ie, found, err := i.db.GetUnclaimedImport(ctx)
+		if err != nil {
+			return i.berr.DatabaseError(err, types.EntityImport, nil)
 		}
-		return err
-	}
 
-	if err = i.db.SetImportState(ctx, ie.ID, types.ImportStateFinished); err != nil {
-		return i.berr.DatabaseError(err, types.EntityImport, &ie.ID)
-	}
+		if !found {
+			i.log.DebugContext(ctx, "no items found for processing")
+			return nil
+		}
 
-	if !i.deleteOnSuccess {
-		err = i.copyFile(ctx, path, filepath.Join(i.postImportDir, ie.Filename))
+		path := filepath.Join(i.importDir, ie.Filename)
+
+		if err = i.db.SetImportState(ctx, ie.ID, types.ImportStateRunning); err != nil {
+			return i.berr.DatabaseError(err, types.EntityImport, &ie.ID)
+		}
+
+		switch ie.Type {
+		case types.ImportTypeAlbum:
+			err = i.importAlbum(ctx, path, ie.Owner, ie.MusicBrainzID)
+		case types.ImportTypeTrack:
+			err = i.importTrack(ctx, path)
+		}
+
+		if err != nil {
+			if dberr := i.db.SetImportState(ctx, ie.ID, types.ImportStateError); dberr != nil {
+				return i.berr.DatabaseError(dberr, types.EntityImport, &ie.ID)
+			}
+			return err
+		}
+
+		if err = i.db.SetImportState(ctx, ie.ID, types.ImportStateFinished); err != nil {
+			return i.berr.DatabaseError(err, types.EntityImport, &ie.ID)
+		}
+
+		if !i.deleteOnSuccess {
+			err = i.copyFile(ctx, path, filepath.Join(i.postImportDir, ie.Filename))
+			if err != nil {
+				return err
+			}
+		}
+
+		err = os.Remove(path)
 		if err != nil {
 			return err
 		}
-	}
 
-	err = os.Remove(path)
-	if err != nil {
-		return err
 	}
-
-	return nil
 }
 
-func (i *Importer) runImportCheck2(ctx context.Context) error {
-	if err := os.MkdirAll(i.postImportDir, 0o755); err != nil {
+func (i *Importer) runManualDirImportCheck(ctx context.Context) error {
+	if err := os.MkdirAll(i.importDir, 0o755); err != nil {
 		return err
 	}
 
-	return filepath.Walk(i.importDir,
+	return filepath.Walk(i.manualImportDir,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				i.log.ErrorContext(ctx, "skipping file due to error", "error", err.Error())
 			}
 
-			var f func(context.Context, string) error
-
 			switch strings.ToLower(filepath.Ext(path)) {
-			case ".flac":
-				f = i.importTrack
-			// case ".zip":
-			// 	f = i.importAlbum
-			default:
-				return nil
-			}
+			case ".zip":
+				i.log.InfoContext(ctx, "manual import file found", "filename", path)
+				if err := i.AddImportEntry(ctx, filepath.Base(path), types.ImportTypeAlbum, uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111")), nil); err != nil {
+					return err
+				}
 
-			i.log.InfoContext(ctx, "file found", "filename", path)
-			err = f(ctx, path)
-			if err != nil {
-				i.log.ErrorContext(ctx, "could not import track", "error", err.Error())
-				return err
-			}
-
-			if !i.deleteOnSuccess {
-				err = i.copyFile(ctx, path, filepath.Join(i.postImportDir, filepath.Base(path)))
+				err = i.copyFile(ctx, path, filepath.Join(i.importDir, filepath.Base(path)))
 				if err != nil {
 					return err
 				}
-			}
 
-			err = os.Remove(path)
-			if err != nil {
-				return err
+				err = os.Remove(path)
+				if err != nil {
+					return err
+				}
+			default:
+				return nil
 			}
-
 			return nil
 		})
 }
@@ -415,7 +407,12 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string, userID uu
 func (i *Importer) Run(ctx context.Context) error {
 	i.log.InfoContext(ctx, "starting import check")
 
-	err := i.runImportCheck(ctx)
+	err := i.runManualDirImportCheck(ctx)
+	if err != nil {
+		return err
+	}
+
+	err = i.runImportCheck(ctx)
 	if err != nil {
 		return err
 	}
@@ -427,6 +424,7 @@ func (i *Importer) Run(ctx context.Context) error {
 func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, im imagemagick.ImageMagick, slogHandler slog.Handler) Importer {
 	return Importer{
 		importDir:       cfg.ImportDirPath,
+		manualImportDir: cfg.ManualImportDirPath,
 		musicDir:        cfg.MusicDirPath,
 		imageDir:        cfg.ImageDirPath,
 		db:              db,
