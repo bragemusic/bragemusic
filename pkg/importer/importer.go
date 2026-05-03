@@ -326,19 +326,13 @@ func (i Importer) downloadAlbumCoverImage(ctx context.Context, album types.Album
 }
 
 func (i Importer) importAlbumFiles(ctx context.Context, folder string, userID uuid.UUID, mbID *string) error {
-	tx, err := i.db.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
 	ftx, err := filetx.Begin(ctx)
 	if err != nil {
 		return err
 	}
 	defer ftx.Rollback()
 
-	mediaFiles, err := i.importMediaFiles(ctx, tx, &ftx, folder, userID)
+	mediaFiles, err := i.importMediaFiles(ctx, &ftx, folder, userID)
 	if err != nil {
 		return err
 	}
@@ -354,9 +348,27 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string, userID uu
 		i.log.InfoContext(ctx, "album musicbrainz ID found", "mbID", albumAnalysis.AlbumID)
 	}
 
-	existingAlbum, err := i.getExistingAlbum(ctx, tx, albumAnalysis)
+	existingAlbum, err := i.getExistingAlbum(ctx, albumAnalysis)
 	if err != nil {
 		if !errors.Is(err, ErrAlbumNotFound) {
+			return err
+		}
+	}
+
+	artist, err := i.generateArtist(ctx, albumAnalysis, userID)
+	if err != nil {
+		return err
+	}
+
+	tx, err := i.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, mf := range mediaFiles {
+		_, err := tx.AddMediaFile(ctx, mf, userID)
+		if err != nil {
 			return err
 		}
 	}
@@ -375,7 +387,7 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string, userID uu
 		return err
 	}
 
-	artistID, err := i.addArtist(ctx, tx, albumAnalysis, userID)
+	artistID, err := i.addArtist(ctx, tx, artist, albumAnalysis, userID)
 	if err != nil {
 		return err
 	}
@@ -384,17 +396,17 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string, userID uu
 		return err
 	}
 
-	err = i.downloadAlbumCover(ctx, album, albumAnalysis.Covers)
-	if err != nil {
-		i.log.ErrorContext(ctx, "could not download album cover", "id", album.ID, "error", err.Error())
-	}
-
 	if err := tx.Commit(); err != nil {
 		return err
 	}
 
 	if err := ftx.Commit(); err != nil {
 		return err
+	}
+
+	err = i.downloadAlbumCover(ctx, album, albumAnalysis.Covers)
+	if err != nil {
+		i.log.ErrorContext(ctx, "could not download album cover", "id", album.ID, "error", err.Error())
 	}
 
 	return nil

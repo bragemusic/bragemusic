@@ -300,9 +300,9 @@ func (i Importer) getID3Info(ctx context.Context, files []types.MediaFile) (arti
 	return utils.HighestCount(artists), utils.HighestCount(albums), utils.HighestCount(releaseYears), tracks, pics, nil
 }
 
-func (i Importer) getExistingAlbum(ctx context.Context, tx database.DatabaseFace, albumAnalysis AlbumAnalysisResults) (types.Album, error) {
+func (i Importer) getExistingAlbum(ctx context.Context, albumAnalysis AlbumAnalysisResults) (types.Album, error) {
 	if albumAnalysis.AlbumID != "" {
-		album, err := tx.GetAlbumFromMbID(ctx, albumAnalysis.AlbumID)
+		album, err := i.db.GetAlbumFromMbID(ctx, albumAnalysis.AlbumID)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return types.Album{}, err
@@ -312,7 +312,7 @@ func (i Importer) getExistingAlbum(ctx context.Context, tx database.DatabaseFace
 		}
 	}
 
-	album, err := tx.GetAlbumFromArtistAndName(ctx, albumAnalysis.Id3Artist, albumAnalysis.Id3Album)
+	album, err := i.db.GetAlbumFromArtistAndName(ctx, albumAnalysis.Id3Artist, albumAnalysis.Id3Album)
 	if err != nil {
 		if !errors.Is(err, sql.ErrNoRows) {
 			return types.Album{}, err

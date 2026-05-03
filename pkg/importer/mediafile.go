@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 
 	"github.com/bragemusic/core/pkg/audioreader"
-	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/files"
 	"github.com/bragemusic/core/pkg/filetx"
 	"github.com/bragemusic/core/pkg/types"
@@ -17,7 +16,7 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (i Importer) importMediaFiles(ctx context.Context, tx database.DatabaseFace, ftx *filetx.FileTx, folder string, userID uuid.UUID) (mediaFiles []types.MediaFile, err error) {
+func (i Importer) importMediaFiles(ctx context.Context, ftx *filetx.FileTx, folder string, userID uuid.UUID) (mediaFiles []types.MediaFile, err error) {
 	tempFiles, err := os.ReadDir(folder)
 	if err != nil {
 		return nil, err
@@ -30,7 +29,7 @@ func (i Importer) importMediaFiles(ctx context.Context, tx database.DatabaseFace
 			return nil, err
 		}
 
-		mf, err := tx.GetMediaFileFromChecksum(ctx, checksum)
+		mf, err := i.db.GetMediaFileFromChecksum(ctx, checksum)
 		if err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return nil, err
@@ -65,14 +64,13 @@ func (i Importer) importMediaFiles(ctx context.Context, tx database.DatabaseFace
 				Checksum: checksum,
 			}
 
-			mfId, err := tx.AddMediaFile(ctx, mf, userID)
+			uid, err := uuid.NewV4()
 			if err != nil {
 				return nil, err
 			}
+			mf.ID = uid
 
-			mf.ID = mfId
-
-			mffp := filepath.Join(i.musicDir, fmt.Sprintf("%s.%s", mfId.String(), mf.Codec))
+			mffp := filepath.Join(i.musicDir, fmt.Sprintf("%s.%s", uid.String(), mf.Codec))
 
 			if err = ftx.CopyFile(filename, mffp); err != nil {
 				return nil, err
