@@ -99,7 +99,8 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 			if dberr := i.db.SetImportState(ctx, ie.ID, types.ImportStateError); dberr != nil {
 				return i.berr.DatabaseError(dberr, types.EntityImport, &ie.ID)
 			}
-			return err
+			i.log.ErrorContext(ctx, "import failed", "type", ie.Type, "filename", ie.Filename, "error", err.Error())
+			continue
 		}
 
 		if err = i.db.SetImportState(ctx, ie.ID, types.ImportStateFinished); err != nil {
@@ -359,9 +360,16 @@ func (i Importer) importAlbumFiles(ctx context.Context, folder string, userID uu
 	defer tx.Rollback()
 
 	for _, mf := range mediaFiles {
-		_, err := tx.AddMediaFile(ctx, mf, userID)
+		exists, err := tx.MediaFileExists(ctx, mf.ID)
 		if err != nil {
 			return err
+		}
+
+		if !exists {
+			_, err = tx.AddMediaFile(ctx, mf, userID)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
