@@ -41,22 +41,23 @@ type SSEvent struct {
 // )
 
 const (
-	SSEventTypeDeviceConnected     SSEventType = "device.connected"
-	SSEventTypeDeviceDisconnected  SSEventType = "device.disconnected"
-	SSEventTypeDeviceUpdated       SSEventType = "device.updated"
-	SSEventTypeDeviceDeleted       SSEventType = "device.deleted"
-	SSEventTypeDevicePlayContext   SSEventType = "device.playcontext"
-	SSEventTypeDevicePlaybackState SSEventType = "device.playbackstate"
-	SSEventTypePlayerAddToQueue    SSEventType = "player.addtoqueue"
-	SSEventTypePlayerPlayContext   SSEventType = "player.playcontext"
-	SSEventTypePlayerPlaybackState SSEventType = "player.playbackstate"
-	SSEventTypePlayerSetRepeat     SSEventType = "player.setrepeat"
-	SSEventTypePlayerSetShuffle    SSEventType = "player.setshuffle"
-	SSEventTypePlayerSetState      SSEventType = "player.setstate"
-	SSEventTypePlayerStop          SSEventType = "player.stop"
-	SSEventTypePlayerNextTrack     SSEventType = "player.nexttrack"
-	SSEventTypePlayerPlayPause     SSEventType = "player.playpause"
-	SSEventTypePlayerPreviousTrack SSEventType = "player.previoustrack"
+	SSEventTypeDeviceConnected      SSEventType = "device.connected"
+	SSEventTypeDeviceDisconnected   SSEventType = "device.disconnected"
+	SSEventTypeDeviceUpdated        SSEventType = "device.updated"
+	SSEventTypeDeviceDeleted        SSEventType = "device.deleted"
+	SSEventTypeDevicePlayContext    SSEventType = "device.playcontext"
+	SSEventTypeDevicePlaybackState  SSEventType = "device.playbackstate"
+	SSEventTypePlayerAddToQueue     SSEventType = "player.addtoqueue"
+	SSEventTypePlayerPlayContext    SSEventType = "player.playcontext"
+	SSEventTypePlayerPlaybackState  SSEventType = "player.playbackstate"
+	SSEventTypePlayerSetRepeat      SSEventType = "player.setrepeat"
+	SSEventTypePlayerSetShuffle     SSEventType = "player.setshuffle"
+	SSEventTypePlayerSetState       SSEventType = "player.setstate"
+	SSEventTypePlayerStop           SSEventType = "player.stop"
+	SSEventTypePlayerNextTrack      SSEventType = "player.nexttrack"
+	SSEventTypePlayerPlayPause      SSEventType = "player.playpause"
+	SSEventTypePlayerPreviousTrack  SSEventType = "player.previoustrack"
+	SSEventTypeImporterItemsUpdated SSEventType = "importer.itemsupdated"
 )
 
 func DecodeEventData[T any](evt SSEvent) (T, error) {
@@ -145,4 +146,8 @@ func SSEPlayerPlayPause() SSEvent {
 
 func SSEPlayerPreviousTrack() SSEvent {
 	return newSSEvent(SSEventTypePlayerPreviousTrack, nil)
+}
+
+func SSEImporterItemsUpdated() SSEvent {
+	return newSSEvent(SSEventTypeImporterItemsUpdated, nil)
 }

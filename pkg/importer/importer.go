@@ -18,6 +18,7 @@ import (
 	"github.com/bragemusic/core/pkg/filetx"
 	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/musicbrainz"
+	"github.com/bragemusic/core/pkg/sse"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/bragemusic/core/pkg/utils"
 	"github.com/dhowden/tag"
@@ -45,6 +46,7 @@ type Importer struct {
 	aid             acoustid.AcoustID
 	im              imagemagick.ImageMagick
 	ar              audioreader.AudioReader
+	sseDispatch     sse.Dispatcher
 	log             *slog.Logger
 	berr            bragerr.BragErrFactory
 }
@@ -61,6 +63,10 @@ func (i Importer) AddImportEntry(ctx context.Context, filename string, itype typ
 	_, err := i.db.AddImport(ctx, ie)
 	if err != nil {
 		return i.berr.DatabaseError(err, types.EntityImport, nil)
+	}
+
+	if err = i.sseDispatch.Broadcast(types.SSEImporterItemsUpdated()); err != nil {
+		i.log.WarnContext(ctx, "could not send updated event", "error", err.Error())
 	}
 
 	return nil
@@ -88,6 +94,10 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 			return i.berr.DatabaseError(err, types.EntityImport, &ie.ID)
 		}
 
+		if err = i.sseDispatch.Broadcast(types.SSEImporterItemsUpdated()); err != nil {
+			i.log.WarnContext(ctx, "could not send updated event", "error", err.Error())
+		}
+
 		switch ie.Type {
 		case types.ImportTypeAlbum:
 			err = i.importAlbum(ctx, path, ie.Owner, ie.MusicBrainzID)
@@ -99,12 +109,21 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 			if dberr := i.db.SetImportState(ctx, ie.ID, types.ImportStateError); dberr != nil {
 				return i.berr.DatabaseError(dberr, types.EntityImport, &ie.ID)
 			}
+
+			if err = i.sseDispatch.Broadcast(types.SSEImporterItemsUpdated()); err != nil {
+				i.log.WarnContext(ctx, "could not send updated event", "error", err.Error())
+			}
+
 			i.log.ErrorContext(ctx, "import failed", "type", ie.Type, "filename", ie.Filename, "error", err.Error())
 			continue
 		}
 
 		if err = i.db.SetImportState(ctx, ie.ID, types.ImportStateFinished); err != nil {
 			return i.berr.DatabaseError(err, types.EntityImport, &ie.ID)
+		}
+
+		if err = i.sseDispatch.Broadcast(types.SSEImporterItemsUpdated()); err != nil {
+			i.log.WarnContext(ctx, "could not send updated event", "error", err.Error())
 		}
 
 		if !i.deleteOnSuccess {
@@ -429,7 +448,7 @@ func (i *Importer) Run(ctx context.Context) error {
 	return nil
 }
 
-func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, im imagemagick.ImageMagick, slogHandler slog.Handler) Importer {
+func New(cfg Config, db database.DatabaseFace, sd sse.Dispatcher, mb musicbrainz.MusicBrainz, aid acoustid.AcoustID, im imagemagick.ImageMagick, slogHandler slog.Handler) Importer {
 	return Importer{
 		importDir:       cfg.ImportDirPath,
 		manualImportDir: cfg.ManualImportDirPath,
@@ -440,6 +459,7 @@ func New(cfg Config, db database.DatabaseFace, mb musicbrainz.MusicBrainz, aid a
 		aid:             aid,
 		im:              im,
 		ar:              audioreader.NewLocalReader(cfg.MusicDirPath),
+		sseDispatch:     sd,
 		log:             slog.New(slogHandler).With("service", "importer"),
 		postImportDir:   cfg.FinishedImportsDirPath,
 		deleteOnSuccess: cfg.DeleteImportsOnSuccess,
