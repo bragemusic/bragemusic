@@ -8,19 +8,20 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
-func (i Importer) addArtist(ctx context.Context, tx database.DatabaseFace, albumAnalysis AlbumAnalysisResults, userID uuid.UUID) (artistID uuid.UUID, err error) {
-	var artist types.Artist
-
+func (i Importer) generateArtist(ctx context.Context, albumAnalysis AlbumAnalysisResults, userID uuid.UUID) (artist types.Artist, err error) {
 	if albumAnalysis.AlbumID != "" {
 		artist, err = i.generateArtistFromAlbumMbID(ctx, albumAnalysis.AlbumID)
 		if err != nil {
-			return uuid.Nil, err
+			return types.Artist{}, err
 		}
 	} else {
 		i.log.WarnContext(ctx, "no artist musicbrainz ID found, using ID3")
 		artist = i.generateArtistFromID3(ctx, albumAnalysis)
 	}
+	return artist, nil
+}
 
+func (i Importer) addArtist(ctx context.Context, tx database.DatabaseFace, artist types.Artist, albumAnalysis AlbumAnalysisResults, userID uuid.UUID) (artistID uuid.UUID, err error) {
 	artistID, existingArtist, err := i.addOrGetArtist(ctx, tx, artist, userID)
 	if err != nil {
 		return uuid.Nil, err

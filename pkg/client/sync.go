@@ -192,6 +192,10 @@ func (c clientSync) ImportAlbum(ctx context.Context, filename string, musicbrain
 	return c.sc.ImportAlbum(ctx, r, filename, musicbrainzID)
 }
 
+func (c clientSync) ListImportItems(ctx context.Context, page, limit int) (types.ListPaginationPayload[types.Import], error) {
+	return c.sc.ListImportItems(ctx, page, limit)
+}
+
 func (c clientSync) GetTrackDetailed(ctx context.Context, trackID, albumID uuid.UUID) (track types.TrackDetailed, err error) {
 	return c.MediaManager.GetTrackDetailed(ctx, trackID, albumID, c.user.ID)
 }

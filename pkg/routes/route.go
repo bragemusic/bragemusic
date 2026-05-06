@@ -313,7 +313,6 @@ func ParseQueries[T Validator](q url.Values, v *T) error {
 				rv.Field(fidx).SetString(vs[0])
 			}
 		case reflect.Int:
-			fmt.Println("hehe")
 			if len(vs) > 0 {
 				intVal, err := strconv.Atoi(vs[0])
 				if err != nil {

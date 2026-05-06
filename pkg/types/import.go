@@ -26,12 +26,12 @@ type ImportAlbum struct {
 }
 
 type Import struct {
-	ID            uuid.UUID   `db:"id" json:"id"`
+	ID            uuid.UUID   `db:"id" json:"id" ts_type:"string"`
 	MusicBrainzID *string     `db:"musicbrainz_id" json:"musicbrainz_id"`
-	Owner         uuid.UUID   `db:"owner" json:"owner"`
+	Owner         uuid.UUID   `db:"owner" json:"owner" ts_type:"string"`
 	Filename      string      `db:"filename" json:"filename"`
 	Type          ImportType  `db:"type" json:"type"`
 	State         ImportState `db:"state" json:"state"`
-	CreatedAt     time.Time   `db:"created_at" json:"created_at"`
-	UpdatedAt     time.Time   `db:"updated_at" json:"updated_at"`
+	CreatedAt     time.Time   `db:"created_at" json:"created_at" ts_type:"string"`
+	UpdatedAt     time.Time   `db:"updated_at" json:"updated_at" ts_type:"string"`
 }

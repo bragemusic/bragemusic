@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"math"
 	"time"
 
 	"github.com/bragemusic/core/pkg/types"
@@ -18,6 +19,7 @@ type ImportFace interface {
 
 	AddImport(ctx context.Context, i types.Import) (uuid.UUID, error)
 	GetUnclaimedImport(ctx context.Context) (i types.Import, found bool, err error)
+	ListImports(ctx context.Context, page, limit int) (i []types.Import, totalPages, totalItems int, err error)
 	SetImportState(ctx context.Context, id uuid.UUID, state types.ImportState) error
 }
 
@@ -78,6 +80,41 @@ func (d Database) GetUnclaimedImport(ctx context.Context) (i types.Import, found
 	}
 
 	return i, true, nil
+}
+
+func (d Database) ListImports(ctx context.Context, page, limit int) (i []types.Import, totalPages, totalItems int, err error) {
+	query := `
+        SELECT *
+        FROM imports
+		ORDER BY updated_at DESC
+		LIMIT ?
+		OFFSET ?
+		;
+    `
+
+	offset := (page - 1) * limit
+
+	err = sqlx.SelectContext(ctx, d.ext, &i, query, limit, offset)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, 0, 0, nil
+		}
+		return nil, 0, 0, nil
+	}
+
+	countQuery := `
+		SELECT COUNT(*)
+		FROM imports;
+	`
+
+	err = sqlx.GetContext(ctx, d.ext, &totalItems, countQuery)
+	if err != nil {
+		return nil, 0, 0, nil
+	}
+
+	totalPages = int(math.Ceil(float64(totalItems) / float64(limit)))
+
+	return i, totalPages, totalItems, nil
 }
 
 func (d Database) SetImportState(ctx context.Context, id uuid.UUID, state types.ImportState) error {
