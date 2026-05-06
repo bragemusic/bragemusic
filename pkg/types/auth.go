@@ -16,6 +16,7 @@ const (
 	UserRoleAdmin         UserRole = "admin"
 	UserRoleRead          UserRole = "read"
 	UserRoleWrite         UserRole = "write"
+	UserRoleImporterRead  UserRole = "importer:read"
 	UserRoleImporterWrite UserRole = "importer:write"
 	UserRoleUsersRead     UserRole = "users:read"
 	UserRoleUsersCreate   UserRole = "users:create"

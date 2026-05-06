@@ -51,6 +51,18 @@ type Importer struct {
 	berr            bragerr.BragErrFactory
 }
 
+func (i Importer) ListImportEntries(ctx context.Context, page, limit int) (items []types.Import, actualPage, actualLimit, totalPages, totalItems int, err error) {
+	page = max(1, page)
+	limit = min(max(10, limit), 100)
+
+	items, totalPages, totalItems, err = i.db.ListImports(ctx, page, limit)
+	if err != nil {
+		return nil, 0, 0, 0, 0, i.berr.DatabaseError(err, types.EntityImport, nil)
+	}
+
+	return items, page, limit, totalPages, totalItems, nil
+}
+
 func (i Importer) AddImportEntry(ctx context.Context, filename string, itype types.ImportType, userID uuid.UUID, musicbrainzID *string) error {
 	ie := types.Import{
 		MusicBrainzID: musicbrainzID,

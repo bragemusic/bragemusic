@@ -53,6 +53,14 @@ type ListPayload[T any] struct {
 	Count int `json:"count"`
 }
 
+type ListPaginationPayload[T any] struct {
+	Items      []T `json:"items,omitempty"`
+	Page       int `json:"page"`
+	Limit      int `json:"limit"`
+	TotalPages int `json:"total_pages"`
+	TotalItems int `json:"total_items"`
+}
+
 type LoginReq struct {
 	Email          string `json:"email"`
 	Password       string `json:"password"`

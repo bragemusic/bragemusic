@@ -3,6 +3,7 @@ package serverclient
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -25,6 +26,31 @@ func (s ServerClient) ImportAlbum(ctx context.Context, r io.Reader, filename str
 	}
 
 	return s.importFile(ctx, u, r, filename, ia)
+}
+
+func (s ServerClient) ListImportItems(ctx context.Context, page, limit int) (types.ListPaginationPayload[types.Import], error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "import")
+	if err != nil {
+		return types.ListPaginationPayload[types.Import]{}, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return types.ListPaginationPayload[types.Import]{}, err
+	}
+
+	q := ur.Query()
+	q.Set("page", fmt.Sprint(page))
+	q.Set("limit", fmt.Sprint(limit))
+
+	ur.RawQuery = q.Encode()
+	resp := types.ListPaginationPayload[types.Import]{}
+
+	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
+		return types.ListPaginationPayload[types.Import]{}, err
+	}
+
+	return resp, nil
 }
 
 func (s ServerClient) importFile(ctx context.Context, u string, r io.Reader, filename string, metadata any) error {

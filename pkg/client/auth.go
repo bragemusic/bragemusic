@@ -187,6 +187,7 @@ func (a *Auth) NewClient(ctx context.Context, config Config, slogHandler slog.Ha
 	ap.RegisterPlaybackStateCallback(c.handlePlaybackStateCallbacks)
 
 	da.SubscribeToEventCategory(c.handlePlayerEvents, "player")
+	da.SubscribeToEventCategory(c.handleServerEvent, "importer")
 
 	jm.RegisterJob(ctx, jobmanager.JobDefinition{
 		Type:     types.JobAuthClientServerStatus,

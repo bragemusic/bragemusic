@@ -223,6 +223,9 @@ type MetadataFace interface {
 	// to enrich metadata.
 	ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error
 
+	// ListImportItems returns all import items, queued, progressing, finished and errored.
+	ListImportItems(ctx context.Context, page, limit int) (types.ListPaginationPayload[types.Import], error)
+
 	// AddPlayCount increments the play count for a track for a specific user.
 	AddPlayCount(ctx context.Context, trackID uuid.UUID) error
 

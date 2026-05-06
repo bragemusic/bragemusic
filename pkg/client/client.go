@@ -87,6 +87,8 @@ type Client struct {
 
 	updateServerStatusCallbacks []func(context.Context)
 
+	serverEventCallbacks []sse.EventHandler
+
 	closeFunc context.CancelFunc
 
 	sc  *serverclient.ServerClient
@@ -107,6 +109,12 @@ func (c *Client) UpdateServerStatusCallbacks(ctx context.Context) {
 	}
 }
 
+func (c *Client) handleServerEvent(ctx context.Context, event types.SSEvent) {
+	for _, f := range c.serverEventCallbacks {
+		f(ctx, event)
+	}
+}
+
 func (c *Client) Close(ctx context.Context) error {
 	err := c.PlaybackControllerFace.Close(ctx)
 	if err != nil {
@@ -119,6 +127,8 @@ func (c *Client) Close(ctx context.Context) error {
 }
 
 func (c *Client) SubscribeToClientEvents(handler sse.EventHandler) {
+	c.serverEventCallbacks = append(c.serverEventCallbacks, handler)
+
 	c.DeviceAgent.SubscribeToClientEvents(handler)
 }
 
