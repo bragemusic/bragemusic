@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/sse"
 	"github.com/bragemusic/core/pkg/types"
@@ -225,6 +226,9 @@ type MetadataFace interface {
 
 	// ListImportItems returns all import items, queued, progressing, finished and errored.
 	ListImportItems(ctx context.Context, page, limit int) (types.ListPaginationPayload[types.Import], error)
+
+	// SearchMusicBrainz searches after a release id on musicbrainz using artist and or album as input
+	SearchMusicBrainz(ctx context.Context, artist, album string) (types.ListPayload[musicbrainz.SearchResults], error)
 
 	// AddPlayCount increments the play count for a track for a specific user.
 	AddPlayCount(ctx context.Context, trackID uuid.UUID) error

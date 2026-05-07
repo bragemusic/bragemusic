@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+type SearchResults struct {
+	ID     string `json:"id"`
+	Artist string `json:"artist"`
+	Album  string `json:"album"`
+	Score  int    `json:"score"`
+}
+
 type MBDate struct {
 	time.Time
 }

@@ -77,8 +77,8 @@ func (i Importer) AddImportEntry(ctx context.Context, filename string, itype typ
 		return i.berr.DatabaseError(err, types.EntityImport, nil)
 	}
 
-	if err = i.sseDispatch.Broadcast(types.SSEImporterItemsUpdated()); err != nil {
-		i.log.WarnContext(ctx, "could not send updated event", "error", err.Error())
+	if brerr := i.sseDispatch.Broadcast(types.SSEImporterItemsUpdated()); brerr != nil {
+		i.log.WarnContext(ctx, "could not send updated event", "error", brerr.Error())
 	}
 
 	return nil
@@ -106,8 +106,8 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 			return i.berr.DatabaseError(err, types.EntityImport, &ie.ID)
 		}
 
-		if err = i.sseDispatch.Broadcast(types.SSEImporterItemsUpdated()); err != nil {
-			i.log.WarnContext(ctx, "could not send updated event", "error", err.Error())
+		if brerr := i.sseDispatch.Broadcast(types.SSEImporterItemsUpdated()); brerr != nil {
+			i.log.WarnContext(ctx, "could not send updated event", "error", brerr.Error())
 		}
 
 		switch ie.Type {
@@ -122,8 +122,8 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 				return i.berr.DatabaseError(dberr, types.EntityImport, &ie.ID)
 			}
 
-			if err = i.sseDispatch.Broadcast(types.SSEImporterItemsUpdated()); err != nil {
-				i.log.WarnContext(ctx, "could not send updated event", "error", err.Error())
+			if brerr := i.sseDispatch.Broadcast(types.SSEImporterItemsUpdated()); brerr != nil {
+				i.log.WarnContext(ctx, "could not send updated event", "error", brerr.Error())
 			}
 
 			i.log.ErrorContext(ctx, "import failed", "type", ie.Type, "filename", ie.Filename, "error", err.Error())
@@ -134,8 +134,8 @@ func (i *Importer) runImportCheck(ctx context.Context) error {
 			return i.berr.DatabaseError(err, types.EntityImport, &ie.ID)
 		}
 
-		if err = i.sseDispatch.Broadcast(types.SSEImporterItemsUpdated()); err != nil {
-			i.log.WarnContext(ctx, "could not send updated event", "error", err.Error())
+		if brerr := i.sseDispatch.Broadcast(types.SSEImporterItemsUpdated()); brerr != nil {
+			i.log.WarnContext(ctx, "could not send updated event", "error", brerr.Error())
 		}
 
 		if !i.deleteOnSuccess {
