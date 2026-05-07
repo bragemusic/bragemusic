@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/routes"
 	"github.com/bragemusic/core/pkg/types"
 )
@@ -31,6 +32,15 @@ func (s *Server) importRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusCreated,
 		}),
+
+		routes.New("GET", "/mb/search", s.importSearchMb(), []types.UserRole{types.UserRoleAdmin, types.UserRoleImporterRead}, routes.RouteMeta{
+			Summary:             "Search musicbrainz for an id",
+			Description:         "Searches musicbrainz api after the release id",
+			ExpectedDescription: "Search Results",
+			Tags:                []string{"Import"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
 	}
 }
 
@@ -48,6 +58,23 @@ func (s *Server) listImportEntities() routes.RouteFunc[ReqListPagination, types.
 				Limit:      limit,
 				TotalPages: totalPages,
 				TotalItems: totalItems,
+			},
+			Status: http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) importSearchMb() routes.RouteFunc[ReqImportSearchMb, types.ListPayload[musicbrainz.SearchResults]] {
+	return func(ctx context.Context, req ReqImportSearchMb, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[musicbrainz.SearchResults]], err error) {
+		res, err := s.mb.SearchAlbum(ctx, req.Artist, req.Album)
+		if err != nil {
+			return types.Response[types.ListPayload[musicbrainz.SearchResults]]{}, err
+		}
+
+		return types.Response[types.ListPayload[musicbrainz.SearchResults]]{
+			Payload: types.ListPayload[musicbrainz.SearchResults]{
+				Items: res,
+				Count: len(res),
 			},
 			Status: http.StatusOK,
 		}, nil

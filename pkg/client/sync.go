@@ -12,6 +12,7 @@ import (
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
 	"github.com/bragemusic/core/pkg/migrations"
+	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/syncer"
 	"github.com/bragemusic/core/pkg/types"
@@ -194,6 +195,10 @@ func (c clientSync) ImportAlbum(ctx context.Context, filename string, musicbrain
 
 func (c clientSync) ListImportItems(ctx context.Context, page, limit int) (types.ListPaginationPayload[types.Import], error) {
 	return c.sc.ListImportItems(ctx, page, limit)
+}
+
+func (c clientSync) SearchMusicBrainz(ctx context.Context, artist, album string) (types.ListPayload[musicbrainz.SearchResults], error) {
+	return c.sc.SearchMusicBrainz(ctx, artist, album)
 }
 
 func (c clientSync) GetTrackDetailed(ctx context.Context, trackID, albumID uuid.UUID) (track types.TrackDetailed, err error) {

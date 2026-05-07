@@ -57,6 +57,66 @@ func (m *MusicBrainz) GetArtist(ctx context.Context, artistID string) (ArtistRes
 	return artistData, nil
 }
 
+func (m *MusicBrainz) SearchAlbum(ctx context.Context, artist, album string) (results []SearchResults, err error) {
+	if artist == "" && album == "" {
+		return nil, nil
+	}
+
+	q := fmt.Sprintf(`release:"%s" AND artist:"%s" AND status:Official`, album, artist)
+	if artist == "" {
+		q = fmt.Sprintf(`release:"%s" AND status:Official`, album)
+	} else if album == "" {
+		q = fmt.Sprintf(`artist:"%s" AND status:Official`, artist)
+	}
+
+	params := url.Values{}
+	params.Set("query", q)
+	params.Set("fmt", "json")
+
+	u := fmt.Sprintf("%s/release/?%s", baseUrl, params.Encode())
+
+	req, err := http.NewRequest(http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := m.do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var releaseData ReleaseSearchResponse
+	if err = json.NewDecoder(resp.Body).Decode(&releaseData); err != nil {
+		return nil, err
+	}
+
+	releases := releaseData.Releases
+
+	for _, preferredMedia := range preferredMediaOrder {
+		filteredReleases := m.filterMedia(releaseData.Releases, preferredMedia)
+		if len(filteredReleases) > 0 {
+			releases = filteredReleases
+			break
+		}
+	}
+
+	for _, r := range releases {
+		sr := SearchResults{
+			ID:    r.ID,
+			Album: r.Title,
+			Score: r.Score,
+		}
+
+		if len(r.ArtistCredit) > 0 {
+			sr.Artist = r.ArtistCredit[0].Name
+		}
+		results = append(results, sr)
+	}
+
+	return results, nil
+}
+
 func (m *MusicBrainz) GetAlbumFromNames(ctx context.Context, artist, album string) (*Release, error) {
 	params := url.Values{}
 	params.Set("query", fmt.Sprintf(`release:"%s" AND artist:"%s" AND status:Official`, album, artist))

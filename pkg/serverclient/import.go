@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"path/filepath"
 
+	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/types"
 )
 
@@ -48,6 +49,31 @@ func (s ServerClient) ListImportItems(ctx context.Context, page, limit int) (typ
 
 	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
 		return types.ListPaginationPayload[types.Import]{}, err
+	}
+
+	return resp, nil
+}
+
+func (s ServerClient) SearchMusicBrainz(ctx context.Context, artist, album string) (types.ListPayload[musicbrainz.SearchResults], error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "import", "mb", "search")
+	if err != nil {
+		return types.ListPayload[musicbrainz.SearchResults]{}, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return types.ListPayload[musicbrainz.SearchResults]{}, err
+	}
+
+	q := ur.Query()
+	q.Set("artist", artist)
+	q.Set("album", album)
+
+	ur.RawQuery = q.Encode()
+	resp := types.ListPayload[musicbrainz.SearchResults]{}
+
+	if err := s.doGetJson(ctx, ur.String(), &resp); err != nil {
+		return types.ListPayload[musicbrainz.SearchResults]{}, err
 	}
 
 	return resp, nil

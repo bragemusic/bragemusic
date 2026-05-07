@@ -339,6 +339,15 @@ func (r ReqUsersUpdate) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqImportSearchMb struct {
+	Artist string `query:"artist" description:"The name of the artist."`
+	Album  string `query:"album" description:"The name of the album."`
+}
+
+func (r ReqImportSearchMb) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`
