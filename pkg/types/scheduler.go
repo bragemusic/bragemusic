@@ -8,4 +8,5 @@ const (
 	JobAuthClientServerStatus      JobType = "authclient:serverstatus"
 	JobSyncerDaemon                JobType = "syncer:daemon"
 	JobMediaManagerUpdateSyncItems JobType = "mediamanager:update-searchitems"
+	JobAnalyserRunTrackAnalysis    JobType = "analyser:run-track-analysis"
 )

@@ -27,19 +27,25 @@ type AcoustID struct {
 	ApiKey string `toml:"api_key" desc:"API key to Acoust ID. Used to identify the files to not rely solely on ID3."`
 }
 
+type Analyser struct {
+	BaseURL string `toml:"base_url" desc:"URL to the analysis service. If left blank, no analysis will be performed."`
+}
+
 type Wikipedia struct {
 	Email string `toml:"email" desc:"Used against the wikipedia API. They require a valid email to make sure you behave."`
 }
 
 type Jobs struct {
-	Importer    string `toml:"importer" desc:"How often the importer will look for new media files. Cron expression. Defaults to '*/3 * * * *'"`
-	MetaSyncer  string `toml:"meta_syncer" desc:"How often the meta-syncer will sync the needed metadata. Cron expression. Defaults to '*/3 * * * *'"`
-	SearchItems string `toml:"search_items" desc:"How often the search items will be updated. Cron expression. Defaults to '*/3 * * * *'"`
+	Importer      string `toml:"importer" desc:"How often the importer will look for new media files. Cron expression. Defaults to '*/3 * * * *'"`
+	MetaSyncer    string `toml:"meta_syncer" desc:"How often the meta-syncer will sync the needed metadata. Cron expression. Defaults to '*/3 * * * *'"`
+	SearchItems   string `toml:"search_items" desc:"How often the search items will be updated. Cron expression. Defaults to '*/3 * * * *'"`
+	TrackAnalysis string `toml:"analyser" desc:"How often the track analysis items will be updated. Cron expression. Defaults to '*/3 * * * *'"`
 }
 
 type Config struct {
 	AcoustID  AcoustID  `toml:"acoust_id"`
 	Admin     Admin     `toml:"admin"`
+	Analyser  Analyser  `toml:"analyser"`
 	Jobs      Jobs      `toml:"jobs"`
 	Paths     Paths     `toml:"paths"`
 	Wikipedia Wikipedia `toml:"wikipedia"`
@@ -55,9 +61,10 @@ var defaultConfig = Config{
 	},
 	Paths: Paths{},
 	Jobs: Jobs{
-		Importer:    "*/3 * * * *",
-		MetaSyncer:  "*/3 * * * *",
-		SearchItems: "*/3 * * * *",
+		Importer:      "*/3 * * * *",
+		MetaSyncer:    "*/3 * * * *",
+		SearchItems:   "*/3 * * * *",
+		TrackAnalysis: "*/3 * * * *",
 	},
 	Name: "Brage Music Server",
 	Port: 3000,
@@ -108,6 +115,10 @@ func verify(cfg Config) error {
 
 	if !gronx.IsValid(cfg.Jobs.SearchItems) {
 		errs = append(errs, errors.New("Jobs.SearchItems is not a valid Cron Expression"))
+	}
+
+	if !gronx.IsValid(cfg.Jobs.TrackAnalysis) {
+		errs = append(errs, errors.New("Jobs.TrackAnalysis is not a valid Cron Expression"))
 	}
 
 	if cfg.Port < 1024 || cfg.Port > 49151 {
