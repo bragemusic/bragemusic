@@ -369,6 +369,16 @@ func (r ReqListPagination) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqListTrackPagination struct {
+	types.TrackFilter
+	Page  int `query:"page" description:"The page of data wanted."`
+	Limit int `query:"limit" description:"Number of results per page."`
+}
+
+func (r ReqListTrackPagination) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqListTracksOfAlbum struct {
 	AlbumID uuid.UUID `path:"albumID" description:"ID of the wanted album"`
 	Count   bool      `query:"count" description:"Only return the count, not the payload."`

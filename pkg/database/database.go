@@ -93,6 +93,7 @@ type DatabaseFace interface {
 	ListAlbumTracksByTrackID(ctx context.Context, trackID uuid.UUID) (results []types.AlbumTrack, err error)
 	UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack, userID uuid.UUID) error
 	CountTracksByArtist(ctx context.Context, artistID uuid.UUID) (int, error)
+	ListTracksWithFilters(ctx context.Context, filter types.TrackFilter, page, limit int) (results []types.TrackDetailedNew, totalPages, totalItems int, err error)
 
 	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist, userID uuid.UUID) (uuid.UUID, error)
 	AlbumArtistExistsByID(ctx context.Context, id uuid.UUID) (bool, error)

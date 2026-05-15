@@ -6,6 +6,7 @@ import (
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
+	"github.com/samber/lo"
 )
 
 func (m MediaManager) GetTrack(ctx context.Context, trackID uuid.UUID) (types.Track, error) {
@@ -51,6 +52,43 @@ func (m MediaManager) ListTracksDetailedByArtist(ctx context.Context, artistID, 
 	}
 
 	return tracks, nil
+}
+
+func (m MediaManager) ListTracksDetailed(ctx context.Context, filter types.TrackFilter, page, limit int) (items []types.TrackDetailed, actualPage, actualLimit, totalPages, totalItems int, err error) {
+	page = max(1, page)
+	limit = min(max(10, limit), 10000000)
+
+	tracks, totalPages, totalItems, err := m.db.ListTracksWithFilters(ctx, filter, page, limit)
+	if err != nil {
+		return nil, 0, 0, 0, 0, m.berr.DatabaseError(err, types.EntityTrack, nil)
+	}
+
+	for _, t := range tracks {
+		items = append(items, types.TrackDetailed{
+			ID:            t.Track.ID,
+			Title:         t.Track.Title,
+			AlbumID:       t.Album.ID.String(),
+			AlbumName:     t.Album.Name,
+			ArtistIDs:     lo.Map(t.Artists, func(item types.Artist, index int) string { return item.ID.String() }),
+			ArtistNames:   lo.Map(t.Artists, func(item types.Artist, index int) string { return item.Name }),
+			MusicBrainzID: t.Track.MusicBrainzID,
+			TrackNumber:   t.AlbumTrack.TrackNumber,
+			DiscNumber:    t.AlbumTrack.DiscNumber,
+			Genre:         nil,
+			Comment:       nil,
+			MediaFile:     t.Mediafile,
+			PlayCount:     0,
+			ContextID:     nil,
+			Rating:        nil,
+			UserRating:    nil,
+			Liked:         false,
+			CreatedAt:     t.Track.CreatedAt,
+			UpdatedAt:     t.Track.UpdatedAt,
+			Analysis:      t.Analysis,
+		})
+	}
+
+	return items, page, limit, totalPages, totalItems, nil
 }
 
 func (m MediaManager) UpdateTrack(ctx context.Context, trackID uuid.UUID, trackData types.TrackUpdate, userID uuid.UUID) error {

@@ -18,6 +18,14 @@ func (s *Server) trackRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
+		routes.New("POST", "/search", s.listTracksDetailed(), nil, routes.RouteMeta{
+			Summary:             "List all detailed tracks",
+			Description:         "Detailed metadata of tracks",
+			ExpectedDescription: "Tracks",
+			Tags:                []string{"Tracks"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
 		routes.New("GET", "/liked", s.listLikedTracks(), nil, routes.RouteMeta{
 			Summary:             "List liked tracks.",
 			Description:         "Returns metadata about all tracks liked by the authenticated user, ordered by when they were liked.",
@@ -215,6 +223,26 @@ func (s *Server) listTracks() routes.RouteFunc[ReqList, types.ListPayload[types.
 			Payload: types.ListPayload[types.TrackDetailed]{
 				Items: nil,
 				Count: cnt,
+			},
+			Status: http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) listTracksDetailed() routes.RouteFunc[ReqListTrackPagination, types.ListPaginationPayload[types.TrackDetailed]] {
+	return func(ctx context.Context, req ReqListTrackPagination, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPaginationPayload[types.TrackDetailed]], err error) {
+		items, page, limit, totalPages, totalItems, err := s.mediamgr.ListTracksDetailed(ctx, req.TrackFilter, req.Page, req.Limit)
+		if err != nil {
+			return types.Response[types.ListPaginationPayload[types.TrackDetailed]]{}, err
+		}
+
+		return types.Response[types.ListPaginationPayload[types.TrackDetailed]]{
+			Payload: types.ListPaginationPayload[types.TrackDetailed]{
+				Items:      items,
+				Page:       page,
+				Limit:      limit,
+				TotalPages: totalPages,
+				TotalItems: totalItems,
 			},
 			Status: http.StatusOK,
 		}, nil

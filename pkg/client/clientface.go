@@ -173,6 +173,9 @@ type MetadataFace interface {
 	// ListTracksDetailedByAlbum returns detailed track metadata for a given album.
 	ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.UUID) ([]types.TrackDetailed, error)
 
+	// FilterTracks returns detailed track metadata of tracks matching the filter
+	FilterTracks(ctx context.Context, filter types.TrackFilter, page, limit int) (types.ListPaginationPayload[types.TrackDetailed], error)
+
 	// RateTrack sets the rating value for a specific track.
 	RateTrack(ctx context.Context, trackID uuid.UUID, value int) error
 
