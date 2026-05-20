@@ -19,6 +19,7 @@ const (
 	PlayContextLikedTracks PlayContextType = "liked_tracks"
 	PlayContextTopTracks   PlayContextType = "top_tracks"
 	PlayContextPlaylist    PlayContextType = "playlist"
+	PlayContextFilter      PlayContextType = "filter"
 
 	RepeatOne RepeatType = "one"
 	RepeatAll RepeatType = "all"

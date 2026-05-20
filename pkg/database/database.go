@@ -93,6 +93,7 @@ type DatabaseFace interface {
 	ListAlbumTracksByTrackID(ctx context.Context, trackID uuid.UUID) (results []types.AlbumTrack, err error)
 	UpdateAlbumTrack(ctx context.Context, at types.AlbumTrack, userID uuid.UUID) error
 	CountTracksByArtist(ctx context.Context, artistID uuid.UUID) (int, error)
+	ListTracksWithFilters(ctx context.Context, filter types.TrackFilter, page, limit int) (results []types.TrackDetailedNew, totalPages, totalItems int, err error)
 
 	AddAlbumArtist(ctx context.Context, aa types.AlbumArtist, userID uuid.UUID) (uuid.UUID, error)
 	AlbumArtistExistsByID(ctx context.Context, id uuid.UUID) (bool, error)
@@ -124,6 +125,7 @@ type DatabaseFace interface {
 	SearchFull(ctx context.Context, searchTerm string, limit int) (results []types.SearchItem, err error)
 
 	AddPlaylist(ctx context.Context, p types.Playlist, userID uuid.UUID) (uuid.UUID, error)
+	AddSmartPlaylist(ctx context.Context, p types.SmartPlaylist, userID uuid.UUID) (uuid.UUID, error)
 	AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack, userID uuid.UUID) (uuid.UUID, error)
 	CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error)
 	CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error)
@@ -152,6 +154,9 @@ type DatabaseFace interface {
 	GetLikeID(ctx context.Context, trackID, userID uuid.UUID) (uuid.UUID, error)
 	HasLike(ctx context.Context, trackID, userID uuid.UUID) (bool, error)
 	ListLikedTracksDetailed(ctx context.Context, userID uuid.UUID) (tracks []types.TrackDetailed, err error)
+
+	AddTrackAnalysis(ctx context.Context, ta types.TrackAnalysis) error
+	GetUnanalysedTrack(ctx context.Context) (id uuid.UUID, found bool, err error)
 
 	AuthFace
 	ImportFace

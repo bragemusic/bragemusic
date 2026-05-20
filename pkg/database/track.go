@@ -3,12 +3,19 @@ package database
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 	"github.com/jmoiron/sqlx"
 )
+
+type trackFilterQuery struct {
+	Joins []string
+	Where []string
+	Args  []any
+}
 
 func (d Database) AddTrack(ctx context.Context, t types.Track, userID uuid.UUID) (uuid.UUID, error) {
 	if t.ID == uuid.Nil {
@@ -422,4 +429,230 @@ func (d Database) CountTracks(ctx context.Context) (int, error) {
 	}
 
 	return count, nil
+}
+
+func (d Database) buildTrackFilterQuery(filter types.TrackFilter) trackFilterQuery {
+	q := trackFilterQuery{}
+
+	if filter.BPM != nil {
+		q.Where = append(q.Where, "ta.bpm BETWEEN ? AND ?")
+		q.Args = append(q.Args, filter.BPM.Lower, filter.BPM.Upper)
+	}
+
+	if filter.Mood.Aggressive != nil {
+		q.Where = append(q.Where, "ta.mood_aggresive > ?")
+		q.Args = append(q.Args, *filter.Mood.Aggressive)
+	}
+
+	if filter.Mood.Calm != nil {
+		q.Where = append(q.Where, "ta.mood_calm > ?")
+		q.Args = append(q.Args, *filter.Mood.Calm)
+	}
+
+	if filter.Artists != nil && len(*filter.Artists) > 0 {
+
+		q.Joins = append(q.Joins,
+			"JOIN album_artists aa ON aa.album_id = al.id",
+		)
+
+		placeholders := strings.Repeat("?,", len(*filter.Artists))
+		placeholders = placeholders[:len(placeholders)-1]
+
+		q.Where = append(q.Where,
+			"aa.artist_id IN ("+placeholders+")",
+		)
+
+		for _, id := range *filter.Artists {
+			q.Args = append(q.Args, id)
+		}
+	}
+
+	return q
+}
+
+func (d Database) ListTracksWithFilters(ctx context.Context, filter types.TrackFilter, page, limit int) (results []types.TrackDetailedNew, totalPages, totalItems int, err error) {
+	fq := d.buildTrackFilterQuery(filter)
+
+	query1 := `
+      SELECT DISTINCT
+          t.*,
+          al.*,
+          at.*,
+          mf.*,
+          ta.*
+      FROM track_analyses ta
+      JOIN tracks t ON t.id = ta.id
+      JOIN album_tracks at ON at.track_id = t.id
+      JOIN albums al ON al.id = at.album_id
+      LEFT JOIN media_files mf ON mf.id = t.media_file
+`
+
+	if len(fq.Joins) > 0 {
+		query1 += "\n" + strings.Join(fq.Joins, "\n")
+	}
+
+	if len(fq.Where) > 0 {
+		query1 += "\nWHERE " + strings.Join(fq.Where, " AND ")
+	}
+
+	query1 += `
+      ORDER BY al.sort_name, at.disc_number, at.track_number
+      LIMIT ?
+      OFFSET ?
+`
+
+	offset := (page - 1) * limit
+
+	albumIDs := map[uuid.UUID]bool{}
+
+	args1 := append(fq.Args, limit, offset)
+	rows, err := d.ext.QueryContext(ctx, query1, args1...)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var td types.TrackDetailedNew
+
+		td.Mediafile = &types.MediaFile{}
+
+		err := rows.Scan(
+			&td.Track.ID,
+			&td.Track.Title,
+			&td.Track.MusicBrainzID,
+			&td.Track.Genre,
+			&td.Track.Comment,
+			&td.Track.MediaFile,
+			&td.Track.CreatedAt,
+			&td.Track.UpdatedAt,
+
+			&td.Album.ID,
+			&td.Album.MusicBrainzID,
+			&td.Album.Name,
+			&td.Album.SortName,
+			&td.Album.ReleaseDate,
+			&td.Album.Tracks,
+			&td.Album.Discs,
+			&td.Album.Description,
+			&td.Album.Owner,
+			&td.Album.Public,
+			&td.Album.CreatedAt,
+			&td.Album.UpdatedAt,
+
+			&td.AlbumTrack.ID,
+			&td.AlbumTrack.AlbumID,
+			&td.AlbumTrack.TrackID,
+			&td.AlbumTrack.DiscNumber,
+			&td.AlbumTrack.TrackNumber,
+			&td.AlbumTrack.CreatedAt,
+			&td.AlbumTrack.UpdatedAt,
+
+			&td.Mediafile.ID,
+			&td.Mediafile.DurationMs,
+			&td.Mediafile.Bitrate,
+			&td.Mediafile.SampleRate,
+			&td.Mediafile.FileSize,
+			&td.Mediafile.Codec,
+			&td.Mediafile.Checksum,
+			&td.Mediafile.CreatedAt,
+			&td.Mediafile.UpdatedAt,
+
+			&td.Analysis.ID,
+			&td.Analysis.BPM,
+			&td.Analysis.Key,
+			&td.Analysis.KeyScale,
+			&td.Analysis.KeyConfidence,
+			&td.Analysis.Loudness,
+			&td.Analysis.Energy,
+			&td.Analysis.Danceability,
+			&td.Analysis.MoodHappy,
+			&td.Analysis.MoodSad,
+			&td.Analysis.MoodAggresive,
+			&td.Analysis.MoodCalm,
+			&td.Analysis.CreatedAt,
+			&td.Analysis.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		results = append(results, td)
+		albumIDs[td.Album.ID] = true
+	}
+
+	ids := []uuid.UUID{}
+	for id := range albumIDs {
+		ids = append(ids, id)
+	}
+
+	if len(ids) == 0 {
+		return nil, 0, 0, nil
+	}
+
+	placeholders := strings.Repeat("?,", len(ids))
+	placeholders = placeholders[:len(placeholders)-1]
+
+	query2 := `
+     SELECT aa.album_id, ar.id, ar.name
+     FROM album_artists aa
+     JOIN artists ar ON ar.id = aa.artist_id
+     WHERE aa.album_id IN (` + placeholders + `)`
+
+	args := make([]any, len(ids))
+	for i, v := range ids {
+		args[i] = v
+	}
+
+	rows2, err := d.ext.QueryContext(ctx, query2, args...)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+	defer rows2.Close()
+
+	artistMap := map[uuid.UUID][]types.Artist{}
+
+	for rows2.Next() {
+		var albumID uuid.UUID
+		var a types.Artist
+
+		err := rows2.Scan(&albumID, &a.ID, &a.Name)
+		if err != nil {
+			return nil, 0, 0, err
+		}
+
+		artistMap[albumID] = append(artistMap[albumID], a)
+	}
+
+	for i := range results {
+		results[i].Artists = artistMap[results[i].Album.ID]
+	}
+
+	countQuery := `
+     SELECT COUNT(DISTINCT t.id)
+     FROM track_analyses ta
+     JOIN tracks t ON t.id = ta.id
+     JOIN album_tracks at ON at.track_id = t.id
+     JOIN albums al ON al.id = at.album_id
+     LEFT JOIN media_files mf ON mf.id = t.media_file
+`
+
+	if len(fq.Joins) > 0 {
+		countQuery += "\n" + strings.Join(fq.Joins, "\n")
+	}
+
+	if len(fq.Where) > 0 {
+		countQuery += "\nWHERE " + strings.Join(fq.Where, " AND ")
+	}
+
+	err = sqlx.GetContext(ctx, d.ext, &totalItems, countQuery, args1...)
+	if err != nil {
+		return nil, 0, 0, err
+	}
+
+	if limit > 0 {
+		totalPages = (totalItems + limit - 1) / limit
+	}
+
+	return results, totalPages, totalItems, nil
 }

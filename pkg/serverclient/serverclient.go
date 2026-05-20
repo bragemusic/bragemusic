@@ -124,6 +124,8 @@ func (s ServerClient) doPostJson(ctx context.Context, u string, payload any, tar
 		return err
 	}
 
+	s.log.DebugContext(ctx, "sending request", "method", "POST", "url", u, "payload", string(payloadJSON))
+
 	req, err := http.NewRequest(http.MethodPost, u, bytes.NewBuffer(payloadJSON))
 	if err != nil {
 		return err

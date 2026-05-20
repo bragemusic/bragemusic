@@ -173,6 +173,9 @@ type MetadataFace interface {
 	// ListTracksDetailedByAlbum returns detailed track metadata for a given album.
 	ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.UUID) ([]types.TrackDetailed, error)
 
+	// FilterTracks returns detailed track metadata of tracks matching the filter
+	FilterTracks(ctx context.Context, filter types.TrackFilter, page, limit int) (types.ListPaginationPayload[types.TrackDetailed], error)
+
 	// RateTrack sets the rating value for a specific track.
 	RateTrack(ctx context.Context, trackID uuid.UUID, value int) error
 
@@ -181,6 +184,9 @@ type MetadataFace interface {
 
 	// AddPlaylist creates a new playlist.
 	AddPlaylist(ctx context.Context, playlist types.Playlist) error
+
+	// AddSmartPlaylist creates a new smart playlist.
+	AddSmartPlaylist(ctx context.Context, playlist types.PlaylistBase, filter types.TrackFilter) error
 
 	// AddPlaylistTrack adds a track to a playlist.
 	AddPlaylistTrack(ctx context.Context, playlistID, albumID, trackID uuid.UUID) error

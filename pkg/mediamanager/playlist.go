@@ -25,6 +25,50 @@ func (m MediaManager) AddPlaylist(ctx context.Context, p types.PlaylistBase, use
 	return nil
 }
 
+func (m MediaManager) AddSmartPlaylist(ctx context.Context, p types.PlaylistBase, filter types.TrackFilter, userID uuid.UUID) error {
+	if p.Name == "" {
+		return m.berr.ParamMissing(nil, "name", types.EntityPlaylist.P(), types.ActionCreate.P())
+	}
+
+	c := types.SmartPlaylistContent{
+		MoodAggressive: filter.Mood.Aggressive,
+		MoodCalm:       filter.Mood.Calm,
+		MoodHappy:      filter.Mood.Happy,
+		MoodSad:        filter.Mood.Sad,
+		Artists:        filter.Artists,
+	}
+
+	if filter.BPM != nil {
+		c.BpmLower = &filter.BPM.Lower
+		c.BpmUpper = &filter.BPM.Upper
+	}
+
+	pl := types.SmartPlaylist{
+		Playlist: types.Playlist{
+			PlaylistBase: p,
+			Owner:        userID,
+		},
+		Content: c,
+	}
+
+	tx, err := m.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err = tx.AddSmartPlaylist(ctx, pl, userID); err != nil {
+		return m.berr.DatabaseError(err, types.EntityPlaylist, nil)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m MediaManager) CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error) {
 	cnt, err := m.db.CountPlaylists(ctx, userID)
 	if err != nil {

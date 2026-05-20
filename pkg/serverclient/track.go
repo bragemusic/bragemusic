@@ -2,6 +2,7 @@ package serverclient
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 
 	"github.com/bragemusic/core/pkg/types"
@@ -150,6 +151,31 @@ func (s ServerClient) ListLikedTracks(ctx context.Context) ([]types.TrackDetaile
 	}
 
 	return resp.Items, nil
+}
+
+func (s ServerClient) FilterTracks(ctx context.Context, filter types.TrackFilter, page, limit int) (types.ListPaginationPayload[types.TrackDetailed], error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "tracks", "search")
+	if err != nil {
+		return types.ListPaginationPayload[types.TrackDetailed]{}, err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return types.ListPaginationPayload[types.TrackDetailed]{}, err
+	}
+
+	q := ur.Query()
+	q.Set("page", fmt.Sprint(page))
+	q.Set("limit", fmt.Sprint(limit))
+
+	ur.RawQuery = q.Encode()
+	resp := types.ListPaginationPayload[types.TrackDetailed]{}
+
+	if err := s.doPostJson(ctx, ur.String(), filter, &resp); err != nil {
+		return types.ListPaginationPayload[types.TrackDetailed]{}, err
+	}
+
+	return resp, nil
 }
 
 func (s ServerClient) CountLikedTracks(ctx context.Context) (cnt int, err error) {

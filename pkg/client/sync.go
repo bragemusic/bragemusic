@@ -70,6 +70,10 @@ func (c clientSync) ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.
 	return c.MediaManager.ListTracksDetailedByAlbum(ctx, albumID, c.user.ID)
 }
 
+func (c clientSync) FilterTracks(ctx context.Context, filter types.TrackFilter, page, limit int) (types.ListPaginationPayload[types.TrackDetailed], error) {
+	return c.sc.FilterTracks(ctx, filter, page, limit)
+}
+
 func (c clientSync) UpdateAlbum(ctx context.Context, id uuid.UUID, album types.AlbumUpdate) error {
 	if err := c.sc.UpdateAlbum(ctx, id, album); err != nil {
 		return err
@@ -100,6 +104,13 @@ func (c clientSync) UpdateTrack(ctx context.Context, id uuid.UUID, track types.T
 
 func (c clientSync) AddPlaylist(ctx context.Context, playlist types.Playlist) error {
 	if err := c.sc.AddPlaylist(ctx, playlist); err != nil {
+		return err
+	}
+	return c.Sync(ctx)
+}
+
+func (c clientSync) AddSmartPlaylist(ctx context.Context, playlist types.PlaylistBase, filter types.TrackFilter) error {
+	if err := c.sc.AddSmartPlaylist(ctx, playlist, filter); err != nil {
 		return err
 	}
 	return c.Sync(ctx)
