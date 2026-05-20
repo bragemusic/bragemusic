@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/bragemusic/core/pkg/routes"
@@ -69,10 +70,18 @@ func (s *Server) playlistRoutes() []routes.RouteHandler {
 	}
 }
 
-func (s *Server) addPlaylist() routes.RouteFunc[ReqPlaylistsAdd, types.NoResponse] {
-	return func(ctx context.Context, req ReqPlaylistsAdd, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
-		if err := s.mediamgr.AddPlaylist(ctx, req.PlaylistBase, user.ID); err != nil {
-			return resp, err
+func (s *Server) addPlaylist() routes.RouteFunc[types.ReqPlaylistsAdd, types.NoResponse] {
+	return func(ctx context.Context, req types.ReqPlaylistsAdd, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		if req.PlistType == "" || req.PlistType == string(types.PlaylistTypeStandard) {
+			if err := s.mediamgr.AddPlaylist(ctx, req.PlaylistBase, user.ID); err != nil {
+				return resp, err
+			}
+		} else if req.PlistType == string(types.PlaylistTypeSmart) {
+			if err := s.mediamgr.AddSmartPlaylist(ctx, req.PlaylistBase, req.Filter, user.ID); err != nil {
+				return resp, err
+			}
+		} else {
+			return types.Response[types.NoResponse]{}, errors.New("unknown type parameter")
 		}
 
 		return types.Response[types.NoResponse]{

@@ -134,14 +134,6 @@ func (r ReqMediaFilesGetFile) Validate() (validationMessages string, err error) 
 	return "", nil
 }
 
-type ReqPlaylistsAdd struct {
-	types.PlaylistBase
-}
-
-func (r ReqPlaylistsAdd) Validate() (validationMessages string, err error) {
-	return "", nil
-}
-
 type ReqPlaylistsGet struct {
 	PlaylistID uuid.UUID `path:"playlistID" description:"ID of the wanted playlist"`
 }

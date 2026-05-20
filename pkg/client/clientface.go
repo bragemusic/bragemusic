@@ -185,6 +185,9 @@ type MetadataFace interface {
 	// AddPlaylist creates a new playlist.
 	AddPlaylist(ctx context.Context, playlist types.Playlist) error
 
+	// AddSmartPlaylist creates a new smart playlist.
+	AddSmartPlaylist(ctx context.Context, playlist types.PlaylistBase, filter types.TrackFilter) error
+
 	// AddPlaylistTrack adds a track to a playlist.
 	AddPlaylistTrack(ctx context.Context, playlistID, albumID, trackID uuid.UUID) error
 

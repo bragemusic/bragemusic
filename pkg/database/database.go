@@ -125,6 +125,7 @@ type DatabaseFace interface {
 	SearchFull(ctx context.Context, searchTerm string, limit int) (results []types.SearchItem, err error)
 
 	AddPlaylist(ctx context.Context, p types.Playlist, userID uuid.UUID) (uuid.UUID, error)
+	AddSmartPlaylist(ctx context.Context, p types.SmartPlaylist, userID uuid.UUID) (uuid.UUID, error)
 	AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack, userID uuid.UUID) (uuid.UUID, error)
 	CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error)
 	CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error)

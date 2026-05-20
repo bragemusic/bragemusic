@@ -2,6 +2,8 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -29,9 +31,9 @@ func (d Database) AddPlaylist(ctx context.Context, p types.Playlist, userID uuid
 
 	const query = `
 		INSERT INTO playlists (
-			id, name, description, owner, public,
+			id, name, description, owner, public, type,
             created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?);
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 	`
 
 	_, err := d.ext.ExecContext(
@@ -42,6 +44,7 @@ func (d Database) AddPlaylist(ctx context.Context, p types.Playlist, userID uuid
 		p.Description,
 		p.Owner,
 		p.Public,
+		p.Type,
 		p.CreatedAt,
 		p.UpdatedAt,
 	)
@@ -55,6 +58,112 @@ func (d Database) AddPlaylist(ctx context.Context, p types.Playlist, userID uuid
 	}
 
 	return p.ID, nil
+}
+
+func (d Database) AddSmartPlaylist(ctx context.Context, p types.SmartPlaylist, userID uuid.UUID) (uuid.UUID, error) {
+	if p.Owner == uuid.Nil {
+		return uuid.Nil, ErrNoUser
+	}
+
+	p.Type = types.PlaylistTypeSmart
+
+	playlistID, err := d.AddPlaylist(ctx, p.Playlist, userID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	p.Content.PlaylistID = playlistID
+
+	c := p.Content
+
+	if c.ID == uuid.Nil {
+		uid, err := uuid.NewV4()
+		if err != nil {
+			return uuid.Nil, err
+		}
+		c.ID = uid
+	}
+
+	now := time.Now()
+	c.CreatedAt = now
+	c.UpdatedAt = now
+
+	const query = `
+		INSERT INTO smart_playlist_contents (
+			id, playlist_id, bpm_upper, bpm_lower, mood_happy, mood_sad, mood_aggressive, mood_calm,
+            created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+	`
+
+	_, err = d.ext.ExecContext(
+		ctx,
+		query,
+		c.ID,
+		c.PlaylistID,
+		c.BpmUpper,
+		c.BpmLower,
+		c.MoodHappy,
+		c.MoodSad,
+		c.MoodAggressive,
+		c.MoodCalm,
+		c.CreatedAt,
+		c.UpdatedAt,
+	)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	err = d.addEntityEvent(ctx, c.ID, types.EntityEventCreate, types.EntitySmartPlaylistContent, userID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	if c.Artists != nil {
+		for _, a := range *c.Artists {
+			_, err := d.addSmartPlaylistArtist(ctx, c.ID, a, userID)
+			if err != nil {
+				return uuid.Nil, err
+			}
+		}
+	}
+
+	return p.ID, nil
+}
+
+func (d Database) addSmartPlaylistArtist(ctx context.Context, parentID, artistID, userID uuid.UUID) (uuid.UUID, error) {
+	uid, err := uuid.NewV4()
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	now := time.Now()
+
+	const query = `
+		INSERT INTO smart_playlist_artists (
+			id, parent_id, artist_id,
+            created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?);
+	`
+
+	_, err = d.ext.ExecContext(
+		ctx,
+		query,
+		uid,
+		parentID,
+		artistID,
+		now,
+		now,
+	)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	err = d.addEntityEvent(ctx, uid, types.EntityEventCreate, types.EntitySmartPlaylistArtist, userID)
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	return uid, nil
 }
 
 func (d Database) AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack, userID uuid.UUID) (uuid.UUID, error) {
@@ -244,7 +353,7 @@ func (d Database) ListPlaylists(ctx context.Context, userID uuid.UUID, includePu
 	return
 }
 
-func (d Database) ListPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID) (tracks []types.TrackDetailed, err error) {
+func (d Database) listPlaylistStandardTracks(ctx context.Context, playlistID, userID uuid.UUID) (tracks []types.TrackDetailed, err error) {
 	tracksQuery := `
         SELECT
             t.id,
@@ -276,6 +385,105 @@ func (d Database) ListPlaylistTracks(ctx context.Context, playlistID, userID uui
 
 	if err := sqlx.SelectContext(ctx, d.ext, &tracks, tracksQuery, playlistID); err != nil {
 		return nil, err
+	}
+
+	return tracks, nil
+}
+
+func (d Database) listPlaylistSmartTracks(ctx context.Context, playlistID, userID uuid.UUID) (tracks []types.TrackDetailed, err error) {
+	contentQuery := `
+		SELECT * FROM smart_playlist_contents
+		WHERE playlist_id = ?
+		LIMIT 1;
+`
+
+	content := types.SmartPlaylistContent{}
+	err = sqlx.GetContext(ctx, d.ext, &content, contentQuery, playlistID)
+	if err != nil {
+		return nil, err
+	}
+
+	artistQuery := `
+		SELECT * FROM smart_playlist_artists
+		WHERE parent_id = ?;
+`
+
+	artists := []types.SmartPlaylistArtist{}
+	if err := sqlx.SelectContext(ctx, d.ext, &artists, artistQuery, content.ID); err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
+	}
+
+	if len(artists) > 0 {
+		ids := []uuid.UUID{}
+		for _, a := range artists {
+			ids = append(ids, a.ArtistID)
+		}
+		content.Artists = &ids
+	}
+
+	filter := content.TrackFilter()
+
+	tracksNew, totalPages, _, err := d.ListTracksWithFilters(ctx, filter, 1, 100)
+	if err != nil {
+		return nil, err
+	}
+
+	page := 2
+
+	for page <= totalPages {
+		tr, _, _, err := d.ListTracksWithFilters(ctx, filter, page, 100)
+		if err != nil {
+			return nil, err
+		}
+
+		tracksNew = append(tracksNew, tr...)
+		page += 1
+	}
+
+	for _, t := range tracksNew {
+		tracks = append(tracks, types.TrackDetailed{
+			ID:            t.Track.ID,
+			Title:         t.Track.Title,
+			AlbumID:       t.Album.ID.String(),
+			AlbumName:     t.Album.Name,
+			MusicBrainzID: t.Track.MusicBrainzID,
+			TrackNumber:   t.AlbumTrack.TrackNumber,
+			DiscNumber:    t.AlbumTrack.DiscNumber,
+			Genre:         nil,
+			Comment:       nil,
+			MediaFile:     t.Mediafile,
+			PlayCount:     0,
+			ContextID:     nil,
+			Rating:        nil,
+			UserRating:    nil,
+			Liked:         false,
+			CreatedAt:     t.Track.CreatedAt,
+			UpdatedAt:     t.Track.UpdatedAt,
+		})
+	}
+
+	return tracks, nil
+}
+
+func (d Database) ListPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID) (tracks []types.TrackDetailed, err error) {
+	playlist, err := d.GetPlaylist(ctx, playlistID, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	switch playlist.Type {
+	case types.PlaylistTypeStandard:
+		tracks, err = d.listPlaylistStandardTracks(ctx, playlistID, userID)
+		if err != nil {
+			return nil, err
+		}
+	case types.PlaylistTypeSmart:
+		tracks, err = d.listPlaylistSmartTracks(ctx, playlistID, userID)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err := d.attachTrackArtists(ctx, tracks); err != nil {

@@ -109,6 +109,13 @@ func (c clientSync) AddPlaylist(ctx context.Context, playlist types.Playlist) er
 	return c.Sync(ctx)
 }
 
+func (c clientSync) AddSmartPlaylist(ctx context.Context, playlist types.PlaylistBase, filter types.TrackFilter) error {
+	if err := c.sc.AddSmartPlaylist(ctx, playlist, filter); err != nil {
+		return err
+	}
+	return c.Sync(ctx)
+}
+
 func (c clientSync) AddPlaylistTrack(ctx context.Context, playlistID, albumID, trackID uuid.UUID) error {
 	if err := c.sc.AddPlaylistTrack(ctx, playlistID, albumID, trackID); err != nil {
 		return err

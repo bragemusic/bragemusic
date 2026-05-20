@@ -25,6 +25,34 @@ func (s ServerClient) AddPlaylist(ctx context.Context, playlist types.Playlist) 
 	return nil
 }
 
+func (s ServerClient) AddSmartPlaylist(ctx context.Context, playlist types.PlaylistBase, filter types.TrackFilter) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "playlists")
+	if err != nil {
+		return err
+	}
+
+	ur, err := url.Parse(u)
+	if err != nil {
+		return err
+	}
+
+	q := ur.Query()
+	q.Set("type", "smart")
+
+	ur.RawQuery = q.Encode()
+
+	req := types.ReqPlaylistsAdd{
+		PlaylistBase: playlist,
+		Filter:       filter,
+	}
+
+	if err := s.doPostJson(ctx, ur.String(), req, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s ServerClient) AddPlaylistTrack(ctx context.Context, playlistID, albumID, trackID uuid.UUID) error {
 	u, err := url.JoinPath(s.baseUrl, "api", "playlists", playlistID.String(), "track")
 	if err != nil {
