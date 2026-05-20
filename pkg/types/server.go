@@ -102,7 +102,7 @@ type UpdateUserReq struct {
 type ReqPlaylistsAdd struct {
 	PlaylistBase
 	Filter    TrackFilter `json:"filter"`
-	PlistType string      `query:"type" description:"Type of playlist. Defaults to 'standard'"`
+	PlistType string      `query:"type" description:"Type of playlist. Defaults to 'standard'" json:"-"`
 }
 
 func (r ReqPlaylistsAdd) Validate() (validationMessages string, err error) {
