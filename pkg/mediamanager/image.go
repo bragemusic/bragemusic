@@ -8,6 +8,20 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
+func (m MediaManager) AddUserImage(ctx context.Context, filename string, userID uuid.UUID) error {
+	if m.im == nil {
+		return m.berr.DependencyMissing(nil, "imagemagick")
+	}
+
+	outputFolder := filepath.Join(m.imageDir, "users", userID.String())
+
+	if err := m.im.ResizeAll(ctx, filename, outputFolder); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m MediaManager) AddArtistImage(ctx context.Context, filename string, artistID, userID uuid.UUID) error {
 	if m.im == nil {
 		return m.berr.DependencyMissing(nil, "imagemagick")

@@ -99,6 +99,14 @@ type UpdateUserReq struct {
 	Roles    []UserRole `json:"roles"`
 }
 
+type UpdateProfileReq struct {
+	Email              *string `json:"email"`
+	Username           *string `json:"username"`
+	Password           *string `json:"password"`
+	NewPassword        *string `json:"new_password"`
+	NewPasswordConfirm *string `json:"new_password_confirm"`
+}
+
 type ReqPlaylistsAdd struct {
 	PlaylistBase
 	Filter    TrackFilter `json:"filter"`

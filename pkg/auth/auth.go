@@ -105,6 +105,57 @@ func (a Auth) createUser(ctx context.Context, userID uuid.UUID, email, username,
 	return tx.Commit()
 }
 
+func (a Auth) UpdateProfile(ctx context.Context, userID uuid.UUID, email, username, password, newPassword, newPasswordConfirm *string) error {
+	user, err := a.db.GetUserDetails(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	var uEmail, uUsername string
+
+	if email == nil {
+		uEmail = user.Email
+	} else {
+		uEmail = *email
+	}
+
+	if username == nil {
+		uUsername = user.Username
+	} else {
+		uUsername = *username
+	}
+
+	if newPassword != nil {
+		if newPassword == nil || newPasswordConfirm == nil {
+			return a.berr.Unauthenticated(errors.New("new passwords are nil"))
+		}
+
+		if password == nil {
+			return a.berr.Unauthenticated(errors.New("password is nil"))
+		}
+
+		if *newPassword != *newPasswordConfirm {
+			return a.berr.Unauthenticated(errors.New("new passwords are not same"))
+		}
+
+		localCreds, err := a.db.GetLocalCredentialsForUser(ctx, user.ID)
+		if err != nil {
+			return ErrInvalidCredentials
+		}
+
+		passMatch, err := a.hc.ComparePasswordAndHash(*password, localCreds.PasswordHash)
+		if err != nil {
+			return ErrInvalidCredentials
+		}
+
+		if !passMatch {
+			return ErrInvalidCredentials
+		}
+	}
+
+	return a.UpdateUser(ctx, userID, uEmail, uUsername, newPassword, user.Roles)
+}
+
 func (a Auth) UpdateUser(ctx context.Context, userID uuid.UUID, email, username string, password *string, roles []types.UserRole) error {
 	tx, err := a.db.Begin(ctx)
 	if err != nil {

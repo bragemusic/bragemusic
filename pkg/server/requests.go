@@ -331,6 +331,14 @@ func (r ReqUsersUpdate) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqUsersUpdateProfile struct {
+	types.UpdateProfileReq
+}
+
+func (r ReqUsersUpdateProfile) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqImportSearchMb struct {
 	Artist string `query:"artist" description:"The name of the artist."`
 	Album  string `query:"album" description:"The name of the album."`
