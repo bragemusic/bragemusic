@@ -47,6 +47,30 @@ func (s *Server) userRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusNoContent,
 		}),
+		routes.New("GET", "/me/tokens", s.usersListTokens(), nil, routes.RouteMeta{
+			Summary:             "List tokens.",
+			Description:         "List all tokens belonging to the logged in user.",
+			ExpectedDescription: "Token data",
+			Tags:                []string{"Users"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+		routes.New("POST", "/me/tokens/api", s.usersCreateApiToken(), nil, routes.RouteMeta{
+			Summary:             "Create new API token.",
+			Description:         "Create a new API token that will live forever.",
+			ExpectedDescription: "Token data",
+			Tags:                []string{"Users"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+		routes.New("DELETE", "/me/tokens/{tokenID}", s.usersDeleteToken(), nil, routes.RouteMeta{
+			Summary:             "Delete token",
+			Description:         "Delete a token with a specific ID.",
+			ExpectedDescription: "Token deleted",
+			Tags:                []string{},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusNoContent,
+		}),
 		routes.New("POST", "/{userID}", s.updateUser(), []types.UserRole{types.UserRoleAdmin, types.UserRoleUsersUpdate}, routes.RouteMeta{
 			Summary:             "Edit an existing user.",
 			Description:         "Edit an exisiting user's information. Password is optional, every other pieces of information must be provided.",
@@ -193,6 +217,53 @@ func (s *Server) uploadProfilePicture() routes.RouteFunc[ReqNoContent, types.NoR
 		return types.Response[types.NoResponse]{
 			Payload: types.NoResponse{},
 			Status:  http.StatusNoContent,
+		}, nil
+	}
+}
+
+func (s *Server) usersCreateApiToken() routes.RouteFunc[ReqUsersApiTokenCreate, types.CreateUserApiTokenResp] {
+	return func(ctx context.Context, req ReqUsersApiTokenCreate, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.CreateUserApiTokenResp], err error) {
+		fmt.Println(user)
+		token, _, err := s.authPkg.CreateAPIToken(ctx, req.Name, user.ID)
+		if err != nil {
+			return types.Response[types.CreateUserApiTokenResp]{}, err
+		}
+
+		return types.Response[types.CreateUserApiTokenResp]{
+			Payload: types.CreateUserApiTokenResp{
+				Token: token,
+			},
+			Status: http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) usersDeleteToken() routes.RouteFunc[ReqUsersTokenDelete, types.NoResponse] {
+	return func(ctx context.Context, req ReqUsersTokenDelete, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		if err := s.authPkg.RemoveToken(ctx, req.TokenID, user.ID); err != nil {
+			return types.Response[types.NoResponse]{}, err
+		}
+
+		return types.Response[types.NoResponse]{
+			Payload: types.NoResponse{},
+			Status:  http.StatusNoContent,
+		}, nil
+	}
+}
+
+func (s *Server) usersListTokens() routes.RouteFunc[ReqNoContent, types.ListPayload[types.TokenLimited]] {
+	return func(ctx context.Context, req ReqNoContent, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[types.TokenLimited]], err error) {
+		tokens, err := s.authPkg.ListUserTokens(ctx, user.ID)
+		if err != nil {
+			return types.Response[types.ListPayload[types.TokenLimited]]{}, err
+		}
+
+		return types.Response[types.ListPayload[types.TokenLimited]]{
+			Payload: types.ListPayload[types.TokenLimited]{
+				Items: tokens,
+				Count: len(tokens),
+			},
+			Status: http.StatusOK,
 		}, nil
 	}
 }

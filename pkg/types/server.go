@@ -99,6 +99,14 @@ type UpdateUserReq struct {
 	Roles    []UserRole `json:"roles"`
 }
 
+type CreateUserApiTokenReq struct {
+	Name string `json:"name"`
+}
+
+type CreateUserApiTokenResp struct {
+	Token string `json:"token"`
+}
+
 type UpdateProfileReq struct {
 	Email              *string `json:"email"`
 	Username           *string `json:"username"`
