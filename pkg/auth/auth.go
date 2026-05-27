@@ -334,6 +334,19 @@ func (a Auth) RemoveToken(ctx context.Context, tokenID, userID uuid.UUID) error 
 	return nil
 }
 
+func (a Auth) TokenCleanupJob(ctx context.Context) error {
+	a.log.InfoContext(ctx, "started token cleanup job")
+
+	tokensDeleted, err := a.db.RemoveExpiredTokens(ctx)
+	if err != nil {
+		return err
+	}
+
+	a.log.InfoContext(ctx, "token cleanup job finsished", "tokens_deleted", tokensDeleted)
+
+	return nil
+}
+
 func (a Auth) generateToken(ctx context.Context, userID uuid.UUID, tokenType types.TokenType, name *string) (token string, expiresIn int, err error) {
 	t := types.Token{
 		UserID:    userID,

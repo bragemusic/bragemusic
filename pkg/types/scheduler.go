@@ -9,4 +9,5 @@ const (
 	JobSyncerDaemon                JobType = "syncer:daemon"
 	JobMediaManagerUpdateSyncItems JobType = "mediamanager:update-searchitems"
 	JobAnalyserRunTrackAnalysis    JobType = "analyser:run-track-analysis"
+	JobAuthExpiredTokenCleanup     JobType = "auth:expired-token-cleanup"
 )

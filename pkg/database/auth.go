@@ -40,6 +40,7 @@ type AuthFace interface {
 	GetTokenFromHash(ctx context.Context, hash string) (token types.Token, err error)
 	GetToken(ctx context.Context, id uuid.UUID) (token types.Token, err error)
 	RemoveToken(ctx context.Context, id uuid.UUID) error
+	RemoveExpiredTokens(ctx context.Context) (int64, error)
 	ListUserTokens(ctx context.Context, userID uuid.UUID) (tokens []types.TokenLimited, err error)
 	UpdateTokenLastUsed(ctx context.Context, tokenID uuid.UUID) (err error)
 
@@ -533,6 +534,24 @@ func (d Database) RemoveToken(ctx context.Context, id uuid.UUID) error {
 	}
 
 	return nil
+}
+
+func (d Database) RemoveExpiredTokens(ctx context.Context) (int64, error) {
+	query := `
+		DELETE FROM tokens WHERE expires_at < datetime(CURRENT_TIMESTAMP, '-1 days');
+    `
+
+	res, err := d.ext.ExecContext(ctx, query)
+	if err != nil {
+		return 0, err
+	}
+
+	ra, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	return ra, nil
 }
 
 func (d Database) ListUserTokens(ctx context.Context, userID uuid.UUID) (tokens []types.TokenLimited, err error) {
