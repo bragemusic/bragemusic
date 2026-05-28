@@ -105,6 +105,57 @@ func (a Auth) createUser(ctx context.Context, userID uuid.UUID, email, username,
 	return tx.Commit()
 }
 
+func (a Auth) UpdateProfile(ctx context.Context, userID uuid.UUID, email, username, password, newPassword, newPasswordConfirm *string) error {
+	user, err := a.db.GetUserDetails(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	var uEmail, uUsername string
+
+	if email == nil {
+		uEmail = user.Email
+	} else {
+		uEmail = *email
+	}
+
+	if username == nil {
+		uUsername = user.Username
+	} else {
+		uUsername = *username
+	}
+
+	if newPassword != nil {
+		if newPassword == nil || newPasswordConfirm == nil {
+			return a.berr.Unauthenticated(errors.New("new passwords are nil"))
+		}
+
+		if password == nil {
+			return a.berr.Unauthenticated(errors.New("password is nil"))
+		}
+
+		if *newPassword != *newPasswordConfirm {
+			return a.berr.Unauthenticated(errors.New("new passwords are not same"))
+		}
+
+		localCreds, err := a.db.GetLocalCredentialsForUser(ctx, user.ID)
+		if err != nil {
+			return ErrInvalidCredentials
+		}
+
+		passMatch, err := a.hc.ComparePasswordAndHash(*password, localCreds.PasswordHash)
+		if err != nil {
+			return ErrInvalidCredentials
+		}
+
+		if !passMatch {
+			return ErrInvalidCredentials
+		}
+	}
+
+	return a.UpdateUser(ctx, userID, uEmail, uUsername, newPassword, user.Roles)
+}
+
 func (a Auth) UpdateUser(ctx context.Context, userID uuid.UUID, email, username string, password *string, roles []types.UserRole) error {
 	tx, err := a.db.Begin(ctx)
 	if err != nil {
@@ -214,6 +265,15 @@ func (a Auth) SetAdmin(ctx context.Context, email, username, password string) er
 	return nil
 }
 
+func (a Auth) ListUserTokens(ctx context.Context, userID uuid.UUID) ([]types.TokenLimited, error) {
+	tokens, err := a.db.ListUserTokens(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	return tokens, nil
+}
+
 func (a Auth) CreateLoginToken(ctx context.Context, email, password string, longLivedToken bool) (token string, expiresIn int, err error) {
 	user, err := a.db.GetUserFromEmail(ctx, email)
 	if err != nil {
@@ -247,6 +307,15 @@ func (a Auth) CreateLoginToken(ctx context.Context, email, password string, long
 	return token, expiresIn, nil
 }
 
+func (a Auth) CreateAPIToken(ctx context.Context, name string, userID uuid.UUID) (token string, expiresIn int, err error) {
+	token, expiresIn, err = a.generateToken(ctx, userID, types.TokenAPI, &name)
+	if err != nil {
+		return "", 0, ErrInvalidCredentials
+	}
+
+	return token, expiresIn, nil
+}
+
 func (a Auth) RemoveToken(ctx context.Context, tokenID, userID uuid.UUID) error {
 	token, err := a.db.GetToken(ctx, tokenID)
 	if err != nil {
@@ -261,6 +330,19 @@ func (a Auth) RemoveToken(ctx context.Context, tokenID, userID uuid.UUID) error 
 	if err := a.db.RemoveToken(ctx, tokenID); err != nil {
 		return a.berr.DatabaseError(err, types.EntityToken, &tokenID)
 	}
+
+	return nil
+}
+
+func (a Auth) TokenCleanupJob(ctx context.Context) error {
+	a.log.InfoContext(ctx, "started token cleanup job")
+
+	tokensDeleted, err := a.db.RemoveExpiredTokens(ctx)
+	if err != nil {
+		return err
+	}
+
+	a.log.InfoContext(ctx, "token cleanup job finsished", "tokens_deleted", tokensDeleted)
 
 	return nil
 }
@@ -281,8 +363,10 @@ func (a Auth) generateToken(ctx context.Context, userID uuid.UUID, tokenType typ
 	case types.TokenFrontendShort:
 		expiresAt := time.Now().Add(a.frontendTokenShortDuration)
 		t.ExpiresAt = &expiresAt
-	default:
+	case types.TokenAPI:
 		t.ExpiresAt = nil
+	default:
+		return "", 0, errors.New("forbidden token type")
 	}
 
 	token, err = generateToken()
@@ -296,7 +380,11 @@ func (a Auth) generateToken(ctx context.Context, userID uuid.UUID, tokenType typ
 		return "", 0, err
 	}
 
-	return token, int(t.ExpiresAt.Sub(time.Now()).Seconds()), nil
+	if t.ExpiresAt != nil {
+		expiresIn = int(t.ExpiresAt.Sub(time.Now()).Seconds())
+	}
+
+	return token, expiresIn, nil
 }
 
 func (a Auth) getUserFromTokenString(ctx context.Context, tokenString string) (user types.UserDetails, tokenID uuid.UUID, err error) {
@@ -311,6 +399,10 @@ func (a Auth) getUserFromTokenString(ctx context.Context, tokenString string) (u
 		return types.UserDetails{}, uuid.Nil, ErrTokenNotValid
 	}
 
+	if err = a.db.UpdateTokenLastUsed(ctx, token.ID); err != nil {
+		return types.UserDetails{}, uuid.Nil, err
+	}
+
 	user, err = a.db.GetUserDetails(ctx, token.UserID)
 	if err != nil {
 		return types.UserDetails{}, uuid.Nil, err
@@ -320,6 +412,15 @@ func (a Auth) getUserFromTokenString(ctx context.Context, tokenString string) (u
 }
 
 func (a Auth) validateToken(ctx context.Context, token types.Token) error {
+	switch token.Type {
+	case types.TokenAPI:
+		return nil
+	default:
+		if token.ExpiresAt == nil {
+			return ErrTokenNotValid
+		}
+	}
+
 	if token.ExpiresAt.Before(time.Now()) {
 		return ErrTokenNotValid
 	}

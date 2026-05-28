@@ -40,6 +40,7 @@ type Jobs struct {
 	MetaSyncer    string `toml:"meta_syncer" desc:"How often the meta-syncer will sync the needed metadata. Cron expression. Defaults to '*/3 * * * *'"`
 	SearchItems   string `toml:"search_items" desc:"How often the search items will be updated. Cron expression. Defaults to '*/3 * * * *'"`
 	TrackAnalysis string `toml:"analyser" desc:"How often the track analysis items will be updated. Cron expression. Defaults to '*/3 * * * *'"`
+	TokenCleanup  string `toml:"token_cleanup" desc:"How often token cleanup will be performed. Cron expression. Defaults to '*/10 * * * *'"`
 }
 
 type Config struct {
@@ -65,6 +66,7 @@ var defaultConfig = Config{
 		MetaSyncer:    "*/3 * * * *",
 		SearchItems:   "*/3 * * * *",
 		TrackAnalysis: "*/3 * * * *",
+		TokenCleanup:  "*/10 * * * *",
 	},
 	Name: "Brage Music Server",
 	Port: 3000,
@@ -119,6 +121,10 @@ func verify(cfg Config) error {
 
 	if !gronx.IsValid(cfg.Jobs.TrackAnalysis) {
 		errs = append(errs, errors.New("Jobs.TrackAnalysis is not a valid Cron Expression"))
+	}
+
+	if !gronx.IsValid(cfg.Jobs.TokenCleanup) {
+		errs = append(errs, errors.New("Jobs.TokenCleanup is not a valid Cron Expression"))
 	}
 
 	if cfg.Port < 1024 || cfg.Port > 49151 {

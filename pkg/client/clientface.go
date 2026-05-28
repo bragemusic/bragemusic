@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"io"
 
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/musicbrainz"
@@ -256,8 +257,14 @@ type AccessFace interface {
 	// CreateUser creates a new user on the server.
 	CreateUser(ctx context.Context, email, username, password string, roles []types.UserRole) error
 
+	// CreateAPIToken creates an API token for the logged in user.
+	CreateAPIToken(ctx context.Context, name string) (token string, err error)
+
 	// DeleteUser removes the selected user from the server. This action cannot be reversed.
 	DeleteUser(ctx context.Context, id uuid.UUID) error
+
+	// DeleteUserToken removes a specified token owned by the logged in user.
+	DeleteUserToken(ctx context.Context, tokenID uuid.UUID) error
 
 	// ListUsers returns all users known to the system.
 	ListUsers(ctx context.Context, includeMachineUsers bool) ([]types.UserDetails, error)
@@ -265,8 +272,18 @@ type AccessFace interface {
 	// ListUserRoles returns a list of available user roles
 	ListUserRoles(ctx context.Context) ([]types.UserRole, error)
 
+	// ListUserTokens returns a list of tokens belonging to the logged in user.
+	ListUserTokens(ctx context.Context) (tokens []types.TokenLimited, err error)
+
 	// UpdateUser updates the selected user's information. If password is not nil, it will be changed.
 	UpdateUser(ctx context.Context, userID uuid.UUID, email, username string, password *string, roles []types.UserRole) error
+
+	// UpdateProfile updates the currently logged in users profile information.
+	UpdateProfile(ctx context.Context, data types.UpdateProfileReq) error
+
+	// UploadUserImage uploads a profile picture for the logged in user.
+	UploadUserImage(ctx context.Context, r io.Reader, filename string) error
+	//
 }
 
 // JobManagerFace defines background job execution and scheduling functionality.

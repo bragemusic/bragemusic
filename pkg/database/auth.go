@@ -2,7 +2,9 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"time"
 
 	"github.com/bragemusic/core/pkg/types"
@@ -38,6 +40,9 @@ type AuthFace interface {
 	GetTokenFromHash(ctx context.Context, hash string) (token types.Token, err error)
 	GetToken(ctx context.Context, id uuid.UUID) (token types.Token, err error)
 	RemoveToken(ctx context.Context, id uuid.UUID) error
+	RemoveExpiredTokens(ctx context.Context) (int64, error)
+	ListUserTokens(ctx context.Context, userID uuid.UUID) (tokens []types.TokenLimited, err error)
+	UpdateTokenLastUsed(ctx context.Context, tokenID uuid.UUID) (err error)
 
 	GetUserDetails(ctx context.Context, userID uuid.UUID) (user types.UserDetails, err error)
 }
@@ -482,6 +487,17 @@ func (d Database) GetTokenFromHash(ctx context.Context, hash string) (token type
 	return
 }
 
+func (d Database) UpdateTokenLastUsed(ctx context.Context, tokenID uuid.UUID) (err error) {
+	query := `
+        UPDATE tokens SET
+            last_used_at = ?
+        WHERE id = ?;
+    `
+
+	_, err = d.ext.ExecContext(ctx, query, time.Now(), tokenID)
+	return err
+}
+
 func (d Database) GetToken(ctx context.Context, id uuid.UUID) (token types.Token, err error) {
 	query := `
         SELECT *
@@ -518,6 +534,51 @@ func (d Database) RemoveToken(ctx context.Context, id uuid.UUID) error {
 	}
 
 	return nil
+}
+
+func (d Database) RemoveExpiredTokens(ctx context.Context) (int64, error) {
+	query := `
+		DELETE FROM tokens WHERE expires_at < datetime(CURRENT_TIMESTAMP, '-1 days');
+    `
+
+	res, err := d.ext.ExecContext(ctx, query)
+	if err != nil {
+		return 0, err
+	}
+
+	ra, err := res.RowsAffected()
+	if err != nil {
+		return 0, err
+	}
+
+	return ra, nil
+}
+
+func (d Database) ListUserTokens(ctx context.Context, userID uuid.UUID) (tokens []types.TokenLimited, err error) {
+	query := `
+		SELECT
+			id,
+			type,
+			name,
+			scopes,
+			expires_at,
+			last_used_at,
+			created_at,
+			updated_at
+		FROM tokens
+        WHERE user_id = ?
+		ORDER BY last_used_at DESC;
+	`
+
+	err = sqlx.SelectContext(ctx, d.ext, &tokens, query, userID)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			return nil, err
+		}
+		return nil, nil
+	}
+
+	return tokens, nil
 }
 
 func (d Database) GetUserDetails(ctx context.Context, userID uuid.UUID) (user types.UserDetails, err error) {

@@ -7,8 +7,9 @@ import (
 )
 
 type (
-	SSEventType string
-	SSENoData   struct{}
+	SSEventType     string
+	SSENoData       struct{}
+	SSEventMsgLevel string
 )
 
 // type SSEventBase struct {
@@ -21,6 +22,12 @@ type SSEvent struct {
 	ID   uuid.UUID       `json:"id"`
 	Type SSEventType     `json:"type"`
 	Data json.RawMessage `json:"data"`
+}
+
+type SSEventMsgPayload struct {
+	Level SSEventMsgLevel `json:"level"`
+	Title string          `json:"title"`
+	Body  string          `json:"body"`
 }
 
 // func (e SSEvent[T]) Base() SSEventBase {
@@ -41,6 +48,7 @@ type SSEvent struct {
 // )
 
 const (
+	SSEventTypeServerMessage        SSEventType = "server.message"
 	SSEventTypeDeviceConnected      SSEventType = "device.connected"
 	SSEventTypeDeviceDisconnected   SSEventType = "device.disconnected"
 	SSEventTypeDeviceUpdated        SSEventType = "device.updated"
@@ -58,6 +66,10 @@ const (
 	SSEventTypePlayerPlayPause      SSEventType = "player.playpause"
 	SSEventTypePlayerPreviousTrack  SSEventType = "player.previoustrack"
 	SSEventTypeImporterItemsUpdated SSEventType = "importer.itemsupdated"
+)
+
+const (
+	SSEventMsgInfo SSEventMsgLevel = "info"
 )
 
 func DecodeEventData[T any](evt SSEvent) (T, error) {
@@ -150,4 +162,12 @@ func SSEPlayerPreviousTrack() SSEvent {
 
 func SSEImporterItemsUpdated() SSEvent {
 	return newSSEvent(SSEventTypeImporterItemsUpdated, nil)
+}
+
+func SSEServerMessage(level SSEventMsgLevel, title, body string) SSEvent {
+	return newSSEvent(SSEventTypeServerMessage, SSEventMsgPayload{
+		Level: level,
+		Title: title,
+		Body:  body,
+	})
 }

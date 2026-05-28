@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -36,6 +37,49 @@ func (s ServerClient) UploadPlaylistImage(ctx context.Context, id uuid.UUID, img
 	}
 
 	return s.uploadImage(ctx, u, img)
+}
+
+func (s ServerClient) UploadUserImage(ctx context.Context, r io.Reader, filename string) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "users", "me", "img")
+	if err != nil {
+		return err
+	}
+
+	return s.uploadImageFromReader(ctx, u, filename, r)
+}
+
+func (s ServerClient) uploadImageFromReader(ctx context.Context, u string, filename string, r io.Reader) error {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	part, err := writer.CreateFormFile("file", filename)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(part, r)
+	if err != nil {
+		return err
+	}
+
+	if err := writer.Close(); err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, body)
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp, err := s.do(ctx, req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return nil
 }
 
 func (s ServerClient) uploadImage(ctx context.Context, u string, img FileUpload) error {
