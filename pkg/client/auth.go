@@ -188,6 +188,7 @@ func (a *Auth) NewClient(ctx context.Context, config Config, slogHandler slog.Ha
 
 	da.SubscribeToEventCategory(c.handlePlayerEvents, "player")
 	da.SubscribeToEventCategory(c.handleServerEvent, "importer")
+	da.SubscribeToEventCategory(c.handleServerEvent, "server")
 
 	jm.RegisterJob(ctx, jobmanager.JobDefinition{
 		Type:     types.JobAuthClientServerStatus,

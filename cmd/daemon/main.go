@@ -36,7 +36,7 @@ func main() {
 		StateFilePath:   utils.Ptr("/home/lucas/dev/brage/daemondata"),
 	}
 
-	token := "brg_v1_wlAAi51av71w5RSN8xs7ZA5WJhFw5w5kogUNA3Bk580"
+	token := "brg_v1_qrcbga8lH5cQsfBSyDbGn15A_zVEuvbw4oiGxbkyAvQ"
 
 	_, err := client.NewFromToken(ctx, token, cCfg, slogHandler)
 	if err != nil {

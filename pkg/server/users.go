@@ -214,6 +214,11 @@ func (s *Server) uploadProfilePicture() routes.RouteFunc[ReqNoContent, types.NoR
 			return resp, err
 		}
 
+		err = s.sseHub.SendToUser(user.ID, types.SSEServerMessage(types.SSEventMsgInfo, "Profile image Updated", "Your profile image has been updated"))
+		if err != nil {
+			s.log.WarnContext(ctx, "could not send server message", "error", err.Error())
+		}
+
 		return types.Response[types.NoResponse]{
 			Payload: types.NoResponse{},
 			Status:  http.StatusNoContent,
@@ -229,6 +234,11 @@ func (s *Server) usersCreateApiToken() routes.RouteFunc[ReqUsersApiTokenCreate, 
 			return types.Response[types.CreateUserApiTokenResp]{}, err
 		}
 
+		err = s.sseHub.SendToUser(user.ID, types.SSEServerMessage(types.SSEventMsgInfo, "API-Token created", "A token was added to your account"))
+		if err != nil {
+			s.log.WarnContext(ctx, "could not send server message", "error", err.Error())
+		}
+
 		return types.Response[types.CreateUserApiTokenResp]{
 			Payload: types.CreateUserApiTokenResp{
 				Token: token,
@@ -242,6 +252,11 @@ func (s *Server) usersDeleteToken() routes.RouteFunc[ReqUsersTokenDelete, types.
 	return func(ctx context.Context, req ReqUsersTokenDelete, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
 		if err := s.authPkg.RemoveToken(ctx, req.TokenID, user.ID); err != nil {
 			return types.Response[types.NoResponse]{}, err
+		}
+
+		err = s.sseHub.SendToUser(user.ID, types.SSEServerMessage(types.SSEventMsgInfo, "Token deleted", "A token was successfully deleted"))
+		if err != nil {
+			s.log.WarnContext(ctx, "could not send server message", "error", err.Error())
 		}
 
 		return types.Response[types.NoResponse]{

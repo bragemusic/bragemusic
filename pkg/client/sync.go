@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -191,8 +192,28 @@ func (c clientSync) ListUserRoles(ctx context.Context) ([]types.UserRole, error)
 	return c.sc.ListUserRoles(ctx)
 }
 
+func (c clientSync) ListUserTokens(ctx context.Context) (tokens []types.TokenLimited, err error) {
+	return c.sc.ListUserTokens(ctx)
+}
+
+func (c clientSync) DeleteUserToken(ctx context.Context, tokenID uuid.UUID) error {
+	return c.sc.DeleteUserToken(ctx, tokenID)
+}
+
+func (c clientSync) CreateAPIToken(ctx context.Context, name string) (token string, err error) {
+	return c.sc.CreateAPIToken(ctx, name)
+}
+
 func (c clientSync) UpdateUser(ctx context.Context, userID uuid.UUID, email, username string, password *string, roles []types.UserRole) error {
 	return c.sc.UpdateUser(ctx, userID, email, username, password, roles)
+}
+
+func (c clientSync) UpdateProfile(ctx context.Context, data types.UpdateProfileReq) error {
+	return c.sc.UpdateProfile(ctx, data)
+}
+
+func (c clientSync) UploadUserImage(ctx context.Context, r io.Reader, filename string) error {
+	return c.sc.UploadUserImage(ctx, r, filename)
 }
 
 func (c clientSync) ImportAlbum(ctx context.Context, filename string, musicbrainzID *string) error {
