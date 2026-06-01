@@ -29,7 +29,25 @@ func (a *Auth) ServerClient() *serverclient.ServerClient {
 	return a.sc
 }
 
-func (a *Auth) GetUser() *types.UserDetails {
+func (a *Auth) GetUser(ctx context.Context) *types.UserDetails {
+	if a.user != nil {
+		return a.user
+	}
+
+	err := a.client.LoginCachedServerUser(ctx)
+	if err != nil {
+		a.log.WarnContext(ctx, "could not log in cached user", "error", err.Error())
+		return nil
+	}
+
+	user, err := a.sc.GetUser(ctx)
+	if err != nil {
+		a.log.WarnContext(ctx, "could not get user", "error", err.Error())
+		return nil
+	}
+
+	a.login(ctx, user)
+
 	return a.user
 }
 
@@ -42,6 +60,23 @@ func (a *Auth) login(ctx context.Context, user types.UserDetails) {
 	a.loggedIn = true
 
 	a.log.InfoContext(ctx, "successfully logged in", "user.name", user.Username, "user.email", user.Email)
+}
+
+func (a *Auth) Logout(ctx context.Context) error {
+	err := a.sc.Logout(ctx)
+	if err != nil {
+		return err
+	}
+
+	a.user = nil
+	a.loggedIn = false
+
+	err = a.client.LogoutServerUser(ctx)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (a *Auth) LoginServerUser(ctx context.Context, username, password string, longLivedToken bool) error {

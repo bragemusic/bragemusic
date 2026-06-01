@@ -27,6 +27,19 @@ func (s ServerClient) Login(ctx context.Context, email, password string, longLiv
 	return resp, nil
 }
 
+func (s ServerClient) Logout(ctx context.Context) (err error) {
+	u, err := url.JoinPath(s.baseUrl, "auth", "logout")
+	if err != nil {
+		return err
+	}
+
+	if err := s.doGetJson(ctx, u, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s ServerClient) DeleteToken(ctx context.Context, tokenID uuid.UUID) error {
 	u, err := url.JoinPath(s.baseUrl, "auth", "tokens", tokenID.String())
 	if err != nil {

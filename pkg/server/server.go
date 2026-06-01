@@ -105,6 +105,7 @@ func (s *Server) info() http.HandlerFunc {
 			Application: config.SERVER_APP_NAME,
 			ID:          uuid.Nil,
 			Status:      types.HealthzRunning,
+			Name:        s.config.Name,
 		}}, nil
 	})
 }

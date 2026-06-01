@@ -69,9 +69,9 @@ func (s *Server) apiInfo() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		return Response{
 			Payload: types.ServerApiInfo{
-				Name:    s.config.Name,
 				Version: config.VERSION,
 				ServerInfo: types.ServerInfo{
+					Name:        s.config.Name,
 					Application: config.SERVER_APP_NAME,
 					Status:      types.HealthzRunning,
 					ID:          uuid.Nil,

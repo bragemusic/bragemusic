@@ -85,8 +85,10 @@ func (s ServerClient) doGetJson(ctx context.Context, u string, target any) error
 	}
 	defer resp.Body.Close()
 
-	if err := json.NewDecoder(resp.Body).Decode(&target); err != nil {
-		return err
+	if target != nil {
+		if err := json.NewDecoder(resp.Body).Decode(&target); err != nil {
+			return err
+		}
 	}
 
 	return nil
