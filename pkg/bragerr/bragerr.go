@@ -69,7 +69,9 @@ func HandleHttpResponse(ctx context.Context, err error, w http.ResponseWriter, l
 		attrs := []slog.Attr{
 			slog.Any("code", berr.Code),
 			slog.Any("service", berr.Service),
-			slog.Any("error", berr.Err.Error()),
+		}
+		if berr.Err != nil {
+			attrs = append(attrs, slog.Any("error", berr.Err.Error()))
 		}
 		attrs = append(attrs, berr.LogAttrs...)
 		logger.LogAttrs(ctx, slog.LevelError, berr.Message, attrs...)

@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"syscall"
 
+	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
@@ -17,10 +20,15 @@ import (
 var DEVICES_PATH = []string{"api", "devices"}
 
 type ErrStatus struct {
-	Status int
+	Status   int
+	Refused  bool
+	TimedOut bool
 }
 
 func (e ErrStatus) Error() string {
+	if e.Refused == true {
+		return fmt.Sprintf("server is not reachable right now")
+	}
 	return fmt.Sprintf("server returned status %d", e.Status)
 }
 
@@ -47,11 +55,32 @@ func (s ServerClient) do(ctx context.Context, req *http.Request) (*http.Response
 
 	resp, err := s.client.Do(req)
 	if err != nil {
-		return resp, err
+		errStatus := ErrStatus{Status: 0}
+
+		if errors.Is(err, syscall.ECONNREFUSED) {
+			errStatus.Refused = true
+		}
+
+		if errors.Is(err, syscall.ETIMEDOUT) {
+			errStatus.TimedOut = true
+		}
+		return resp, errStatus
 	}
 
 	if resp.StatusCode >= 400 {
-		resp.Body.Close()
+		defer resp.Body.Close()
+
+		bragErr := bragerr.Response{}
+		if jerr := json.NewDecoder(resp.Body).Decode(&bragErr); jerr != nil {
+			return resp, ErrStatus{Status: resp.StatusCode}
+		}
+
+		if bragErr.Error != nil {
+			// av nan anledning panikar vi har. i gui-client nar jag loggar in med fel creds
+			bragErr.Error.Status = resp.StatusCode
+			return resp, bragErr.Error
+		}
+
 		return resp, ErrStatus{Status: resp.StatusCode}
 	}
 
@@ -85,8 +114,10 @@ func (s ServerClient) doGetJson(ctx context.Context, u string, target any) error
 	}
 	defer resp.Body.Close()
 
-	if err := json.NewDecoder(resp.Body).Decode(&target); err != nil {
-		return err
+	if target != nil {
+		if err := json.NewDecoder(resp.Body).Decode(&target); err != nil {
+			return err
+		}
 	}
 
 	return nil

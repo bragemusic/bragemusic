@@ -22,11 +22,11 @@ type ServerInfo struct {
 	Application string        `json:"application"`
 	ID          uuid.UUID     `json:"id" ts_type:"string"`
 	Status      HealthzStatus `json:"status"`
+	Name        string        `json:"name"`
 }
 
 type ServerApiInfo struct {
 	ServerInfo
-	Name    string `json:"name"`
 	Version string `json:"version"`
 }
 

@@ -14,54 +14,111 @@ import (
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
-	"github.com/gofrs/uuid/v5"
 )
 
 type Auth struct {
-	client   authclient.AuthClient
-	sc       *serverclient.ServerClient
-	user     *types.UserDetails
-	loggedIn bool
-	log      *slog.Logger
+	client    authclient.AuthClient
+	sc        *serverclient.ServerClient
+	user      *types.UserDetails
+	loggedIn  bool
+	tokenType *types.TokenType
+	log       *slog.Logger
 }
 
 func (a *Auth) ServerClient() *serverclient.ServerClient {
 	return a.sc
 }
 
-func (a *Auth) GetUser() *types.UserDetails {
+func (a *Auth) GetUser(ctx context.Context, tokenType types.TokenType) *types.UserDetails {
+	if a.user != nil {
+		return a.user
+	}
+
+	err := a.client.LoginCachedServerUser(ctx, tokenType)
+	if err != nil {
+		a.log.WarnContext(ctx, "could not log in cached user", "error", err.Error())
+		return nil
+	}
+
+	user, userErr := a.sc.GetUser(ctx)
+	if userErr != nil {
+		a.log.WarnContext(ctx, "could not get user", "error", userErr.Error())
+		if tokenType != types.TokenAPI {
+			return nil
+		}
+	}
+
+	serr, ok := userErr.(serverclient.ErrStatus)
+	if !ok {
+		return nil
+	}
+
+	if serr.Refused && tokenType == types.TokenAPI {
+		cachedUser, err := a.GetCachedUser(ctx)
+		if err != nil {
+			a.log.WarnContext(ctx, "could not get cached user", "error", err.Error())
+			return nil
+		}
+
+		if cachedUser == nil {
+			a.log.InfoContext(ctx, "no cached user found")
+			return nil
+		}
+
+		user = *cachedUser
+
+	}
+
+	a.login(ctx, user, tokenType)
+
 	return a.user
+}
+
+func (a *Auth) GetCachedUser(ctx context.Context) (user *types.UserDetails, err error) {
+	return a.client.GetCachedUser(ctx)
 }
 
 func (a *Auth) GetCachedUsers(ctx context.Context) (users []types.UserDetails, err error) {
 	return a.client.GetCachedUsers(ctx)
 }
 
-func (a *Auth) login(ctx context.Context, user types.UserDetails) {
+func (a *Auth) login(ctx context.Context, user types.UserDetails, tokenType types.TokenType) {
 	a.user = &user
 	a.loggedIn = true
+	a.tokenType = &tokenType
 
 	a.log.InfoContext(ctx, "successfully logged in", "user.name", user.Username, "user.email", user.Email)
 }
 
-func (a *Auth) LoginServerUser(ctx context.Context, username, password string, longLivedToken bool) error {
-	user, err := a.client.Login(ctx, username, password, longLivedToken)
+func (a *Auth) Logout(ctx context.Context) error {
+	err := a.sc.Logout(ctx)
 	if err != nil {
 		return err
 	}
 
-	a.login(ctx, user)
+	a.user = nil
+	a.loggedIn = false
+
+	tokenType := types.TokenFrontendShort
+	if a.tokenType != nil {
+		tokenType = *a.tokenType
+	}
+
+	err = a.client.LogoutServerUser(ctx, tokenType)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
-func (a *Auth) LoginLocalUser(ctx context.Context, userID uuid.UUID) error {
-	user, err := a.client.LoginLocalUser(ctx, userID, false)
+func (a *Auth) LoginServerUser(ctx context.Context, username, password string, tokenType types.TokenType) error {
+	user, err := a.client.Login(ctx, username, password, tokenType)
 	if err != nil {
 		return err
 	}
 
-	a.login(ctx, user)
+	a.login(ctx, user, tokenType)
 
 	return nil
 }
@@ -72,7 +129,7 @@ func (a *Auth) LoginToken(ctx context.Context, token string) error {
 		return err
 	}
 
-	a.login(ctx, user)
+	a.login(ctx, user, types.TokenAPI)
 
 	return nil
 }
@@ -178,8 +235,7 @@ func (a *Auth) NewClient(ctx context.Context, config Config, slogHandler slog.Ha
 
 	err = c.SubscribeDeviceEvents(ctx)
 	if err != nil {
-		cancelFunc()
-		return nil, err
+		a.log.ErrorContext(ctx, "could not subscribe to device events", "error", err.Error())
 	}
 
 	ap.RegisterPlayCountCallback(c.updatePlayCount)

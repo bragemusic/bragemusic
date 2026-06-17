@@ -28,6 +28,13 @@ var ErrNoUserInContext = BragErr{
 	Status:  http.StatusForbidden,
 }
 
+var ErrInvalidUserCreds = BragErr{
+	Code:    "INVALIDUSERCREDS",
+	Title:   "Invalid user credentials",
+	Status:  http.StatusUnauthorized,
+	Message: "Username and/or password is incorrect.",
+}
+
 func (b BragErrFactory) Unauthenticated(err error) *BragErr {
 	e := ErrUnauthenticated
 	e.Service = b.service
@@ -45,6 +52,13 @@ func (b BragErrFactory) ItemAccessDenied(err error, entityType types.EntityType,
 
 func (b BragErrFactory) NoUserInContext(err error) *BragErr {
 	e := ErrNoUserInContext
+	e.Service = b.service
+	e.Err = err
+	return &e
+}
+
+func (b BragErrFactory) ErrInvalidUserCreds(err error) *BragErr {
+	e := ErrInvalidUserCreds
 	e.Service = b.service
 	e.Err = err
 	return &e
