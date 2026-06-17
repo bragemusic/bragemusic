@@ -277,21 +277,21 @@ func (a Auth) ListUserTokens(ctx context.Context, userID uuid.UUID) ([]types.Tok
 func (a Auth) CreateLoginToken(ctx context.Context, email, password string, longLivedToken bool) (token string, expiresIn int, err error) {
 	user, err := a.db.GetUserFromEmail(ctx, email)
 	if err != nil {
-		return "", 0, ErrInvalidCredentials
+		return "", 0, a.berr.ErrInvalidUserCreds(err)
 	}
 
 	localCreds, err := a.db.GetLocalCredentialsForUser(ctx, user.ID)
 	if err != nil {
-		return "", 0, ErrInvalidCredentials
+		return "", 0, a.berr.ErrInvalidUserCreds(err)
 	}
 
 	passMatch, err := a.hc.ComparePasswordAndHash(password, localCreds.PasswordHash)
 	if err != nil {
-		return "", 0, ErrInvalidCredentials
+		return "", 0, a.berr.ErrInvalidUserCreds(err)
 	}
 
 	if !passMatch {
-		return "", 0, ErrInvalidCredentials
+		return "", 0, a.berr.ErrInvalidUserCreds(errors.New("password does not match"))
 	}
 
 	tokenType := types.TokenFrontendShort
@@ -301,7 +301,7 @@ func (a Auth) CreateLoginToken(ctx context.Context, email, password string, long
 
 	token, expiresIn, err = a.generateToken(ctx, user.ID, tokenType, nil)
 	if err != nil {
-		return "", 0, ErrInvalidCredentials
+		return "", 0, a.berr.ErrInvalidUserCreds(err)
 	}
 
 	return token, expiresIn, nil

@@ -37,8 +37,8 @@ func (ac *AuthClient) UserCallback(user *types.UserDetails) {
 	}
 }
 
-func (ac *AuthClient) LoginCachedServerUser(ctx context.Context) error {
-	path, err := ac.tokenPath()
+func (ac *AuthClient) LoginCachedServerUser(ctx context.Context, tokenType types.TokenType) error {
+	path, err := ac.tokenPath(tokenType)
 	if err != nil {
 		return err
 	}
@@ -56,20 +56,31 @@ func (ac *AuthClient) LoginCachedServerUser(ctx context.Context) error {
 	return nil
 }
 
-func (ac *AuthClient) Login(ctx context.Context, username, password string, longLivedToken bool) (types.UserDetails, error) {
-	loginResp, err := ac.sc.Login(ctx, username, password, longLivedToken)
+func (ac *AuthClient) Login(ctx context.Context, username, password string, tokenType types.TokenType) (types.UserDetails, error) {
+	var token string
+
+	loginResp, err := ac.sc.Login(ctx, username, password, tokenType == types.TokenFrontendLong)
 	if err != nil {
 		return types.UserDetails{}, err
 	}
 
 	ac.sc.SetAuthToken(loginResp.Token)
 
+	if tokenType == types.TokenAPI {
+		token, err = ac.sc.CreateAPIToken(ctx, "Desktop Client")
+		if err != nil {
+			return types.UserDetails{}, err
+		}
+	} else {
+		token = loginResp.Token
+	}
+
 	user, err := ac.sc.GetUser(ctx)
 	if err != nil {
 		return types.UserDetails{}, err
 	}
 
-	if err = ac.saveToken(ctx, loginResp.Token, user.ID); err != nil {
+	if err = ac.saveToken(ctx, token, user.ID, tokenType); err != nil {
 		return types.UserDetails{}, err
 	}
 
@@ -91,54 +102,76 @@ func (ac *AuthClient) LoginToken(ctx context.Context, token string) (types.UserD
 	return user, err
 }
 
-func (ac *AuthClient) LogoutServerUser(ctx context.Context) error {
-	if err := ac.removeToken(ctx); err != nil {
+func (ac *AuthClient) LogoutServerUser(ctx context.Context, tokenType types.TokenType) error {
+	if err := ac.removeToken(ctx, tokenType); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (ac *AuthClient) LoginLocalUser(ctx context.Context, userID uuid.UUID, runCallback bool) (types.UserDetails, error) {
-	path, err := ac.tokenPath()
+// func (ac *AuthClient) LoginLocalUser(ctx context.Context, userID uuid.UUID, runCallback bool) (types.UserDetails, error) {
+// 	path, err := ac.tokenPath()
+// 	if err != nil {
+// 		return types.UserDetails{}, err
+// 	}
+
+// 	b, err := os.ReadFile(path)
+// 	if err != nil {
+// 		if !errors.Is(err, os.ErrNotExist) {
+// 			return types.UserDetails{}, err
+// 		}
+// 	}
+
+// 	ac.sc.SetAuthToken(strings.TrimSpace(string(b)))
+
+// 	userPath, err := ac.userDetailsPath(userID)
+// 	if err != nil {
+// 		return types.UserDetails{}, err
+// 	}
+
+// 	var user types.UserDetails
+
+// 	bUser, err := os.ReadFile(userPath)
+// 	if err != nil {
+// 		if errors.Is(err, os.ErrNotExist) {
+// 			user, err = ac.sc.GetUser(ctx)
+// 			if err != nil {
+// 				return types.UserDetails{}, err
+// 			}
+// 		} else {
+// 			return types.UserDetails{}, err
+// 		}
+// 	} else {
+// 		if err = json.Unmarshal(bUser, &user); err != nil {
+// 			return types.UserDetails{}, err
+// 		}
+// 	}
+
+// 	if runCallback {
+// 		ac.UserCallback(&user)
+// 	}
+
+// 	return user, nil
+// }
+
+func (ac *AuthClient) GetCachedUser(ctx context.Context) (user *types.UserDetails, err error) {
+	path, err := ac.userPath()
 	if err != nil {
-		return types.UserDetails{}, err
+		return nil, err
 	}
 
-	b, err := os.ReadFile(path)
-	if err != nil {
-		if !errors.Is(err, os.ErrNotExist) {
-			return types.UserDetails{}, err
-		}
-	}
-
-	ac.sc.SetAuthToken(strings.TrimSpace(string(b)))
-
-	userPath, err := ac.userDetailsPath(userID)
-	if err != nil {
-		return types.UserDetails{}, err
-	}
-
-	var user types.UserDetails
-
-	bUser, err := os.ReadFile(userPath)
+	bUser, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			user, err = ac.sc.GetUser(ctx)
-			if err != nil {
-				return types.UserDetails{}, err
-			}
-		} else {
-			return types.UserDetails{}, err
+			return nil, nil
 		}
-	} else {
-		if err = json.Unmarshal(bUser, &user); err != nil {
-			return types.UserDetails{}, err
-		}
+
+		return nil, err
 	}
 
-	if runCallback {
-		ac.UserCallback(&user)
+	if err = json.Unmarshal(bUser, &user); err != nil {
+		return nil, err
 	}
 
 	return user, nil
@@ -189,10 +222,10 @@ func (ac *AuthClient) RemoveToken(ctx context.Context, id uuid.UUID) error {
 	return ac.sc.DeleteToken(ctx, id)
 }
 
-func (ac *AuthClient) removeToken(ctx context.Context) error {
+func (ac *AuthClient) removeToken(ctx context.Context, tokenType types.TokenType) error {
 	ac.sc.SetAuthToken("")
 
-	path, err := ac.tokenPath()
+	path, err := ac.tokenPath(tokenType)
 	if err != nil {
 		return err
 	}
@@ -202,8 +235,8 @@ func (ac *AuthClient) removeToken(ctx context.Context) error {
 	return nil
 }
 
-func (ac *AuthClient) saveToken(ctx context.Context, token string, userID uuid.UUID) error {
-	path, err := ac.tokenPath()
+func (ac *AuthClient) saveToken(ctx context.Context, token string, userID uuid.UUID, tokenType types.TokenType) error {
+	path, err := ac.tokenPath(tokenType)
 	if err != nil {
 		return err
 	}
@@ -216,7 +249,7 @@ func (ac *AuthClient) saveToken(ctx context.Context, token string, userID uuid.U
 }
 
 func (ac *AuthClient) saveUserDetails(ctx context.Context, user types.UserDetails) error {
-	path, err := ac.userDetailsPath(user.ID)
+	path, err := ac.userPath()
 	if err != nil {
 		return err
 	}
@@ -237,8 +270,15 @@ func (ac *AuthClient) usersPath() (string, error) {
 	return xdg.StateFile(filepath.Join("brage", "users"))
 }
 
-func (ac *AuthClient) tokenPath() (string, error) {
-	return xdg.StateFile(filepath.Join("brage", "token"))
+func (ac *AuthClient) userPath() (string, error) {
+	return xdg.StateFile(filepath.Join("brage", "user-sync.json"))
+}
+
+func (ac *AuthClient) tokenPath(tokenType types.TokenType) (string, error) {
+	if tokenType == types.TokenAPI {
+		return xdg.StateFile(filepath.Join("brage", "token-sync"))
+	}
+	return xdg.StateFile(filepath.Join("brage", "token-stream"))
 }
 
 func (ac *AuthClient) userDetailsPath(userID uuid.UUID) (string, error) {
