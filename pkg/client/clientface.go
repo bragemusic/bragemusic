@@ -124,6 +124,7 @@ type AudioPlayerFace interface {
 
 	ConnectDevice(ctx context.Context, id uuid.UUID) error
 	DisconnectDevice(ctx context.Context) error
+	GetConnectedDevice() *uuid.UUID
 }
 
 // MetadataFace defines access to and modification of music library metadata,
