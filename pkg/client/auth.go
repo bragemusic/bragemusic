@@ -5,13 +5,13 @@ import (
 	"errors"
 	"log/slog"
 
-	playbackcontroller "github.com/bragemusic/core/pkg"
 	"github.com/bragemusic/core/pkg/audiointerface"
 	"github.com/bragemusic/core/pkg/audioplayer"
 	"github.com/bragemusic/core/pkg/audioreader"
 	"github.com/bragemusic/core/pkg/authclient"
 	"github.com/bragemusic/core/pkg/device"
 	"github.com/bragemusic/core/pkg/jobmanager"
+	"github.com/bragemusic/core/pkg/playbackcontroller"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
 )
@@ -46,27 +46,27 @@ func (a *Auth) GetUser(ctx context.Context, tokenType types.TokenType) *types.Us
 		if tokenType != types.TokenAPI {
 			return nil
 		}
-	}
 
-	serr, ok := userErr.(serverclient.ErrStatus)
-	if !ok {
-		return nil
-	}
-
-	if serr.Refused && tokenType == types.TokenAPI {
-		cachedUser, err := a.GetCachedUser(ctx)
-		if err != nil {
-			a.log.WarnContext(ctx, "could not get cached user", "error", err.Error())
+		serr, ok := userErr.(serverclient.ErrStatus)
+		if !ok {
 			return nil
 		}
 
-		if cachedUser == nil {
-			a.log.InfoContext(ctx, "no cached user found")
-			return nil
+		if serr.Refused && tokenType == types.TokenAPI {
+			cachedUser, err := a.GetCachedUser(ctx)
+			if err != nil {
+				a.log.WarnContext(ctx, "could not get cached user", "error", err.Error())
+				return nil
+			}
+
+			if cachedUser == nil {
+				a.log.InfoContext(ctx, "no cached user found")
+				return nil
+			}
+
+			user = *cachedUser
+
 		}
-
-		user = *cachedUser
-
 	}
 
 	a.login(ctx, user, tokenType)

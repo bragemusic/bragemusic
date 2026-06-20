@@ -13,12 +13,12 @@ import (
 	"log/slog"
 
 	"github.com/bragemusic/core/internal/config"
-	playbackcontroller "github.com/bragemusic/core/pkg"
 	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/device"
 	"github.com/bragemusic/core/pkg/jobmanager"
 	"github.com/bragemusic/core/pkg/mediamanager"
+	"github.com/bragemusic/core/pkg/playbackcontroller"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/sse"
 	"github.com/bragemusic/core/pkg/syncer"

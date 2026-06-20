@@ -15,6 +15,7 @@ type PlaybackControllerFace interface {
 	audioplayer.AudioPlayerFace
 	ConnectDevice(ctx context.Context, id uuid.UUID) error
 	DisconnectDevice(ctx context.Context) error
+	GetConnectedDevice() *uuid.UUID
 }
 
 type PlaybackController struct {
@@ -103,6 +104,10 @@ func (p *PlaybackController) DisconnectDevice(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (p *PlaybackController) GetConnectedDevice() *uuid.UUID {
+	return p.remoteDeviceID
 }
 
 func (p *PlaybackController) PlayerState() types.PlayerState {
