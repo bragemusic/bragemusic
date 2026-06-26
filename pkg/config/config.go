@@ -1,17 +1,45 @@
-package utils
+package config
 
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"reflect"
 	"strconv"
 	"strings"
 )
 
-const envPrefix = "BRAGE"
+const envPrefix = "BM"
 
-func AddFromEnv(cfg any) error {
+type VerificationError struct {
+	Parameter string
+	Error     string
+}
+
+type Config interface {
+	Verify() (errs []VerificationError)
+}
+
+type LogFormat string
+
+const (
+	LogFormatPretty LogFormat = "pretty"
+	LogFormatJson   LogFormat = "json"
+)
+
+func verify(cfg Config, logger *slog.Logger) error {
+	if errs := cfg.Verify(); errs != nil {
+		for _, e := range errs {
+			logger.Error("config error", "parameter", e.Parameter, "error", e.Error)
+		}
+		return errors.New("config verification failed")
+	}
+
+	return nil
+}
+
+func addFromEnv(cfg any) error {
 	t := reflect.TypeOf(cfg).Elem()
 	v := reflect.ValueOf(cfg).Elem()
 
@@ -69,10 +97,4 @@ func reflectField(field reflect.StructField, value reflect.Value, p []string) er
 	}
 
 	return nil
-}
-
-func GenerateDocsMap(cfg any, generateToml bool) (map[string]string, error) {
-	// TODO: Parse desc tags and generate docs of toml name, env name and desc.
-	// To be used in an md file or similar
-	return nil, nil
 }

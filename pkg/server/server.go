@@ -12,9 +12,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/bragemusic/core/internal/config"
+	"github.com/bragemusic/core/internal/vars"
 	"github.com/bragemusic/core/pkg/auth"
 	"github.com/bragemusic/core/pkg/bragerr"
+	"github.com/bragemusic/core/pkg/config"
 	"github.com/bragemusic/core/pkg/device"
 	"github.com/bragemusic/core/pkg/importer"
 	"github.com/bragemusic/core/pkg/jobmanager"
@@ -42,7 +43,7 @@ type Server struct {
 	jobmgr    *jobmanager.JobManager
 	sseHub    *sse.Hub
 	distFs    fs.FS
-	config    Config
+	config    config.ServerConfig
 	berr      bragerr.BragErrFactory
 	httpSrv   *http.Server
 	ready     atomic.Bool
@@ -102,10 +103,10 @@ func (s *Server) healthz() http.HandlerFunc {
 func (s *Server) info() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		return Response{Status: http.StatusOK, Payload: types.ServerInfo{
-			Application: config.SERVER_APP_NAME,
+			Application: vars.SERVER_APP_NAME,
 			ID:          uuid.Nil,
 			Status:      types.HealthzRunning,
-			Name:        s.config.Name,
+			Name:        s.config.General.Name,
 		}}, nil
 	})
 }
@@ -149,7 +150,7 @@ func (s *Server) Start(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	s.httpSrv = &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.config.Port),
+		Addr:    fmt.Sprintf(":%d", s.config.General.Port),
 		Handler: s.Handler(),
 	}
 
@@ -157,7 +158,7 @@ func (s *Server) Start(ctx context.Context) error {
 	s.ready.Store(true)
 
 	g.Go(func() error {
-		s.log.InfoContext(ctx, "HTTP server starting", "port", s.config.Port)
+		s.log.InfoContext(ctx, "HTTP server starting", "port", s.config.General.Port)
 
 		if err := s.httpSrv.ListenAndServe(); err != nil &&
 			!errors.Is(err, http.ErrServerClosed) {
@@ -211,7 +212,7 @@ func (s *Server) Start(ctx context.Context) error {
 // 	return nil
 // }
 
-func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, mb *musicbrainz.MusicBrainz, j *jobmanager.JobManager, sseHub *sse.Hub, d *device.DeviceManager, distFs fs.FS, c Config) Server {
+func New(slogHandler slog.Handler, m *mediamanager.MediaManager, a *auth.Auth, i *importer.Importer, mb *musicbrainz.MusicBrainz, j *jobmanager.JobManager, sseHub *sse.Hub, d *device.DeviceManager, distFs fs.FS, c config.ServerConfig) Server {
 	return Server{
 		log:       slog.New(slogHandler).With("service", "server"),
 		errLog:    slog.New(slogHandler),

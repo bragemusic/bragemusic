@@ -2,20 +2,54 @@ package main
 
 import (
 	"fmt"
+	"os"
 
-	"github.com/bragemusic/core/internal/config"
+	"github.com/bragemusic/core/internal/vars"
+	"github.com/bragemusic/core/pkg/config"
 	"github.com/bragemusic/core/pkg/server"
 	"github.com/bragemusic/core/pkg/utils"
 	"github.com/swaggest/openapi-go/openapi31"
 )
 
+func generateConfigDocs() error {
+	serverDocs, err := config.ServerMdDocs()
+	if err != nil {
+		return err
+	}
+
+	clientDocs, err := config.ClientMdDocs()
+	if err != nil {
+		return err
+	}
+
+	header := `
+# Configuration
+
+Below is a description of the configuration parameters. You can see the toml and the env ways to enter the data.
+`
+
+	out := header + serverDocs + clientDocs
+
+	err = os.WriteFile("docs/config.md", []byte(out), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
+	err := generateConfigDocs()
+	if err != nil {
+		panic(err)
+	}
+
 	s := server.Server{}
 
 	refl := openapi31.NewReflector()
 	refl.Spec.Info.
 		WithTitle("Brage Music API").
-		WithVersion(config.VERSION).
+		WithVersion(vars.VERSION).
 		WithDescription(`
 <p>
   Brage Music is a personal music library and streaming platform built around a strongly typed, relational domain model.

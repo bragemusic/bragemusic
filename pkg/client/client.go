@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/bragemusic/core/internal/config"
+	"github.com/bragemusic/core/internal/vars"
 	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/device"
@@ -322,8 +322,8 @@ func (c *Client) UpdateServerStatus(ctx context.Context) error {
 		return err
 	}
 
-	if h.Application != config.SERVER_APP_NAME {
-		return fmt.Errorf("expected server application name differs. '%s' != expected '%s'", h.Application, config.SERVER_APP_NAME)
+	if h.Application != vars.SERVER_APP_NAME {
+		return fmt.Errorf("expected server application name differs. '%s' != expected '%s'", h.Application, vars.SERVER_APP_NAME)
 	}
 
 	if h.Status == types.HealthzUnavailable {
