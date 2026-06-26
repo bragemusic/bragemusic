@@ -19,6 +19,13 @@ This config is used to define the server. It only accepts ENV values at the mome
 | Parameter | Type | ENV Variable | Descripion |
 | --------- | ---- | ------------ | ---------- |
 | base_url | string | BM_ANALYSER_BASE_URL | URL to the analysis service. If left blank, no analysis will be performed. |
+### GENERAL
+| Parameter | Type | ENV Variable | Descripion |
+| --------- | ---- | ------------ | ---------- |
+| name | string | BM_GENERAL_NAME | Name of the server. Defaults to 'Brage Music Server' |
+| port | int | BM_GENERAL_PORT | Port of the server. Defaults to 3000. |
+| log_format | string | BM_GENERAL_LOG_FORMAT | The format of the logs printed to the stderr. Defaults to 'json' |
+| log_level | string | BM_GENERAL_LOG_LEVEL | Set the log level of the client. Defaults to 'INFO'. |
 ### JOBS
 | Parameter | Type | ENV Variable | Descripion |
 | --------- | ---- | ------------ | ---------- |
@@ -40,8 +47,6 @@ This config is used to define the server. It only accepts ENV values at the mome
 | Parameter | Type | ENV Variable | Descripion |
 | --------- | ---- | ------------ | ---------- |
 | email | string | BM_WIKIPEDIA_EMAIL | Used against the wikipedia API. They require a valid email to make sure you behave. |
-| name | string | BM_NAME | Name of the server. Defaults to 'Brage Music Server' |
-| port | int | BM_PORT | Port of the server. Defaults to 3000. |
 ## Client Config
 The following configuration is used in the local client. The daemon and the GUI are both accepting the same config.
 It is stored in ~/.config/brage/config.toml or use it with ENV variables.
@@ -56,6 +61,7 @@ It is stored in ~/.config/brage/config.toml or use it with ENV variables.
 | player_icon | string | BM_GENERAL_PLAYER_ICON | The icon of your player will have. Choose from 'laptop', 'computer', 'phone', 'speaker', 'tv', 'generic'. Defaults to 'laptop'. |
 | disable_transitions | bool | BM_GENERAL_DISABLE_TRANSITIONS | Set this to true if you see weird artefacts on popups, overlays and more. Will disable all transitions. |
 | client_type | string | BM_GENERAL_CLIENT_TYPE | Either sync or streaming. Sync client is syncing all files to the client and can run offline. The streaming client streams everything from the server. |
+| log_format | string | BM_GENERAL_LOG_FORMAT | The format of the logs printed to the stderr. Defaults to 'pretty' |
 | log_level | string | BM_GENERAL_LOG_LEVEL | Set the log level of the client. Defaults to 'INFO'. |
 ### PATHS
 | Parameter | Type | ENV Variable | Descripion |

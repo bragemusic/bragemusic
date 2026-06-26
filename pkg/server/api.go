@@ -71,7 +71,7 @@ func (s *Server) apiInfo() http.HandlerFunc {
 			Payload: types.ServerApiInfo{
 				Version: vars.VERSION,
 				ServerInfo: types.ServerInfo{
-					Name:        s.config.Name,
+					Name:        s.config.General.Name,
 					Application: vars.SERVER_APP_NAME,
 					Status:      types.HealthzRunning,
 					ID:          uuid.Nil,

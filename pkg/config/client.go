@@ -19,6 +19,7 @@ type General struct {
 	PlayerIcon         types.DeviceIcon `toml:"player_icon" desc:"The icon of your player will have. Choose from 'laptop', 'computer', 'phone', 'speaker', 'tv', 'generic'. Defaults to 'laptop'."`
 	DisableTransitions bool             `toml:"disable_transitions" desc:"Set this to true if you see weird artefacts on popups, overlays and more. Will disable all transitions."`
 	ClientType         types.DeviceType `toml:"client_type" desc:"Either sync or streaming. Sync client is syncing all files to the client and can run offline. The streaming client streams everything from the server."`
+	LogFormat          LogFormat        `toml:"log_format" desc:"The format of the logs printed to the stderr. Defaults to 'pretty'"`
 	LogLevel           string           `toml:"log_level" desc:"Set the log level of the client. Defaults to 'INFO'."`
 }
 
@@ -38,6 +39,15 @@ func (g General) Verify() (errs []VerificationError) {
 		errs = append(errs, VerificationError{
 			Parameter: "General.ClientType",
 			Error:     fmt.Sprintf("unknown client type '%s'. Choose from Choose from 'sync', 'streaming'", g.ClientType),
+		})
+	}
+
+	switch g.LogFormat {
+	case LogFormatJson, LogFormatPretty:
+	default:
+		errs = append(errs, VerificationError{
+			Parameter: "General.LogFormat",
+			Error:     fmt.Sprintf("unknown log format '%s'. Choose from 'pretty', 'json'", g.LogFormat),
 		})
 	}
 	return errs
@@ -105,6 +115,7 @@ var defaultClientConfig = ClientConfig{
 		PlayerIcon: types.DeviceIconLaptop,
 		ClientType: types.DeviceTypeStreaming,
 		LogLevel:   "INFO",
+		LogFormat:  LogFormatPretty,
 	},
 	Paths: ClientPaths{
 		ConfigDir: filepath.Join(xdg.DataHome, "brage", "config"),

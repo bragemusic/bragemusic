@@ -149,29 +149,48 @@ func (j Jobs) Verify() (errs []VerificationError) {
 	return errs
 }
 
-type ServerConfig struct {
-	AcoustID  AcoustID  `toml:"acoust_id"`
-	Admin     Admin     `toml:"admin"`
-	Analyser  Analyser  `toml:"analyser"`
-	Jobs      Jobs      `toml:"jobs"`
-	Paths     Paths     `toml:"paths"`
-	Wikipedia Wikipedia `toml:"wikipedia"`
+type ServerGeneral struct {
 	Name      string    `toml:"name" desc:"Name of the server. Defaults to 'Brage Music Server'"`
 	Port      int       `toml:"port" desc:"Port of the server. Defaults to 3000."`
+	LogFormat LogFormat `toml:"log_format" desc:"The format of the logs printed to the stderr. Defaults to 'json'"`
+	LogLevel  string    `toml:"log_level" desc:"Set the log level of the client. Defaults to 'INFO'."`
+}
+
+func (g ServerGeneral) Verify() (errs []VerificationError) {
+	if g.Port < 1024 || g.Port > 49151 {
+		errs = append(errs, VerificationError{
+			Parameter: "General.Port",
+			Error:     fmt.Sprintf("port %d not allowed. Use in range 1024-49151", g.Port),
+		})
+	}
+
+	switch g.LogFormat {
+	case LogFormatJson, LogFormatPretty:
+	default:
+		errs = append(errs, VerificationError{
+			Parameter: "General.LogFormat",
+			Error:     fmt.Sprintf("unknown log format '%s'. Choose from 'pretty', 'json'", g.LogFormat),
+		})
+	}
+	return errs
+}
+
+type ServerConfig struct {
+	AcoustID  AcoustID      `toml:"acoust_id"`
+	Admin     Admin         `toml:"admin"`
+	Analyser  Analyser      `toml:"analyser"`
+	General   ServerGeneral `toml:"general"`
+	Jobs      Jobs          `toml:"jobs"`
+	Paths     Paths         `toml:"paths"`
+	Wikipedia Wikipedia     `toml:"wikipedia"`
 }
 
 func (s ServerConfig) Verify() (errs []VerificationError) {
 	errs = append(errs, s.AcoustID.Verify()...)
+	errs = append(errs, s.General.Verify()...)
 	errs = append(errs, s.Jobs.Verify()...)
 	errs = append(errs, s.Paths.Verify()...)
 	errs = append(errs, s.Wikipedia.Verify()...)
-
-	if s.Port < 1024 || s.Port > 49151 {
-		errs = append(errs, VerificationError{
-			Parameter: "Port",
-			Error:     fmt.Sprintf("port %d not allowed. Use in range 1024-49151", s.Port),
-		})
-	}
 
 	// TODO: Add more verification
 	return errs
@@ -191,8 +210,12 @@ var defaultServerConfig = ServerConfig{
 		TrackAnalysis: "*/3 * * * *",
 		TokenCleanup:  "*/10 * * * *",
 	},
-	Name: "Brage Music Server",
-	Port: 3000,
+	General: ServerGeneral{
+		Name:      "Brage Music Server",
+		Port:      3000,
+		LogFormat: LogFormatJson,
+		LogLevel:  "INFO",
+	},
 }
 
 func GetServerConfig(logger *slog.Logger) (ServerConfig, error) {

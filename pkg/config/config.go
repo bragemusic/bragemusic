@@ -21,6 +21,13 @@ type Config interface {
 	Verify() (errs []VerificationError)
 }
 
+type LogFormat string
+
+const (
+	LogFormatPretty LogFormat = "pretty"
+	LogFormatJson   LogFormat = "json"
+)
+
 func verify(cfg Config, logger *slog.Logger) error {
 	if errs := cfg.Verify(); errs != nil {
 		for _, e := range errs {

@@ -106,7 +106,7 @@ func (s *Server) info() http.HandlerFunc {
 			Application: vars.SERVER_APP_NAME,
 			ID:          uuid.Nil,
 			Status:      types.HealthzRunning,
-			Name:        s.config.Name,
+			Name:        s.config.General.Name,
 		}}, nil
 	})
 }
@@ -150,7 +150,7 @@ func (s *Server) Start(ctx context.Context) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	s.httpSrv = &http.Server{
-		Addr:    fmt.Sprintf(":%d", s.config.Port),
+		Addr:    fmt.Sprintf(":%d", s.config.General.Port),
 		Handler: s.Handler(),
 	}
 
@@ -158,7 +158,7 @@ func (s *Server) Start(ctx context.Context) error {
 	s.ready.Store(true)
 
 	g.Go(func() error {
-		s.log.InfoContext(ctx, "HTTP server starting", "port", s.config.Port)
+		s.log.InfoContext(ctx, "HTTP server starting", "port", s.config.General.Port)
 
 		if err := s.httpSrv.ListenAndServe(); err != nil &&
 			!errors.Is(err, http.ErrServerClosed) {
