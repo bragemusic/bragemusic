@@ -3,7 +3,7 @@ package server
 import (
 	"net/http"
 
-	"github.com/bragemusic/core/internal/config"
+	"github.com/bragemusic/core/internal/vars"
 	"github.com/bragemusic/core/pkg/routes"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/go-chi/chi/v5"
@@ -69,10 +69,10 @@ func (s *Server) apiInfo() http.HandlerFunc {
 	return s.handle(func(w http.ResponseWriter, r *http.Request) (Response, error) {
 		return Response{
 			Payload: types.ServerApiInfo{
-				Version: config.VERSION,
+				Version: vars.VERSION,
 				ServerInfo: types.ServerInfo{
 					Name:        s.config.Name,
-					Application: config.SERVER_APP_NAME,
+					Application: vars.SERVER_APP_NAME,
 					Status:      types.HealthzRunning,
 					ID:          uuid.Nil,
 				},

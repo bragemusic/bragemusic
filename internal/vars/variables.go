@@ -1,4 +1,4 @@
-package config
+package vars
 
 var VERSION = "dev"
 

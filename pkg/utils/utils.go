@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
 	"path/filepath"
@@ -142,4 +143,10 @@ func FileSHA256(path string) (string, error) {
 
 	checksum := hasher.Sum(nil)
 	return fmt.Sprintf("%x", checksum), nil
+}
+
+func ParseLogLevel(s string) (slog.Level, error) {
+	var level slog.Level
+	err := level.UnmarshalText([]byte(s))
+	return level, err
 }
