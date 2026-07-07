@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strings"
 
 	"github.com/tidwall/gjson"
 )
@@ -56,12 +57,15 @@ func (w Wiki) GetWikiData(ctx context.Context, wikiDataUrl string) (WikiData, er
 	}
 
 	for _, lang := range w.preferredLangs {
-		u := res.Get(fmt.Sprintf("entities.%s.sitelinks.%swiki.url", wikiID, lang)).String()
+		u := res.Get(fmt.Sprintf("entities.%s.sitelinks.%swiki.title", wikiID, lang)).String()
 		if u != "" {
-			wpData, err := w.getWikipedia(ctx, u)
+			wikiUrl := fmt.Sprintf("https://%s.wikipedia.org/api/rest_v1/page/summary/%s", lang, strings.ReplaceAll(u, " ", "_"))
+			wpData, err := w.getWikipedia(ctx, wikiUrl)
 			if err == nil {
 				wd.Summary = &wpData.Summary
 				break
+			} else {
+				w.log.WarnContext(ctx, "could not get wikipedia summary", "error", err.Error())
 			}
 		}
 	}

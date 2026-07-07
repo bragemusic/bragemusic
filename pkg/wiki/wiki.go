@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 )
@@ -15,6 +16,7 @@ const (
 type Wiki struct {
 	email          string
 	preferredLangs []string
+	log            *slog.Logger
 }
 
 func (w Wiki) do(ctx context.Context, req *http.Request) (*http.Response, error) {
@@ -58,9 +60,10 @@ func (w Wiki) DownloadFile(ctx context.Context, fromUrl, filename string) error 
 	return nil
 }
 
-func New(email string) Wiki {
+func New(email string, slogHandler slog.Handler) Wiki {
 	return Wiki{
 		preferredLangs: []string{"en", "sv"},
 		email:          email,
+		log:            slog.New(slogHandler).With("service", "wiki"),
 	}
 }

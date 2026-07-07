@@ -106,7 +106,7 @@ type Jobs struct {
 	Importer      string `toml:"importer" desc:"How often the importer will look for new media files. Cron expression. Defaults to '*/3 * * * *'"`
 	MetaSyncer    string `toml:"meta_syncer" desc:"How often the meta-syncer will sync the needed metadata. Cron expression. Defaults to '*/3 * * * *'"`
 	SearchItems   string `toml:"search_items" desc:"How often the search items will be updated. Cron expression. Defaults to '*/3 * * * *'"`
-	TrackAnalysis string `toml:"analyser" desc:"How often the track analysis items will be updated. Cron expression. Defaults to '*/3 * * * *'"`
+	TrackAnalysis string `toml:"track_analyser" desc:"How often the track analysis items will be updated. Cron expression. Defaults to '*/3 * * * *'"`
 	TokenCleanup  string `toml:"token_cleanup" desc:"How often token cleanup will be performed. Cron expression. Defaults to '*/10 * * * *'"`
 }
 

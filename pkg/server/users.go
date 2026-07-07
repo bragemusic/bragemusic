@@ -228,7 +228,6 @@ func (s *Server) uploadProfilePicture() routes.RouteFunc[ReqNoContent, types.NoR
 
 func (s *Server) usersCreateApiToken() routes.RouteFunc[ReqUsersApiTokenCreate, types.CreateUserApiTokenResp] {
 	return func(ctx context.Context, req ReqUsersApiTokenCreate, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.CreateUserApiTokenResp], err error) {
-		fmt.Println(user)
 		token, _, err := s.authPkg.CreateAPIToken(ctx, req.Name, user.ID)
 		if err != nil {
 			return types.Response[types.CreateUserApiTokenResp]{}, err
