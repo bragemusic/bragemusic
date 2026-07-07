@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -348,7 +347,6 @@ func (d DeviceManager) RegisterOrUpdateDevice(ctx context.Context, id *uuid.UUID
 	}
 	defer tx.Rollback()
 
-	fmt.Println("ueue", id)
 	if id != nil {
 		existing, err := tx.GetDevice(ctx, *id)
 		if err != nil {
@@ -370,7 +368,6 @@ func (d DeviceManager) RegisterOrUpdateDevice(ctx context.Context, id *uuid.UUID
 		existing.LastIP = device.LastIP
 		existing.UpdatedAt = time.Now()
 
-		fmt.Println("uppdatera", device.Name, existing.Name)
 		if err = tx.UpdateDevice(ctx, existing); err != nil {
 			// FIXME: bragerr
 			return uuid.Nil, err

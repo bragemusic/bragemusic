@@ -25,6 +25,8 @@ func (d Database) AddPlaylist(ctx context.Context, p types.Playlist, userID uuid
 		p.ID = uid
 	}
 
+	p.Type = types.PlaylistTypeStandard
+
 	now := time.Now()
 	p.CreatedAt = now
 	p.UpdatedAt = now
