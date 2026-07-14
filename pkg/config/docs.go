@@ -61,7 +61,7 @@ func reflectDocsField(field reflect.StructField, value reflect.Value, p []string
 	envName := fmt.Sprintf("%s_%s", envPrefix, strings.Join(p, "_"))
 
 	res := []string{}
-	res = append(res, fmt.Sprintf("| %s | %s | %s | %s |", field.Tag.Get("toml"), value.Kind(), envName, field.Tag.Get("desc")))
+	res = append(res, fmt.Sprintf("| **%s** | `%s` | `%s` | %s |", field.Tag.Get("toml"), value.Kind(), envName, field.Tag.Get("desc")))
 
 	return res, nil
 }
