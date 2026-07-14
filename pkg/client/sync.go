@@ -53,6 +53,13 @@ func (c clientSync) GetArtistTopTracks(ctx context.Context, artistID uuid.UUID) 
 	return tracks, nil
 }
 
+func (c clientSync) CreateArtist(ctx context.Context, artistData types.ArtistBase) error {
+	if err := c.sc.CreateArtist(ctx, artistData); err != nil {
+		return err
+	}
+	return c.Sync(ctx)
+}
+
 func (c clientSync) UpdateArtist(ctx context.Context, artistID uuid.UUID, artistData types.Artist) error {
 	if err := c.sc.UpdateArtist(ctx, artistID, artistData); err != nil {
 		return err

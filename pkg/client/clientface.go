@@ -133,6 +133,9 @@ type MetadataFace interface {
 	// CountArtists returns the total number of artists.
 	CountArtists(ctx context.Context) (int, error)
 
+	// CreateArtist creates a new Artist object
+	CreateArtist(ctx context.Context, artistData types.ArtistBase) error
+
 	// GetArtist returns metadata for a specific artist.
 	GetArtist(ctx context.Context, artistID uuid.UUID) (types.Artist, error)
 

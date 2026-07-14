@@ -8,6 +8,19 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
+func (m MediaManager) CreateArtist(ctx context.Context, artistData types.ArtistBase, userID uuid.UUID) error {
+	artist := types.Artist{
+		ArtistBase: artistData,
+	}
+
+	_, err := m.db.AddArtist(ctx, artist, userID)
+	if err != nil {
+		return m.berr.DatabaseError(err, types.EntityArtist, nil)
+	}
+
+	return nil
+}
+
 func (m MediaManager) GetArtist(ctx context.Context, artistID uuid.UUID) (types.Artist, error) {
 	artist, err := m.db.GetArtistFromID(ctx, artistID)
 	if err != nil {

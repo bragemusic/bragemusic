@@ -29,6 +29,14 @@ func (r ReqArtistsUpdate) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqArtistsCreate struct {
+	types.ArtistBase
+}
+
+func (r ReqArtistsCreate) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqAlbumsGet struct {
 	AlbumID uuid.UUID `path:"albumID" description:"ID of the wanted album"`
 }

@@ -37,6 +37,19 @@ func (s ServerClient) CountArtists(ctx context.Context) (cnt int, err error) {
 	return resp.Count, nil
 }
 
+func (s ServerClient) CreateArtist(ctx context.Context, artistData types.ArtistBase) error {
+	u, err := url.JoinPath(s.baseUrl, "api", "artists")
+	if err != nil {
+		return err
+	}
+
+	if err := s.doPostJson(ctx, u, artistData, nil); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s ServerClient) DownloadArtistImage(ctx context.Context, artistID string, size imagemagick.ImageSize, w io.Writer) error {
 	u, err := url.JoinPath(s.baseUrl, "api", "img", "artists", artistID, fmt.Sprintf("%d.jpg", size))
 	if err != nil {
