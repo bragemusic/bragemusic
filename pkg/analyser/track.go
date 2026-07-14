@@ -16,6 +16,25 @@ import (
 	"github.com/gofrs/uuid/v5"
 )
 
+func (a Analyser) CheckAvailability(ctx context.Context) error {
+	u, err := url.JoinPath(a.analyserBaseURL, "healthz")
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = a.do(ctx, req)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (a Analyser) RunTrackAnalysisJob(ctx context.Context) error {
 	a.log.InfoContext(ctx, "starting track analysis check")
 
@@ -27,6 +46,10 @@ func (a Analyser) RunTrackAnalysisJob(ctx context.Context) error {
 
 		if !found {
 			break
+		}
+
+		if err = a.CheckAvailability(ctx); err != nil {
+			return errors.New("track analyser is not available")
 		}
 
 		if err = a.RunTrackAnalysis(ctx, trackID); err != nil {
