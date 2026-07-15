@@ -56,7 +56,7 @@ func (p *Player) Metadata() map[string]dbus.Variant {
 
 	return map[string]dbus.Variant{
 		"xesam:album":       dbus.MakeVariant(p.track.AlbumName),
-		"xesam:artist":      dbus.MakeVariant(p.track.ArtistNames),
+		"xesam:artist":      dbus.MakeVariant(p.track.ArtistNames()),
 		"xesam:discNumber":  dbus.MakeVariant(p.track.DiscNumber),
 		"xesam:title":       dbus.MakeVariant(p.track.Title),
 		"xesam:trackNumber": dbus.MakeVariant(p.track.TrackNumber),

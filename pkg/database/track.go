@@ -594,7 +594,7 @@ func (d Database) ListTracksWithFilters(ctx context.Context, filter types.TrackF
 	placeholders = placeholders[:len(placeholders)-1]
 
 	query2 := `
-     SELECT aa.album_id, ar.id, ar.name
+     SELECT aa.album_id, aa.role, ar.id, ar.name, ar.sort_name
      FROM album_artists aa
      JOIN artists ar ON ar.id = aa.artist_id
      WHERE aa.album_id IN (` + placeholders + `)`
@@ -616,7 +616,7 @@ func (d Database) ListTracksWithFilters(ctx context.Context, filter types.TrackF
 		var albumID uuid.UUID
 		var a types.Artist
 
-		err := rows2.Scan(&albumID, &a.ID, &a.Name)
+		err := rows2.Scan(&albumID, &a.Role, &a.ID, &a.Name, &a.SortName)
 		if err != nil {
 			return nil, 0, 0, err
 		}

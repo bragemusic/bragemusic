@@ -240,7 +240,7 @@ func (a *AudioPlayer) AddTrackToQueue(ctx context.Context, track types.TrackDeta
 
 	a.sendStateCallback(ctx)
 
-	a.log.InfoContext(ctx, "added track to queue", "name", track.Title, "album", track.AlbumName, "artist", track.ArtistNames)
+	a.log.InfoContext(ctx, "added track to queue", "name", track.Title, "album", track.AlbumName, "artist", track.ArtistNames())
 }
 
 func (a *AudioPlayer) stopPlayback(ctx context.Context) error {
@@ -294,7 +294,7 @@ func (a *AudioPlayer) startTrack(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	a.log.InfoContext(ctx, "start track", "title", cT.Title, "artist", cT.ArtistNames, "album", cT.AlbumName)
+	a.log.InfoContext(ctx, "start track", "title", cT.Title, "artist", cT.ArtistNames(), "album", cT.AlbumName)
 
 	a.ai.StartAudioFile(ctx, af, a.NextTrack, a.stopCallback)
 

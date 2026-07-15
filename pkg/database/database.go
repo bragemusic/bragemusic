@@ -105,6 +105,10 @@ type DatabaseFace interface {
 	ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UUID) (albumArtists []types.AlbumArtist, err error)
 	DeleteAlbumArtist(ctx context.Context, id, userID uuid.UUID) error
 
+	AddTrackArtist(ctx context.Context, ta types.TrackArtist, userID uuid.UUID) (uuid.UUID, error)
+	DeleteTrackArtist(ctx context.Context, id, userID uuid.UUID) error
+	ListTrackArtistsByTrackID(ctx context.Context, trackID uuid.UUID) (trackArtists []types.TrackArtist, err error)
+
 	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
 	GetLastSync(ctx context.Context) (sync types.DBSyncState, err error)
 

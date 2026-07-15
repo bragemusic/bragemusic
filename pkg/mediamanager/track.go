@@ -65,12 +65,20 @@ func (m MediaManager) ListTracksDetailed(ctx context.Context, filter types.Track
 
 	for _, t := range tracks {
 		items = append(items, types.TrackDetailed{
-			ID:            t.Track.ID,
-			Title:         t.Track.Title,
-			AlbumID:       t.Album.ID.String(),
-			AlbumName:     t.Album.Name,
-			ArtistIDs:     lo.Map(t.Artists, func(item types.Artist, index int) string { return item.ID.String() }),
-			ArtistNames:   lo.Map(t.Artists, func(item types.Artist, index int) string { return item.Name }),
+			ID:        t.Track.ID,
+			Title:     t.Track.Title,
+			AlbumID:   t.Album.ID.String(),
+			AlbumName: t.Album.Name,
+			Artists: lo.Map(t.Artists, func(item types.Artist, index int) types.ArtistMinimal {
+				return types.ArtistMinimal{
+					ID:       item.ID,
+					Name:     item.Name,
+					SortName: item.SortName,
+					Role:     item.Role,
+				}
+			}),
+			// ArtistIDs:     lo.Map(t.Artists, func(item types.Artist, index int) string { return item.ID.String() }),
+			// ArtistNames:   lo.Map(t.Artists, func(item types.Artist, index int) string { return item.Name }),
 			MusicBrainzID: t.Track.MusicBrainzID,
 			TrackNumber:   t.AlbumTrack.TrackNumber,
 			DiscNumber:    t.AlbumTrack.DiscNumber,
@@ -122,6 +130,41 @@ func (m MediaManager) UpdateTrack(ctx context.Context, trackID uuid.UUID, trackD
 
 		if err = tx.UpdateAlbumTrack(ctx, albumTrack, userID); err != nil {
 			return m.berr.DatabaseError(err, types.EntityAlbumTrack, &albumTrack.ID)
+		}
+	}
+
+	// Track artists
+	existingTrackArtists, err := tx.ListTrackArtistsByTrackID(ctx, trackID)
+	if err != nil {
+		return m.berr.DatabaseError(err, types.EntityTrackArtist, nil)
+	}
+
+	for _, artist := range trackData.Artists {
+		exists := lo.ContainsBy(existingTrackArtists, func(item types.TrackArtist) bool {
+			return item.ArtistID == artist
+		})
+
+		if !exists {
+			ta := types.TrackArtist{
+				TrackID:  trackID,
+				ArtistID: artist,
+				Role:     types.ArFeatured,
+			}
+			if _, err := tx.AddTrackArtist(ctx, ta, userID); err != nil {
+				return m.berr.DatabaseError(err, types.EntityTrackArtist, nil)
+			}
+		}
+	}
+
+	for _, existingTa := range existingTrackArtists {
+		exists := lo.ContainsBy(trackData.Artists, func(item uuid.UUID) bool {
+			return item == existingTa.ArtistID
+		})
+
+		if !exists {
+			if err := tx.DeleteTrackArtist(ctx, existingTa.ID, userID); err != nil {
+				return m.berr.DatabaseError(err, types.EntityTrackArtist, &existingTa.ID)
+			}
 		}
 	}
 

@@ -36,6 +36,7 @@ const (
 	EntityDeviceToken          EntityType = "device_token"
 	EntityToken                EntityType = "token"
 	EntityTrackAnalysis        EntityType = "track_analysis"
+	EntityTrackArtist          EntityType = "track_artist"
 
 	EntityEventDelete EntityEventType = "delete"
 	EntityEventCreate EntityEventType = "create"
