@@ -45,6 +45,7 @@ type DatabaseFace interface {
 	GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]types.Album, error)
 	ListAlbums(ctx context.Context) (albums []types.Album, err error)
 	ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
+	ListFeaturedAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
 	ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error)
 	CountAlbums(ctx context.Context) (int, error)
 	CountAlbumsByArtist(ctx context.Context, artistID uuid.UUID) (int, error)
@@ -104,6 +105,10 @@ type DatabaseFace interface {
 	UpdateAlbumArtist(ctx context.Context, aa types.AlbumArtist, userID uuid.UUID) error
 	ListAlbumArtistsByAlbumID(ctx context.Context, albumID uuid.UUID) (albumArtists []types.AlbumArtist, err error)
 	DeleteAlbumArtist(ctx context.Context, id, userID uuid.UUID) error
+
+	AddTrackArtist(ctx context.Context, ta types.TrackArtist, userID uuid.UUID) (uuid.UUID, error)
+	DeleteTrackArtist(ctx context.Context, id, userID uuid.UUID) error
+	ListTrackArtistsByTrackID(ctx context.Context, trackID uuid.UUID) (trackArtists []types.TrackArtist, err error)
 
 	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
 	GetLastSync(ctx context.Context) (sync types.DBSyncState, err error)

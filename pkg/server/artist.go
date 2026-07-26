@@ -20,6 +20,14 @@ func (s *Server) artistRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
+		routes.New("POST", "/", s.createArtist(), nil, routes.RouteMeta{
+			Summary:             "Create an artist.",
+			Description:         "Create an artist object on the server.",
+			ExpectedDescription: "Artist created",
+			Tags:                []string{"Artists"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusNoContent,
+		}),
 		routes.New("GET", "/{artistID}", s.getArtist(), nil, routes.RouteMeta{
 			Summary:             "Retrieve an artist by ID.",
 			Description:         "Returns metadata about the specified artist.",
@@ -32,6 +40,14 @@ func (s *Server) artistRoutes() []routes.RouteHandler {
 			Summary:             "List an artist's albums.",
 			Description:         "Returns all albums the selected artist takes part of.",
 			ExpectedDescription: "Artist's albums",
+			Tags:                []string{"Artists"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
+		routes.New("GET", "/{artistID}/albums/featured", s.listFeaturedAlbumsByArtist(), nil, routes.RouteMeta{
+			Summary:             "List an artist's featured albums.",
+			Description:         "Returns all albums the selected artist is featured on one or more tracks.",
+			ExpectedDescription: "Artist's featured albums",
 			Tags:                []string{"Artists"},
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
@@ -100,6 +116,23 @@ func (s *Server) listAlbumsByArtist() routes.RouteFunc[ReqArtistsGet, types.List
 	}
 }
 
+func (s *Server) listFeaturedAlbumsByArtist() routes.RouteFunc[ReqArtistsGet, types.ListPayload[types.AlbumDetailed]] {
+	return func(ctx context.Context, req ReqArtistsGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[types.AlbumDetailed]], err error) {
+		albums, err := s.mediamgr.ListFeaturedAlbumsByArtist(ctx, req.ArtistID, database.SortByDate, database.SortAsc)
+		if err != nil {
+			return resp, err
+		}
+
+		return types.Response[types.ListPayload[types.AlbumDetailed]]{
+			Status: http.StatusOK,
+			Payload: types.ListPayload[types.AlbumDetailed]{
+				Count: len(albums),
+				Items: albums,
+			},
+		}, nil
+	}
+}
+
 func (s *Server) listArtists() routes.RouteFunc[ReqList, types.ListPayload[types.ArtistDetailed]] {
 	return func(ctx context.Context, req ReqList, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[types.ArtistDetailed]], err error) {
 		cnt, err := s.mediamgr.CountArtists(ctx)
@@ -136,6 +169,16 @@ func (s *Server) updateArtist() routes.RouteFunc[ReqArtistsUpdate, types.NoRespo
 		artist := types.Artist{ArtistBase: req.ArtistBase}
 
 		if err := s.mediamgr.UpdateArtist(ctx, req.ArtistID, artist, user.ID); err != nil {
+			return resp, err
+		}
+
+		return types.Response[types.NoResponse]{Status: http.StatusNoContent, Payload: types.NoResponse{}}, nil
+	}
+}
+
+func (s *Server) createArtist() routes.RouteFunc[ReqArtistsCreate, types.NoResponse] {
+	return func(ctx context.Context, req ReqArtistsCreate, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.NoResponse], err error) {
+		if err = s.mediamgr.CreateArtist(ctx, req.ArtistBase, user.ID); err != nil {
 			return resp, err
 		}
 

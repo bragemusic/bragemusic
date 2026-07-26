@@ -133,6 +133,9 @@ type MetadataFace interface {
 	// CountArtists returns the total number of artists.
 	CountArtists(ctx context.Context) (int, error)
 
+	// CreateArtist creates a new Artist object
+	CreateArtist(ctx context.Context, artistData types.ArtistBase) error
+
 	// GetArtist returns metadata for a specific artist.
 	GetArtist(ctx context.Context, artistID uuid.UUID) (types.Artist, error)
 
@@ -156,6 +159,9 @@ type MetadataFace interface {
 
 	// ListAlbumsByArtist returns albums for a given artist ordered by the provided sorting options.
 	ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error)
+
+	// ListFeaturedAlbumsByArtist returns albums where a given artist is featured.
+	ListFeaturedAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) (albums []types.AlbumDetailed, err error)
 
 	// ListAlbums returns albums ordered by the provided sorting options.
 	ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error)

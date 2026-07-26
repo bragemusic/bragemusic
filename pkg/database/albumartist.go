@@ -111,8 +111,10 @@ func (d Database) attachTrackArtists(ctx context.Context, tracks []types.TrackDe
 	query := `
 		SELECT
 			at.track_id,
+            aa.role,
 			ar.id   AS artist_id,
-			ar.name AS artist_name
+			ar.name AS artist_name,
+            ar.sort_name AS sort_name
 		FROM album_tracks at
 		JOIN album_artists aa ON aa.album_id = at.album_id
 		JOIN artists ar ON ar.id = aa.artist_id
@@ -133,22 +135,80 @@ func (d Database) attachTrackArtists(ctx context.Context, tracks []types.TrackDe
 
 	for rows.Next() {
 		var (
-			trackID    string
-			artistID   string
-			artistName string
+			trackID        string
+			role           types.ArtistRole
+			artistID       uuid.UUID
+			artistName     string
+			artistSortName string
 		)
 
-		if err := rows.Scan(&trackID, &artistID, &artistName); err != nil {
+		if err := rows.Scan(&trackID, &role, &artistID, &artistName, &artistSortName); err != nil {
 			return err
 		}
 
 		if t := trackIndex[trackID]; t != nil {
-			t.ArtistIDs = append(t.ArtistIDs, artistID)
-			t.ArtistNames = append(t.ArtistNames, artistName)
+			t.Artists = append(t.Artists, types.ArtistMinimal{
+				ID:       artistID,
+				Name:     artistName,
+				SortName: artistSortName,
+				Role:     role,
+			})
 		}
 	}
 
-	return rows.Err()
+	if rows.Err() != nil {
+		return rows.Err()
+	}
+
+	query2 := `
+		SELECT
+			at.track_id,
+            ta.role,
+			ar.id   AS artist_id,
+			ar.name AS artist_name,
+            ar.sort_name AS sort_name
+		FROM album_tracks at
+		JOIN track_artists ta ON ta.track_id = at.track_id
+		JOIN artists ar ON ar.id = ta.artist_id
+		WHERE at.track_id IN (?);
+	`
+
+	query2, args, err = sqlx.In(query2, trackIDs)
+	if err != nil {
+		return err
+	}
+	query2 = d.ext.Rebind(query2)
+
+	rows2, err := d.ext.QueryxContext(ctx, query2, args...)
+	if err != nil {
+		return err
+	}
+	defer rows2.Close()
+
+	for rows2.Next() {
+		var (
+			trackID        string
+			role           types.ArtistRole
+			artistID       uuid.UUID
+			artistName     string
+			artistSortName string
+		)
+
+		if err := rows2.Scan(&trackID, &role, &artistID, &artistName, &artistSortName); err != nil {
+			return err
+		}
+
+		if t := trackIndex[trackID]; t != nil {
+			t.Artists = append(t.Artists, types.ArtistMinimal{
+				ID:       artistID,
+				Name:     artistName,
+				SortName: artistSortName,
+				Role:     role,
+			})
+		}
+	}
+
+	return rows2.Err()
 }
 
 func (d Database) ListUpdatedAlbumArtists(ctx context.Context, since time.Time) (albumArtists []uuid.UUID, err error) {

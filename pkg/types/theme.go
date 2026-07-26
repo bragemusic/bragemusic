@@ -3,7 +3,9 @@ package types
 import (
 	"errors"
 	"fmt"
+	"image/color"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -53,6 +55,46 @@ func (h HexColor) validate(paramName, themeName string) error {
 		return fmt.Errorf("'%s' in color theme '%s' is not a valid hex color", paramName, themeName)
 	}
 	return nil
+}
+
+func (h HexColor) RGBA() color.RGBA {
+	hex := strings.TrimPrefix(string(h), "#")
+
+	if len(hex) != 6 {
+		panic("expected 6 hex digits (RRGGBB)")
+	}
+
+	v, err := strconv.ParseUint(hex, 16, 32)
+	if err != nil {
+		panic(err)
+	}
+	opacity := 1
+	return color.RGBA{
+		R: uint8(v >> 16),
+		G: uint8(v >> 8),
+		B: uint8(v),
+		A: min(255, max(0, uint8(opacity*255))),
+	}
+}
+
+func (h HexColor) NRGBA(opacity float32) color.NRGBA {
+	hex := strings.TrimPrefix(string(h), "#")
+
+	if len(hex) != 6 {
+		panic("expected 6 hex digits (RRGGBB)")
+	}
+
+	v, err := strconv.ParseUint(hex, 16, 32)
+	if err != nil {
+		panic(err)
+	}
+
+	return color.NRGBA{
+		R: uint8(v >> 16),
+		G: uint8(v >> 8),
+		B: uint8(v),
+		A: min(255, max(0, uint8(opacity*255))),
+	}
 }
 
 type ThemeColors struct {
