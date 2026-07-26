@@ -221,6 +221,43 @@ func (d Database) ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, so
 	return
 }
 
+func (d Database) ListFeaturedAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error) {
+	sortByStr := ""
+
+	switch sortBy {
+	case SortByName:
+		sortByStr = "sort_name"
+	case SortByDate:
+		sortByStr = "release_date"
+	}
+
+	query := fmt.Sprintf(`
+		SELECT DISTINCT
+			al.id,
+			al.musicbrainz_id,
+			al.name,
+			al.sort_name,
+			al.release_date,
+			al.description,
+			al.owner,
+			al.public,
+			al.created_at,
+			al.updated_at
+		FROM albums al
+		JOIN album_tracks at ON at.album_id = al.id
+		JOIN track_artists ta ON ta.track_id = at.track_id
+		WHERE ta.artist_id = ?
+		AND ta.role = 'featured'
+		ORDER BY %s %s;
+    `, sortByStr, sortOrder)
+	err = sqlx.SelectContext(ctx, d.ext, &albums, query, artistID)
+	if err != nil {
+		return nil, err
+	}
+
+	return
+}
+
 func (d Database) ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error) {
 	query := `
         SELECT id

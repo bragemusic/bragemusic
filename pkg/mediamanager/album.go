@@ -36,6 +36,15 @@ func (m MediaManager) ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID
 	return albums, nil
 }
 
+func (m MediaManager) ListFeaturedAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error) {
+	albums, err := m.db.ListFeaturedAlbumsByArtist(ctx, artistID, sortBy, sortOrder)
+	if err != nil {
+		return nil, m.berr.DatabaseError(err, types.EntityAlbum, &artistID)
+	}
+
+	return albums, nil
+}
+
 func (m MediaManager) ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) (albums []types.AlbumDetailed, err error) {
 	artists, err := m.db.ListArtists(ctx, sortBy, sortOrder)
 	if err != nil {

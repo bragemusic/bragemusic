@@ -45,6 +45,7 @@ type DatabaseFace interface {
 	GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]types.Album, error)
 	ListAlbums(ctx context.Context) (albums []types.Album, err error)
 	ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
+	ListFeaturedAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
 	ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error)
 	CountAlbums(ctx context.Context) (int, error)
 	CountAlbumsByArtist(ctx context.Context, artistID uuid.UUID) (int, error)

@@ -44,6 +44,14 @@ func (s *Server) artistRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
+		routes.New("GET", "/{artistID}/albums/featured", s.listFeaturedAlbumsByArtist(), nil, routes.RouteMeta{
+			Summary:             "List an artist's featured albums.",
+			Description:         "Returns all albums the selected artist is featured on one or more tracks.",
+			ExpectedDescription: "Artist's featured albums",
+			Tags:                []string{"Artists"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
 		routes.New("GET", "/{artistID}/top-tracks", s.getArtistTopTracks(), nil, routes.RouteMeta{
 			Summary:             "Retrieve artist top tracks by ID.",
 			Description:         "Returns the 10 most played tracks by the logged in user of the specified artist.",
@@ -94,6 +102,23 @@ func (s *Server) getArtistTopTracks() routes.RouteFunc[ReqArtistsGet, types.List
 func (s *Server) listAlbumsByArtist() routes.RouteFunc[ReqArtistsGet, types.ListPayload[types.AlbumDetailed]] {
 	return func(ctx context.Context, req ReqArtistsGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[types.AlbumDetailed]], err error) {
 		albums, err := s.mediamgr.ListAlbumsByArtist(ctx, req.ArtistID, database.SortByDate, database.SortAsc)
+		if err != nil {
+			return resp, err
+		}
+
+		return types.Response[types.ListPayload[types.AlbumDetailed]]{
+			Status: http.StatusOK,
+			Payload: types.ListPayload[types.AlbumDetailed]{
+				Count: len(albums),
+				Items: albums,
+			},
+		}, nil
+	}
+}
+
+func (s *Server) listFeaturedAlbumsByArtist() routes.RouteFunc[ReqArtistsGet, types.ListPayload[types.AlbumDetailed]] {
+	return func(ctx context.Context, req ReqArtistsGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.ListPayload[types.AlbumDetailed]], err error) {
+		albums, err := s.mediamgr.ListFeaturedAlbumsByArtist(ctx, req.ArtistID, database.SortByDate, database.SortAsc)
 		if err != nil {
 			return resp, err
 		}

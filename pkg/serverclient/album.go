@@ -112,6 +112,20 @@ func (s ServerClient) ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID
 	return resp.Items, nil
 }
 
+func (s ServerClient) ListFeaturedAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) (albums []types.AlbumDetailed, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "artists", artistID.String(), "albums", "featured")
+	if err != nil {
+		return nil, err
+	}
+
+	resp := types.ListPayload[types.AlbumDetailed]{}
+	if err := s.doGetJson(ctx, u, &resp); err != nil {
+		return nil, err
+	}
+
+	return resp.Items, nil
+}
+
 func (s ServerClient) ListTracksByAlbum(ctx context.Context, albumID string) (tracks []types.Track, err error) {
 	u, err := url.JoinPath(s.baseUrl, "api", "albums", albumID, "tracks")
 	if err != nil {
