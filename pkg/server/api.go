@@ -59,6 +59,7 @@ func (s *Server) api() http.Handler {
 	r.Mount("/search", s.buildMount(s.searchRoutes()))
 	r.Mount("/smart-playlists", s.buildMount(s.smartPlaylistRoutes()))
 	r.Mount("/tracks", s.buildMount(s.trackRoutes()))
+	r.Mount("/track-analysis", s.buildMount(s.trackAnalysisRoutes()))
 	r.Mount("/track-artists", s.buildMount(s.trackArtistRoutes()))
 
 	r.Mount("/devices", s.buildMount(s.deviceRoutes()))

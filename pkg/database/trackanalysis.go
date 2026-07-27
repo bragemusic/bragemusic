@@ -11,7 +11,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-func (d Database) AddTrackAnalysis(ctx context.Context, ta types.TrackAnalysis) error {
+func (d Database) AddTrackAnalysis(ctx context.Context, ta types.TrackAnalysis, userID uuid.UUID) error {
 	if ta.ID == uuid.Nil {
 		return errors.New("track_analysis must have an ID")
 	}
@@ -50,7 +50,27 @@ func (d Database) AddTrackAnalysis(ctx context.Context, ta types.TrackAnalysis) 
 		return err
 	}
 
+	err = d.addEntityEvent(ctx, ta.ID, types.EntityEventCreate, types.EntityTrackAnalysis, userID)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+func (d Database) GetTrackAnalysisByID(ctx context.Context, id uuid.UUID) (trackAnalysis types.TrackAnalysis, err error) {
+	query := `
+		SELECT *
+		FROM track_analyses
+		WHERE
+			id = ?;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &trackAnalysis, query, id)
+	if err != nil {
+		return types.TrackAnalysis{}, err
+	}
+
+	return
 }
 
 func (d Database) GetUnanalysedTrack(ctx context.Context) (id uuid.UUID, found bool, err error) {

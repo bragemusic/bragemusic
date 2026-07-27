@@ -99,6 +99,14 @@ func (r ReqAlbumTracksGet) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqTrackAnalysisGet struct {
+	ID uuid.UUID `path:"trackAnalysisID" description:"ID of the wanted track analysis"`
+}
+
+func (r ReqTrackAnalysisGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqTrackArtistsGet struct {
 	TrackArtistID uuid.UUID `path:"trackArtistID" description:"ID of the wanted track artist"`
 }

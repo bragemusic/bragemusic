@@ -165,7 +165,8 @@ type DatabaseFace interface {
 	HasLike(ctx context.Context, trackID, userID uuid.UUID) (bool, error)
 	ListLikedTracksDetailed(ctx context.Context, userID uuid.UUID) (tracks []types.TrackDetailed, err error)
 
-	AddTrackAnalysis(ctx context.Context, ta types.TrackAnalysis) error
+	AddTrackAnalysis(ctx context.Context, ta types.TrackAnalysis, userID uuid.UUID) error
+	GetTrackAnalysisByID(ctx context.Context, id uuid.UUID) (trackAnalysis types.TrackAnalysis, err error)
 	GetUnanalysedTrack(ctx context.Context) (id uuid.UUID, found bool, err error)
 
 	AuthFace

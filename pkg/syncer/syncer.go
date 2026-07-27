@@ -154,6 +154,8 @@ func (s Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, 
 			f = s.syncSmartPlaylistContent
 		case types.EntitySmartPlaylistArtist:
 			f = s.syncSmartPlaylistArtist
+		case types.EntityTrackAnalysis:
+			f = s.syncTrackAnalysis
 		default:
 			return fmt.Errorf("unsupported entity type '%s'", e.EntityType)
 		}
@@ -575,6 +577,30 @@ func (s *Syncer) syncSmartPlaylistArtist(ctx context.Context, tx database.Databa
 		return errors.New("'update' not supported for smart_playlist_artist")
 	case types.EntityEventDelete:
 		return errors.New("'delete' not supported for smart_playlist_artist")
+	}
+
+	return nil
+}
+
+func (s *Syncer) syncTrackAnalysis(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var p types.TrackAnalysis
+
+	if event.Type != types.EntityEventDelete {
+		p, err = s.sc.GetTrackAnalysisByID(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if err = tx.AddTrackAnalysis(ctx, p, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		return errors.New("'update' not supported for track_analysis")
+	case types.EntityEventDelete:
+		return errors.New("'delete' not supported for track_analysis")
 	}
 
 	return nil
