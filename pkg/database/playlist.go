@@ -25,7 +25,9 @@ func (d Database) AddPlaylist(ctx context.Context, p types.Playlist, userID uuid
 		p.ID = uid
 	}
 
-	p.Type = types.PlaylistTypeStandard
+	if p.Type == "" {
+		return uuid.Nil, errors.New("playlist must have a type")
+	}
 
 	now := time.Now()
 	p.CreatedAt = now

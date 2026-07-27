@@ -16,6 +16,7 @@ func (m MediaManager) AddPlaylist(ctx context.Context, p types.PlaylistBase, use
 	pl := types.Playlist{
 		PlaylistBase: p,
 		Owner:        userID,
+		Type:         types.PlaylistTypeStandard,
 	}
 
 	if _, err := m.db.AddPlaylist(ctx, pl, userID); err != nil {
