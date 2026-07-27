@@ -132,6 +132,7 @@ type DatabaseFace interface {
 
 	AddPlaylist(ctx context.Context, p types.Playlist, userID uuid.UUID) (uuid.UUID, error)
 	AddSmartPlaylist(ctx context.Context, p types.SmartPlaylist, userID uuid.UUID) (uuid.UUID, error)
+	AddSmartPlaylistArtist(ctx context.Context, a types.SmartPlaylistArtist, userID uuid.UUID) (uuid.UUID, error)
 	AddSmartPlaylistContent(ctx context.Context, c types.SmartPlaylistContent, userID uuid.UUID) (uuid.UUID, error)
 	AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack, userID uuid.UUID) (uuid.UUID, error)
 	CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error)
@@ -141,6 +142,7 @@ type DatabaseFace interface {
 	GetPlaylist(ctx context.Context, ID, userID uuid.UUID) (plist types.Playlist, err error)
 	GetPlaylistTrack(ctx context.Context, id uuid.UUID) (plistTrack types.PlaylistTrack, err error)
 	GetPlaylistTrackByPlaylistAndAlbumTrack(ctx context.Context, playlistID, albumTrackID uuid.UUID) (plistTrack types.PlaylistTrack, err error)
+	GetSmartPlaylistArtist(ctx context.Context, id, userID uuid.UUID) (artist types.SmartPlaylistArtist, err error)
 	GetSmartPlaylistContent(ctx context.Context, id, userID uuid.UUID) (content types.SmartPlaylistContent, err error)
 	ListPlaylists(ctx context.Context, userID uuid.UUID, includePublic bool, sortBy SortBy, sortOrder SortOrder) (playlists []types.Playlist, err error)
 	ListPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID) (tracks []types.TrackDetailed, err error)

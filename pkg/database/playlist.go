@@ -87,7 +87,10 @@ func (d Database) AddSmartPlaylist(ctx context.Context, p types.SmartPlaylist, u
 
 	if c.Artists != nil {
 		for _, a := range *c.Artists {
-			_, err := d.addSmartPlaylistArtist(ctx, c.ID, a, userID)
+			_, err := d.AddSmartPlaylistArtist(ctx, types.SmartPlaylistArtist{
+				ParentID: c.ID,
+				ArtistID: a,
+			}, userID)
 			if err != nil {
 				return uuid.Nil, err
 			}
@@ -144,13 +147,18 @@ func (d Database) AddSmartPlaylistContent(ctx context.Context, c types.SmartPlay
 	return c.ID, nil
 }
 
-func (d Database) addSmartPlaylistArtist(ctx context.Context, parentID, artistID, userID uuid.UUID) (uuid.UUID, error) {
-	uid, err := uuid.NewV4()
-	if err != nil {
-		return uuid.Nil, err
+func (d Database) AddSmartPlaylistArtist(ctx context.Context, a types.SmartPlaylistArtist, userID uuid.UUID) (uuid.UUID, error) {
+	if a.ID == uuid.Nil {
+		uid, err := uuid.NewV4()
+		if err != nil {
+			return uuid.Nil, err
+		}
+		a.ID = uid
 	}
 
 	now := time.Now()
+	a.CreatedAt = now
+	a.UpdatedAt = now
 
 	const query = `
 		INSERT INTO smart_playlist_artists (
@@ -159,12 +167,12 @@ func (d Database) addSmartPlaylistArtist(ctx context.Context, parentID, artistID
 		) VALUES (?, ?, ?, ?, ?, ?);
 	`
 
-	_, err = d.ext.ExecContext(
+	_, err := d.ext.ExecContext(
 		ctx,
 		query,
-		uid,
-		parentID,
-		artistID,
+		a.ID,
+		a.ParentID,
+		a.ArtistID,
 		userID,
 		now,
 		now,
@@ -173,12 +181,12 @@ func (d Database) addSmartPlaylistArtist(ctx context.Context, parentID, artistID
 		return uuid.Nil, err
 	}
 
-	err = d.addEntityEvent(ctx, uid, types.EntityEventCreate, types.EntitySmartPlaylistArtist, userID)
+	err = d.addEntityEvent(ctx, a.ID, types.EntityEventCreate, types.EntitySmartPlaylistArtist, userID)
 	if err != nil {
 		return uuid.UUID{}, err
 	}
 
-	return uid, nil
+	return a.ID, nil
 }
 
 func (d Database) AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack, userID uuid.UUID) (uuid.UUID, error) {
@@ -329,6 +337,22 @@ func (d Database) GetPlaylistTrackByPlaylistAndAlbumTrack(ctx context.Context, p
 	err = sqlx.GetContext(ctx, d.ext, &plistTrack, query, playlistID, albumTrackID)
 	if err != nil {
 		return types.PlaylistTrack{}, err
+	}
+
+	return
+}
+
+func (d Database) GetSmartPlaylistArtist(ctx context.Context, id, userID uuid.UUID) (artist types.SmartPlaylistArtist, err error) {
+	query := `
+        SELECT *
+        FROM smart_playlist_artists
+        WHERE id = ?
+          AND owner = ?
+        LIMIT 1;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &artist, query, id, userID)
+	if err != nil {
+		return types.SmartPlaylistArtist{}, err
 	}
 
 	return

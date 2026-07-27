@@ -173,6 +173,19 @@ func (s ServerClient) GetPlaylistTrack(ctx context.Context, id uuid.UUID) (playl
 	return playlistTrack, nil
 }
 
+func (s ServerClient) GetSmartPlaylistArtist(ctx context.Context, id uuid.UUID) (artist types.SmartPlaylistArtist, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "smart-playlists", "artist", id.String())
+	if err != nil {
+		return types.SmartPlaylistArtist{}, err
+	}
+
+	if err := s.doGetJson(ctx, u, &artist); err != nil {
+		return types.SmartPlaylistArtist{}, err
+	}
+
+	return artist, nil
+}
+
 func (s ServerClient) GetSmartPlaylistContent(ctx context.Context, id uuid.UUID) (content types.SmartPlaylistContent, err error) {
 	u, err := url.JoinPath(s.baseUrl, "api", "smart-playlists", "content", id.String())
 	if err != nil {

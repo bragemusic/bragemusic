@@ -152,6 +152,8 @@ func (s Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, 
 			f = s.syncTrackArtist
 		case types.EntitySmartPlaylistContent:
 			f = s.syncSmartPlaylistContent
+		case types.EntitySmartPlaylistArtist:
+			f = s.syncSmartPlaylistArtist
 		default:
 			return fmt.Errorf("unsupported entity type '%s'", e.EntityType)
 		}
@@ -544,6 +546,35 @@ func (s *Syncer) syncSmartPlaylistContent(ctx context.Context, tx database.Datab
 		return errors.New("'update' not supported for smart_playlist_content")
 	case types.EntityEventDelete:
 		return errors.New("'delete' not supported for smart_playlist_content")
+	}
+
+	return nil
+}
+
+func (s *Syncer) syncSmartPlaylistArtist(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var p types.SmartPlaylistArtist
+
+	if event.Type != types.EntityEventDelete {
+		p, err = s.sc.GetSmartPlaylistArtist(ctx, event.ItemID)
+		if err != nil {
+			serr, ok := err.(*bragerr.BragErr)
+			if ok && serr.Status == http.StatusNotFound {
+				s.log.WarnContext(ctx, "smart playlist artist does not exists on server, has probably been cascade deleted. Skipping", "id", event.ItemID)
+				return nil
+			}
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if _, err = tx.AddSmartPlaylistArtist(ctx, p, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		return errors.New("'update' not supported for smart_playlist_artist")
+	case types.EntityEventDelete:
+		return errors.New("'delete' not supported for smart_playlist_artist")
 	}
 
 	return nil

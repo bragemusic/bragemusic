@@ -18,6 +18,14 @@ func (s *Server) smartPlaylistRoutes() []routes.RouteHandler {
 			Errors:              []routes.RouteErrorMeta{},
 			ExpectedStatus:      http.StatusOK,
 		}),
+		routes.New("GET", "/artist/{artistID}", s.getSmartPlaylistArtist(), nil, routes.RouteMeta{
+			Summary:             "Get smart artist for a playlist by ID",
+			Description:         "Returns metadata for the specified playlist smart artist.",
+			ExpectedDescription: "Playlist smart artist",
+			Tags:                []string{"Smart Playlist"},
+			Errors:              []routes.RouteErrorMeta{},
+			ExpectedStatus:      http.StatusOK,
+		}),
 	}
 }
 
@@ -30,6 +38,20 @@ func (s *Server) getSmartPlaylistContent() routes.RouteFunc[ReqSmartPlaylistCont
 
 		return types.Response[types.SmartPlaylistContent]{
 			Payload: content,
+			Status:  http.StatusOK,
+		}, nil
+	}
+}
+
+func (s *Server) getSmartPlaylistArtist() routes.RouteFunc[ReqSmartPlaylistArtistGet, types.SmartPlaylistArtist] {
+	return func(ctx context.Context, req ReqSmartPlaylistArtistGet, user types.UserDetails, w http.ResponseWriter, r *http.Request) (resp types.Response[types.SmartPlaylistArtist], err error) {
+		artist, err := s.mediamgr.GetSmartPlaylistArtist(ctx, req.ID, user.ID)
+		if err != nil {
+			return types.Response[types.SmartPlaylistArtist]{}, err
+		}
+
+		return types.Response[types.SmartPlaylistArtist]{
+			Payload: artist,
 			Status:  http.StatusOK,
 		}, nil
 	}

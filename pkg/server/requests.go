@@ -184,6 +184,14 @@ func (r ReqPlaylistTracksGet) Validate() (validationMessages string, err error) 
 	return "", nil
 }
 
+type ReqSmartPlaylistArtistGet struct {
+	ID uuid.UUID `path:"artistID" description:"ID of the wanted smart playlist artist"`
+}
+
+func (r ReqSmartPlaylistArtistGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqSmartPlaylistContentGet struct {
 	ID uuid.UUID `path:"contentID" description:"ID of the wanted smart playlist content"`
 }
