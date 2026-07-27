@@ -73,6 +73,19 @@ func (s ServerClient) GetTrackDetailed(ctx context.Context, trackID, albumID uui
 	return track, nil
 }
 
+func (s ServerClient) GetTrackArtistByID(ctx context.Context, id uuid.UUID) (trackArtist types.TrackArtist, err error) {
+	u, err := url.JoinPath(s.baseUrl, "api", "track-artists", id.String())
+	if err != nil {
+		return types.TrackArtist{}, err
+	}
+
+	if err := s.doGetJson(ctx, u, &trackArtist); err != nil {
+		return types.TrackArtist{}, err
+	}
+
+	return trackArtist, nil
+}
+
 func (s ServerClient) GetTrackRatings(ctx context.Context, trackID uuid.UUID) (ratings []types.Rating, err error) {
 	u, err := url.JoinPath(s.baseUrl, "api", "tracks", trackID.String(), "ratings")
 	if err != nil {

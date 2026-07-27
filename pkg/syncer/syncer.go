@@ -147,6 +147,8 @@ func (s Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, 
 			f = s.syncRating
 		case types.EntityLike:
 			f = s.syncLike
+		case types.EntityTrackArtist:
+			f = s.syncTrackArtist
 		default:
 			return fmt.Errorf("unsupported entity type '%s'", e.EntityType)
 		}
@@ -489,6 +491,26 @@ func (s *Syncer) syncLike(ctx context.Context, tx database.DatabaseFace, userID 
 		return errors.New("'update' not supported for likes")
 	case types.EntityEventDelete:
 		if err := tx.DeleteLike(ctx, event.ItemID, userID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Syncer) syncTrackArtist(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) error {
+	switch event.Type {
+	case types.EntityEventCreate:
+		i, err := s.sc.GetTrackArtistByID(ctx, event.ItemID)
+		if err != nil {
+			return err
+		}
+		if _, err := tx.AddTrackArtist(ctx, i, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		return errors.New("'update' not supported for track_artist")
+	case types.EntityEventDelete:
+		if err := tx.DeleteTrackArtist(ctx, event.ItemID, userID); err != nil {
 			return err
 		}
 	}

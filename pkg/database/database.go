@@ -108,6 +108,7 @@ type DatabaseFace interface {
 
 	AddTrackArtist(ctx context.Context, ta types.TrackArtist, userID uuid.UUID) (uuid.UUID, error)
 	DeleteTrackArtist(ctx context.Context, id, userID uuid.UUID) error
+	GetTrackArtistByID(ctx context.Context, id uuid.UUID) (trackArtist types.TrackArtist, err error)
 	ListTrackArtistsByTrackID(ctx context.Context, trackID uuid.UUID) (trackArtists []types.TrackArtist, err error)
 
 	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
