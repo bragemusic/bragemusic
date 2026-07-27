@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/bragemusic/core/pkg/bragerr"
 	"github.com/bragemusic/core/pkg/database"
 	"github.com/bragemusic/core/pkg/imagemagick"
 	"github.com/bragemusic/core/pkg/serverclient"
@@ -149,6 +150,8 @@ func (s Syncer) syncEntityEvents(ctx context.Context, tx database.DatabaseFace, 
 			f = s.syncLike
 		case types.EntityTrackArtist:
 			f = s.syncTrackArtist
+		case types.EntitySmartPlaylistContent:
+			f = s.syncSmartPlaylistContent
 		default:
 			return fmt.Errorf("unsupported entity type '%s'", e.EntityType)
 		}
@@ -408,7 +411,7 @@ func (s *Syncer) syncPlaylistTrack(ctx context.Context, tx database.DatabaseFace
 	if event.Type != types.EntityEventDelete {
 		p, err = s.sc.GetPlaylistTrack(ctx, event.ItemID)
 		if err != nil {
-			serr, ok := err.(serverclient.ErrStatus)
+			serr, ok := err.(*bragerr.BragErr)
 			if ok && serr.Status == http.StatusNotFound {
 				s.log.WarnContext(ctx, "playlist track does not exists on server, has probably been cascade deleted. Skipping", "id", event.ItemID)
 				return nil
@@ -514,6 +517,35 @@ func (s *Syncer) syncTrackArtist(ctx context.Context, tx database.DatabaseFace, 
 			return err
 		}
 	}
+	return nil
+}
+
+func (s *Syncer) syncSmartPlaylistContent(ctx context.Context, tx database.DatabaseFace, userID uuid.UUID, event types.EntityEvent) (err error) {
+	var p types.SmartPlaylistContent
+
+	if event.Type != types.EntityEventDelete {
+		p, err = s.sc.GetSmartPlaylistContent(ctx, event.ItemID)
+		if err != nil {
+			serr, ok := err.(*bragerr.BragErr)
+			if ok && serr.Status == http.StatusNotFound {
+				s.log.WarnContext(ctx, "smart playlist content does not exists on server, has probably been cascade deleted. Skipping", "id", event.ItemID)
+				return nil
+			}
+			return err
+		}
+	}
+
+	switch event.Type {
+	case types.EntityEventCreate:
+		if _, err = tx.AddSmartPlaylistContent(ctx, p, userID); err != nil {
+			return err
+		}
+	case types.EntityEventUpdate:
+		return errors.New("'update' not supported for smart_playlist_content")
+	case types.EntityEventDelete:
+		return errors.New("'delete' not supported for smart_playlist_content")
+	}
+
 	return nil
 }
 

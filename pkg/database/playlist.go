@@ -80,46 +80,9 @@ func (d Database) AddSmartPlaylist(ctx context.Context, p types.SmartPlaylist, u
 
 	c := p.Content
 
-	if c.ID == uuid.Nil {
-		uid, err := uuid.NewV4()
-		if err != nil {
-			return uuid.Nil, err
-		}
-		c.ID = uid
-	}
-
-	now := time.Now()
-	c.CreatedAt = now
-	c.UpdatedAt = now
-
-	const query = `
-		INSERT INTO smart_playlist_contents (
-			id, playlist_id, bpm_upper, bpm_lower, mood_happy, mood_sad, mood_aggressive, mood_calm,
-            created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-	`
-
-	_, err = d.ext.ExecContext(
-		ctx,
-		query,
-		c.ID,
-		c.PlaylistID,
-		c.BpmUpper,
-		c.BpmLower,
-		c.MoodHappy,
-		c.MoodSad,
-		c.MoodAggressive,
-		c.MoodCalm,
-		c.CreatedAt,
-		c.UpdatedAt,
-	)
+	c.ID, err = d.AddSmartPlaylistContent(ctx, c, userID)
 	if err != nil {
-		return uuid.Nil, err
-	}
-
-	err = d.addEntityEvent(ctx, c.ID, types.EntityEventCreate, types.EntitySmartPlaylistContent, userID)
-	if err != nil {
-		return uuid.Nil, err
+		return uuid.UUID{}, err
 	}
 
 	if c.Artists != nil {
@@ -134,6 +97,53 @@ func (d Database) AddSmartPlaylist(ctx context.Context, p types.SmartPlaylist, u
 	return p.ID, nil
 }
 
+func (d Database) AddSmartPlaylistContent(ctx context.Context, c types.SmartPlaylistContent, userID uuid.UUID) (uuid.UUID, error) {
+	if c.ID == uuid.Nil {
+		uid, err := uuid.NewV4()
+		if err != nil {
+			return uuid.Nil, err
+		}
+		c.ID = uid
+	}
+
+	now := time.Now()
+	c.CreatedAt = now
+	c.UpdatedAt = now
+
+	const query = `
+		INSERT INTO smart_playlist_contents (
+			id, playlist_id, bpm_upper, bpm_lower, mood_happy, mood_sad, mood_aggressive, mood_calm, owner,
+            created_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+	`
+
+	_, err := d.ext.ExecContext(
+		ctx,
+		query,
+		c.ID,
+		c.PlaylistID,
+		c.BpmUpper,
+		c.BpmLower,
+		c.MoodHappy,
+		c.MoodSad,
+		c.MoodAggressive,
+		c.MoodCalm,
+		userID,
+		c.CreatedAt,
+		c.UpdatedAt,
+	)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	err = d.addEntityEvent(ctx, c.ID, types.EntityEventCreate, types.EntitySmartPlaylistContent, userID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	return c.ID, nil
+}
+
 func (d Database) addSmartPlaylistArtist(ctx context.Context, parentID, artistID, userID uuid.UUID) (uuid.UUID, error) {
 	uid, err := uuid.NewV4()
 	if err != nil {
@@ -144,9 +154,9 @@ func (d Database) addSmartPlaylistArtist(ctx context.Context, parentID, artistID
 
 	const query = `
 		INSERT INTO smart_playlist_artists (
-			id, parent_id, artist_id,
+			id, parent_id, artist_id, owner,
             created_at, updated_at
-		) VALUES (?, ?, ?, ?, ?);
+		) VALUES (?, ?, ?, ?, ?, ?);
 	`
 
 	_, err = d.ext.ExecContext(
@@ -155,6 +165,7 @@ func (d Database) addSmartPlaylistArtist(ctx context.Context, parentID, artistID
 		uid,
 		parentID,
 		artistID,
+		userID,
 		now,
 		now,
 	)
@@ -318,6 +329,22 @@ func (d Database) GetPlaylistTrackByPlaylistAndAlbumTrack(ctx context.Context, p
 	err = sqlx.GetContext(ctx, d.ext, &plistTrack, query, playlistID, albumTrackID)
 	if err != nil {
 		return types.PlaylistTrack{}, err
+	}
+
+	return
+}
+
+func (d Database) GetSmartPlaylistContent(ctx context.Context, id, userID uuid.UUID) (content types.SmartPlaylistContent, err error) {
+	query := `
+        SELECT *
+        FROM smart_playlist_contents
+        WHERE id = ?
+          AND owner = ?
+        LIMIT 1;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &content, query, id, userID)
+	if err != nil {
+		return types.SmartPlaylistContent{}, err
 	}
 
 	return

@@ -51,6 +51,7 @@ type SmartPlaylistContent struct {
 	MoodHappy      *float64     `db:"mood_happy" json:"mood_happy"`
 	MoodSad        *float64     `db:"mood_sad" json:"mood_sad"`
 	Artists        *[]uuid.UUID `json:"artists" ts_type:"string[]"`
+	Owner          uuid.UUID    `db:"owner" json:"owner" ts_type:"string"`
 
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
@@ -81,6 +82,7 @@ type SmartPlaylistArtist struct {
 	ID        uuid.UUID `db:"id" json:"id" ts_type:"string"`
 	ParentID  uuid.UUID `db:"parent_id" json:"parent_id"`
 	ArtistID  uuid.UUID `db:"artist_id" json:"artist_id"`
+	Owner     uuid.UUID `db:"owner" json:"owner" ts_type:"string"`
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 	UpdatedAt time.Time `db:"updated_at" json:"updated_at"`
 }

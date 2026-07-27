@@ -123,6 +123,15 @@ func (m MediaManager) GetPlaylist(ctx context.Context, id, userID uuid.UUID) (ty
 	return plist, nil
 }
 
+func (m MediaManager) GetSmartPlaylistContent(ctx context.Context, id, userID uuid.UUID) (types.SmartPlaylistContent, error) {
+	content, err := m.db.GetSmartPlaylistContent(ctx, id, userID)
+	if err != nil {
+		return types.SmartPlaylistContent{}, m.berr.DatabaseError(err, types.EntitySmartPlaylistContent, &id)
+	}
+
+	return content, nil
+}
+
 func (m MediaManager) ListPlaylists(ctx context.Context, userID uuid.UUID, includePublic bool, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Playlist, error) {
 	playlists, err := m.db.ListPlaylists(ctx, userID, includePublic, sortBy, sortOrder)
 	if err != nil {
