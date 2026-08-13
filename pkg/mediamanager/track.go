@@ -18,6 +18,24 @@ func (m MediaManager) GetTrack(ctx context.Context, trackID uuid.UUID) (types.Tr
 	return track, nil
 }
 
+func (m MediaManager) GetTrackAnalysisByID(ctx context.Context, id uuid.UUID) (types.TrackAnalysis, error) {
+	trackAnalysis, err := m.db.GetTrackAnalysisByID(ctx, id)
+	if err != nil {
+		return types.TrackAnalysis{}, m.berr.DatabaseError(err, types.EntityTrackAnalysis, &id)
+	}
+
+	return trackAnalysis, nil
+}
+
+func (m MediaManager) GetTrackArtistByID(ctx context.Context, id uuid.UUID) (types.TrackArtist, error) {
+	trackArtist, err := m.db.GetTrackArtistByID(ctx, id)
+	if err != nil {
+		return types.TrackArtist{}, m.berr.DatabaseError(err, types.EntityTrackArtist, &id)
+	}
+
+	return trackArtist, nil
+}
+
 func (m MediaManager) GetTrackDetailed(ctx context.Context, trackID, albumID, userID uuid.UUID) (types.TrackDetailed, error) {
 	track, err := m.db.GetTrackDetailed(ctx, trackID, albumID, userID)
 	if err != nil {

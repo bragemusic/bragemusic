@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/bragemusic/core/pkg/internalusers"
 	"github.com/bragemusic/core/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
@@ -97,7 +98,7 @@ func (a Analyser) RunTrackAnalysis(ctx context.Context, trackID uuid.UUID) error
 		TrackAnalysisResults: res,
 	}
 
-	if err = a.db.AddTrackAnalysis(ctx, trackAnalysis); err != nil {
+	if err = a.db.AddTrackAnalysis(ctx, trackAnalysis, internalusers.TrackAnalyser); err != nil {
 		return a.berr.DatabaseError(err, types.EntityTrackAnalysis, &track.ID)
 	}
 

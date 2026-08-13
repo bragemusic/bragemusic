@@ -99,6 +99,22 @@ func (r ReqAlbumTracksGet) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 
+type ReqTrackAnalysisGet struct {
+	ID uuid.UUID `path:"trackAnalysisID" description:"ID of the wanted track analysis"`
+}
+
+func (r ReqTrackAnalysisGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqTrackArtistsGet struct {
+	TrackArtistID uuid.UUID `path:"trackArtistID" description:"ID of the wanted track artist"`
+}
+
+func (r ReqTrackArtistsGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
 type ReqTracksGet struct {
 	TrackID uuid.UUID `path:"trackID" description:"ID of the wanted track"`
 }
@@ -173,6 +189,22 @@ type ReqPlaylistTracksGet struct {
 }
 
 func (r ReqPlaylistTracksGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqSmartPlaylistArtistGet struct {
+	ID uuid.UUID `path:"artistID" description:"ID of the wanted smart playlist artist"`
+}
+
+func (r ReqSmartPlaylistArtistGet) Validate() (validationMessages string, err error) {
+	return "", nil
+}
+
+type ReqSmartPlaylistContentGet struct {
+	ID uuid.UUID `path:"contentID" description:"ID of the wanted smart playlist content"`
+}
+
+func (r ReqSmartPlaylistContentGet) Validate() (validationMessages string, err error) {
 	return "", nil
 }
 

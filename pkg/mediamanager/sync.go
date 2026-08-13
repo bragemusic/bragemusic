@@ -77,6 +77,30 @@ func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st typ
 	}
 	st.New = append(st.New, likes...)
 
+	trackAnalyses, err := m.db.ListEntityEventsByEntityType(ctx, types.EntityTrackAnalysis, since, nil)
+	if err != nil {
+		return types.SyncState{}, err
+	}
+	st.New = append(st.New, trackAnalyses...)
+
+	smartPlaylistContent, err := m.db.ListEntityEventsByEntityType(ctx, types.EntitySmartPlaylistContent, since, &user.ID)
+	if err != nil {
+		return types.SyncState{}, err
+	}
+	st.New = append(st.New, smartPlaylistContent...)
+
+	smartPlaylistArtist, err := m.db.ListEntityEventsByEntityType(ctx, types.EntitySmartPlaylistArtist, since, &user.ID)
+	if err != nil {
+		return types.SyncState{}, err
+	}
+	st.New = append(st.New, smartPlaylistArtist...)
+
+	trackArtists, err := m.db.ListEntityEventsByEntityType(ctx, types.EntityTrackArtist, since, nil)
+	if err != nil {
+		return types.SyncState{}, err
+	}
+	st.New = append(st.New, trackArtists...)
+
 	return
 }
 

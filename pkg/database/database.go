@@ -108,6 +108,7 @@ type DatabaseFace interface {
 
 	AddTrackArtist(ctx context.Context, ta types.TrackArtist, userID uuid.UUID) (uuid.UUID, error)
 	DeleteTrackArtist(ctx context.Context, id, userID uuid.UUID) error
+	GetTrackArtistByID(ctx context.Context, id uuid.UUID) (trackArtist types.TrackArtist, err error)
 	ListTrackArtistsByTrackID(ctx context.Context, trackID uuid.UUID) (trackArtists []types.TrackArtist, err error)
 
 	AddSync(ctx context.Context, s types.DBSyncState) (string, error)
@@ -131,6 +132,8 @@ type DatabaseFace interface {
 
 	AddPlaylist(ctx context.Context, p types.Playlist, userID uuid.UUID) (uuid.UUID, error)
 	AddSmartPlaylist(ctx context.Context, p types.SmartPlaylist, userID uuid.UUID) (uuid.UUID, error)
+	AddSmartPlaylistArtist(ctx context.Context, a types.SmartPlaylistArtist, userID uuid.UUID) (uuid.UUID, error)
+	AddSmartPlaylistContent(ctx context.Context, c types.SmartPlaylistContent, userID uuid.UUID) (uuid.UUID, error)
 	AddPlaylistTrack(ctx context.Context, p types.PlaylistTrack, userID uuid.UUID) (uuid.UUID, error)
 	CountPlaylists(ctx context.Context, userID uuid.UUID) (int, error)
 	CountPlaylistTracks(ctx context.Context, playlistID uuid.UUID) (int, error)
@@ -139,6 +142,8 @@ type DatabaseFace interface {
 	GetPlaylist(ctx context.Context, ID, userID uuid.UUID) (plist types.Playlist, err error)
 	GetPlaylistTrack(ctx context.Context, id uuid.UUID) (plistTrack types.PlaylistTrack, err error)
 	GetPlaylistTrackByPlaylistAndAlbumTrack(ctx context.Context, playlistID, albumTrackID uuid.UUID) (plistTrack types.PlaylistTrack, err error)
+	GetSmartPlaylistArtist(ctx context.Context, id, userID uuid.UUID) (artist types.SmartPlaylistArtist, err error)
+	GetSmartPlaylistContent(ctx context.Context, id, userID uuid.UUID) (content types.SmartPlaylistContent, err error)
 	ListPlaylists(ctx context.Context, userID uuid.UUID, includePublic bool, sortBy SortBy, sortOrder SortOrder) (playlists []types.Playlist, err error)
 	ListPlaylistTracks(ctx context.Context, playlistID, userID uuid.UUID) (tracks []types.TrackDetailed, err error)
 	ListUpdatedPlaylists(ctx context.Context, since time.Time, userID uuid.UUID) (plists []uuid.UUID, err error)
@@ -160,7 +165,8 @@ type DatabaseFace interface {
 	HasLike(ctx context.Context, trackID, userID uuid.UUID) (bool, error)
 	ListLikedTracksDetailed(ctx context.Context, userID uuid.UUID) (tracks []types.TrackDetailed, err error)
 
-	AddTrackAnalysis(ctx context.Context, ta types.TrackAnalysis) error
+	AddTrackAnalysis(ctx context.Context, ta types.TrackAnalysis, userID uuid.UUID) error
+	GetTrackAnalysisByID(ctx context.Context, id uuid.UUID) (trackAnalysis types.TrackAnalysis, err error)
 	GetUnanalysedTrack(ctx context.Context) (id uuid.UUID, found bool, err error)
 
 	AuthFace

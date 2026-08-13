@@ -78,8 +78,19 @@ func (c clientSync) ListTracksDetailedByAlbum(ctx context.Context, albumID uuid.
 	return c.MediaManager.ListTracksDetailedByAlbum(ctx, albumID, c.user.ID)
 }
 
-func (c clientSync) FilterTracks(ctx context.Context, filter types.TrackFilter, page, limit int) (types.ListPaginationPayload[types.TrackDetailed], error) {
-	return c.sc.FilterTracks(ctx, filter, page, limit)
+func (c clientSync) FilterTracks(ctx context.Context, filter types.TrackFilter, page, limit int) (resp types.ListPaginationPayload[types.TrackDetailed], err error) {
+	items, page, limit, totalPages, totalItems, err := c.ListTracksDetailed(ctx, filter, page, limit)
+	if err != nil {
+		return types.ListPaginationPayload[types.TrackDetailed]{}, err
+	}
+
+	return types.ListPaginationPayload[types.TrackDetailed]{
+		Items:      items,
+		Page:       page,
+		Limit:      limit,
+		TotalPages: totalPages,
+		TotalItems: totalItems,
+	}, nil
 }
 
 func (c clientSync) UpdateAlbum(ctx context.Context, id uuid.UUID, album types.AlbumUpdate) error {

@@ -16,6 +16,7 @@ func (m MediaManager) AddPlaylist(ctx context.Context, p types.PlaylistBase, use
 	pl := types.Playlist{
 		PlaylistBase: p,
 		Owner:        userID,
+		Type:         types.PlaylistTypeStandard,
 	}
 
 	if _, err := m.db.AddPlaylist(ctx, pl, userID); err != nil {
@@ -120,6 +121,24 @@ func (m MediaManager) GetPlaylist(ctx context.Context, id, userID uuid.UUID) (ty
 	}
 
 	return plist, nil
+}
+
+func (m MediaManager) GetSmartPlaylistContent(ctx context.Context, id, userID uuid.UUID) (types.SmartPlaylistContent, error) {
+	content, err := m.db.GetSmartPlaylistContent(ctx, id, userID)
+	if err != nil {
+		return types.SmartPlaylistContent{}, m.berr.DatabaseError(err, types.EntitySmartPlaylistContent, &id)
+	}
+
+	return content, nil
+}
+
+func (m MediaManager) GetSmartPlaylistArtist(ctx context.Context, id, userID uuid.UUID) (types.SmartPlaylistArtist, error) {
+	content, err := m.db.GetSmartPlaylistArtist(ctx, id, userID)
+	if err != nil {
+		return types.SmartPlaylistArtist{}, m.berr.DatabaseError(err, types.EntitySmartPlaylistArtist, &id)
+	}
+
+	return content, nil
 }
 
 func (m MediaManager) ListPlaylists(ctx context.Context, userID uuid.UUID, includePublic bool, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.Playlist, error) {

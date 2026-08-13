@@ -73,6 +73,21 @@ func (d Database) DeleteTrackArtist(ctx context.Context, id, userID uuid.UUID) e
 	return d.addEntityEvent(ctx, id, types.EntityEventDelete, types.EntityTrackArtist, userID)
 }
 
+func (d Database) GetTrackArtistByID(ctx context.Context, id uuid.UUID) (trackArtist types.TrackArtist, err error) {
+	query := `
+		SELECT *
+		FROM track_artists
+		WHERE
+			id = ?;
+    `
+	err = sqlx.GetContext(ctx, d.ext, &trackArtist, query, id)
+	if err != nil {
+		return types.TrackArtist{}, err
+	}
+
+	return
+}
+
 func (d Database) ListTrackArtistsByTrackID(ctx context.Context, trackID uuid.UUID) (trackArtists []types.TrackArtist, err error) {
 	query := `
 		SELECT *
