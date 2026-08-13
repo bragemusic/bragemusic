@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/bragemusic/core/internal/vars"
 	"github.com/bragemusic/core/pkg/audiointerface"
 	"github.com/bragemusic/core/pkg/audioplayer"
 	"github.com/bragemusic/core/pkg/audioreader"
@@ -204,15 +205,14 @@ func (a *Auth) NewClient(ctx context.Context, config Config, slogHandler slog.Ha
 		return nil, err
 	}
 
-	// FIXME: need to fix platform and version
 	da := device.NewAgent(slogHandler, sc, a.user.ID, types.DeviceBase{
 		Name:             config.PlayerName,
 		Type:             config.ClientType,
 		Interface:        config.ClientInterface,
 		Icon:             config.ClientIcon,
 		SupportsPlayback: true,
-		Platform:         "linux",
-		Version:          "1.2.0",
+		Platform:         vars.PLATFORM,
+		Version:          vars.VERSION,
 	},
 		config.StateFilePath,
 	)
