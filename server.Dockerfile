@@ -1,4 +1,4 @@
-# docker build -t brage1t --build-arg VERSION="v0.0.1" .
+# docker build -t brage1t --build-arg VERSION="v0.0.1" -f server.Dockerfile .
 # ---- BUILD FRONTEND
 FROM node:22-alpine AS fe-build
 
@@ -9,11 +9,14 @@ RUN apk add --no-cache git
 
 WORKDIR /fe-build
 
-COPY package.json tsconfig.json vite.config.ts index.html ./
-COPY frontend ./frontend
+COPY . .
 
+RUN mkdir -p ./assets/frontend
 RUN VITE_APP_VERSION=${VERSION} npm install
-RUN npm run build
+RUN npm install --prefix web/
+RUN npm run build --prefix web/
+RUN cp -r ./web/dist/* ./assets/frontend
+RUN cp ./web/static/* ./assets/frontend/assets
 
 # ---- BUILD BACKEND
 FROM golang:1.25-alpine AS go-build
@@ -23,12 +26,9 @@ RUN test -n "$VERSION" || (echo "VERSION is required" && exit 1)
 
 WORKDIR /build
 
-COPY go.mod go.sum ./
-COPY assets ./assets
-COPY cmd ./cmd
+COPY . .
 
 COPY --from=fe-build /fe-build/assets/frontend ./assets/frontend
-COPY static/* ./assets/frontend/assets/
 
 RUN apk add --no-cache \
     git \
@@ -40,19 +40,11 @@ RUN apk add --no-cache \
 RUN go mod download
 RUN CGO_ENABLED=1 go build -tags fts5 -o bragemusic-server --ldflags="-X 'github.com/bragemusic/core/internal/vars.VERSION=${VERSION}'" cmd/server/main.go
 
-WORKDIR /clone
-# RUN git clone --depth 1 --branch ${VERSION} https://github.com/bragemusic/core.git
-RUN TAG=$(git ls-remote --tags --sort='v:refname' https://github.com/bragemusic/core.git \
-    | awk -F/ '{print $3}' \
-    | tail -1) \
-    && git clone --depth 1 --branch "$TAG" \
-    https://github.com/bragemusic/core.git
-
 # ---- BUILD RELEASE STAGE
 FROM alpine:latest AS release
 
 WORKDIR /bragemusic-server
-COPY --from=go-build /clone/core/db/migrations ./migrations
+COPY --from=go-build /build/db/migrations ./migrations
 
 COPY --from=amacneil/dbmate:latest /usr/local/bin/dbmate /usr/local/bin/dbmate
 COPY --from=ghcr.io/lucas-ingemar/hermox:latest /usr/local/bin/hermox /usr/local/bin/hermox
