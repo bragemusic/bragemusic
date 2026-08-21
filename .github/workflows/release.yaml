@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   server-container:
-    name: Build and Publish Container Image
+    name: Build and Publish Server Container
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -28,7 +28,7 @@ jobs:
           docker push ghcr.io/bragemusic/server:latest
 
   desktop-client:
-    name: Build Linux amd64 Client
+    name: Build and Publish Linux amd64 Client
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
@@ -63,5 +63,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          mv wails/build/bin/brage-client wails/build/bin/bragemusic-client-${{ github.ref_name }}-linux-amd64
+          mv wails/build/bin/bragemusic wails/build/bin/bragemusic-client-${{ github.ref_name }}-linux-amd64
           gh release upload "${{ github.ref_name }}" ./wails/build/bin/bragemusic-client-${{ github.ref_name }}-linux-amd64
