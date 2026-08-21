@@ -1,4 +1,4 @@
-import { Api, UserDetails, responses } from "bragemusic-frontend";
+import { Api, UserDetails, responses } from "bragemusic";
 import { types, musicbrainz } from "../../wailsjs/go/models";
 import * as App from "../../wailsjs/go/app/App";
 import { EventsOn } from "../../wailsjs/runtime/runtime";

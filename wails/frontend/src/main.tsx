@@ -5,7 +5,7 @@ import ReactDOM from "react-dom/client";
 import { WailsApi } from "./api/wailsApi.ts";
 import { WailsPlayerApi } from "./api/wailsPlayerApi.ts";
 
-import { App, ApiProvider } from "bragemusic-frontend";
+import { App, ApiProvider } from "bragemusic";
 
 function loadTheme() {
   const existing = document.getElementById("runtime-theme")

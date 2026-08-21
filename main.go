@@ -11,15 +11,15 @@ import (
 	markdown "github.com/MichaelMure/go-term-markdown"
 	chigo "github.com/UltiRequiem/chigo/pkg"
 	"github.com/alecthomas/kong"
-	"github.com/bragemusic/core/pkg/config"
-	"github.com/bragemusic/core/pkg/utils"
 	"github.com/bragemusic/core/internal/daemon"
 	"github.com/bragemusic/core/internal/gui"
+	"github.com/bragemusic/core/pkg/config"
+	"github.com/bragemusic/core/pkg/utils"
 	"github.com/common-nighthawk/go-figure"
 	"github.com/lmittmann/tint"
 )
 
-//go:embed all:frontend/dist
+//go:embed all:wails/frontend/dist
 var assets embed.FS
 
 var cmdDesc = chigo.Colorize(figure.NewFigure("Brage Music", "speed", true).String()) + `

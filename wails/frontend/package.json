@@ -18,7 +18,7 @@
     "@tailwindcss/postcss": "4.1.11",
     "@tailwindcss/vite": "^4.2.2",
     "@wailsapp/runtime": "^1.1.1",
-    "bragemusic-frontend": "github:bragemusic/frontend#v0.0.1",
+    "bragemusic": "file:../..",
     "clsx": "^2.1.1",
     "framer-motion": "11.18.2",
     "lucide-react": "^0.563.0",

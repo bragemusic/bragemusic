@@ -1,4 +1,4 @@
-import { PlayerApi, PlayContextType } from "bragemusic-frontend";
+import { PlayerApi, PlayContextType } from "bragemusic";
 import { AddTrackToQueue, NextRepeat, NextTrack, PlayPause, PreviousTrack, Start, ToggleShuffle } from "../../wailsjs/go/app/App";
 
 export class WailsPlayerApi implements PlayerApi {
