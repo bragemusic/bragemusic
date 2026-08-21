@@ -27,3 +27,14 @@ login email password long_lived_token="true":
       -H "Content-Type: application/json" \
       -d @- \
     | jq
+
+build-frontend:
+    rm -rf ./assets/frontend/*
+    mkdir -p ./assets/frontend
+    npm install --prefix web/
+    npm run build --prefix web/
+    cp -r ./web/dist/* ./assets/frontend
+    cp ./web/static/* ./assets/frontend/assets
+
+serve:
+    go run -tags fts5 cmd/server/main.go

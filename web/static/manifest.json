@@ -1,0 +1,22 @@
+{
+  "short_name": "Brage Music",
+  "name": "Brage Music",
+  "icons": [
+    {
+      "src": "/assets/logo.png",
+      "type": "image/png",
+      "sizes": "500x500"
+    }
+  ],
+  "id": "/",
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#ff5000",
+  "shortcuts": [
+  ],
+  "description": "Own your music. Keep your freedom.",
+  "screenshots": [
+  ]
+}

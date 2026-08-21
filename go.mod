@@ -32,6 +32,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/godbus/dbus/v5 v5.2.0
 	github.com/gordonklaus/portaudio v0.0.0-20250206071425-98a94950218b
+	github.com/lmittmann/tint v1.2.0
 	github.com/mewkiz/flac v1.0.13
 	github.com/samber/lo v1.52.0
 	github.com/swaggest/openapi-go v0.2.60
