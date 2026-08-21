@@ -13,8 +13,8 @@ import (
 	"github.com/alecthomas/kong"
 	"github.com/bragemusic/core/pkg/config"
 	"github.com/bragemusic/core/pkg/utils"
-	"github.com/bragemusic/desktop/internal/daemon"
-	"github.com/bragemusic/desktop/internal/gui"
+	"github.com/bragemusic/core/internal/daemon"
+	"github.com/bragemusic/core/internal/gui"
 	"github.com/common-nighthawk/go-figure"
 	"github.com/lmittmann/tint"
 )

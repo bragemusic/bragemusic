@@ -14,8 +14,8 @@ import (
 	"github.com/bragemusic/core/pkg/musicbrainz"
 	"github.com/bragemusic/core/pkg/serverclient"
 	"github.com/bragemusic/core/pkg/types"
-	"github.com/bragemusic/desktop/internal/assethandler"
-	"github.com/bragemusic/desktop/internal/utils"
+	"github.com/bragemusic/core/internal/assethandler"
+	"github.com/bragemusic/core/internal/utils"
 	"github.com/gofrs/uuid/v5"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
