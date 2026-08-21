@@ -1,0 +1,63 @@
+{
+  "name": "vite-template",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "lint": "eslint --fix",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@heroui/react": "^3.0.2",
+    "@heroui/styles": "^3.0.2",
+    "@react-aria/visually-hidden": "3.8.28",
+    "@react-stately/data": "^3.15.1",
+    "@react-types/shared": "3.32.1",
+    "@tailwindcss/postcss": "4.1.11",
+    "@tailwindcss/vite": "^4.2.2",
+    "@wailsapp/runtime": "^1.1.1",
+    "bragemusic-frontend": "github:bragemusic/frontend#v0.0.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "11.18.2",
+    "lucide-react": "^0.563.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-hotkeys": "^2.0.0-pre9",
+    "react-hotkeys-hook": "^5.2.1",
+    "tailwind-variants": "3.1.1",
+    "tailwindcss": "^4.2.2",
+    "vite-plugin-svgr": "^4.5.0",
+    "zustand": "^5.0.11"
+  },
+  "devDependencies": {
+    "@eslint/compat": "1.2.8",
+    "@eslint/eslintrc": "3.3.1",
+    "@eslint/js": "9.25.1",
+    "@types/node": "20.5.7",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "@typescript-eslint/eslint-plugin": "8.31.1",
+    "@typescript-eslint/parser": "8.31.1",
+    "@vitejs/plugin-react": "4.7.0",
+    "eslint": "9.25.1",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-jsx-a11y": "6.10.2",
+    "eslint-plugin-node": "11.1.0",
+    "eslint-plugin-prettier": "5.2.1",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "5.2.0",
+    "eslint-plugin-unused-imports": "4.1.4",
+    "globals": "16.0.0",
+    "postcss": "8.5.6",
+    "prettier": "3.5.3",
+    "typescript": "5.6.3",
+    "vite": "6.0.11",
+    "vite-tsconfig-paths": "5.1.4"
+  },
+  "overrides": {
+    "@internationalized/date": "3.12.0"
+  }
+}

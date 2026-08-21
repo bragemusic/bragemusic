@@ -13,3 +13,6 @@ web/node_modules
 web/dist
 
 frontend/dist
+
+wails/build/bin
+wails/frontend/dist
