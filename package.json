@@ -7,7 +7,7 @@
   "types": "frontend/dist/main.d.ts",
   "files": ["frontend/dist"],
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --config vite.dev.config.ts",
     "build": "tsc --p ./tsconfig.build.json && vite build",
     "lint": "eslint --fix",
     "preview": "vite preview",
