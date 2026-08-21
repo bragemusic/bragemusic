@@ -4,8 +4,15 @@ data
 db/schema.sql
 .env.local
 
-importDir
+node_modules
 
 assets/frontend/*.html
-assets/frontend/assets/*.css
-assets/frontend/assets/*.js
+assets/frontend/assets/*
+
+web/node_modules
+web/dist
+
+frontend/dist
+
+wails/build/bin
+wails/frontend/dist

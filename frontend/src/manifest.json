@@ -1,0 +1,22 @@
+{
+  "short_name": "Brage Music",
+  "name": "Brage Music",
+  "icons": [
+    {
+      "src": "/assets/static/img/logo.png",
+      "type": "image/png",
+      "sizes": "855x851"
+    }
+  ],
+  "id": "/",
+  "start_url": "/",
+  "background_color": "#F2644B",
+  "display": "standalone",
+  "scope": "/",
+  "theme_color": "#F2644B",
+  "shortcuts": [
+  ],
+  "description": "5 vänners resa genom drinkarnas förtrollande land",
+  "screenshots": [
+  ]
+}

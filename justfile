@@ -27,3 +27,21 @@ login email password long_lived_token="true":
       -H "Content-Type: application/json" \
       -d @- \
     | jq
+
+build-frontend:
+    rm -rf ./assets/frontend/*
+    mkdir -p ./assets/frontend
+    npm install
+    npm install --prefix web/
+    npm run build --prefix web/
+    cp -r ./web/dist/* ./assets/frontend
+    cp ./web/static/* ./assets/frontend/assets
+
+serve:
+    go run -tags fts5 cmd/server/main.go
+
+dev-client:
+    wails dev -tags fts5
+
+build-linux-client version:
+    wails build -tags fts5 --ldflags="-X 'github.com/bragemusic/core/internal/vars.VERSION={{version}}' -X 'github.com/bragemusic/core/internal/vars.PLATFORM=linux'"
