@@ -43,6 +43,8 @@ RUN CGO_ENABLED=1 go build -tags fts5 -o bragemusic-server --ldflags="-X 'github
 # ---- BUILD RELEASE STAGE
 FROM alpine:latest AS release
 
+LABEL org.opencontainers.image.source="https://github.com/bragemusic/core"
+
 WORKDIR /bragemusic-server
 COPY --from=go-build /build/db/migrations ./migrations
 
