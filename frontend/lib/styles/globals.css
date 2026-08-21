@@ -1,0 +1,136 @@
+@import "tailwindcss";
+@import "@heroui/styles";
+/*
+ * HeroUI Theme Customization
+ * Add this to your global.css after importing @heroui/styles
+ * Only includes base variables from variables.css
+ * @see https://heroui.com/docs/react/getting-started/theming
+ */
+
+@layer components {
+  .dropdown__popover {
+    @apply border-1 border-border;
+  }
+
+  .popover {
+    @apply border-1 border-border;
+  }
+
+  .toast {
+    @apply border-1 border-border shadow-lg;
+  }
+}
+
+:root,
+.light,
+.default,
+[data-theme="light"],
+[data-theme="default"] {
+  /* main color */
+  --accent: #ff5000;
+  /* foreground color on components with main bg */
+  --accent-foreground: #ffffff;
+  /* main background */
+  --background: #f9faf9;
+  /* border color*/
+  --border: #dddedf;
+  /* danger color */
+  --danger: #e30121;
+  /* danger foreground color */
+  --danger-foreground: #FFFFFF;
+  /* default color, used for cancel buttons, hovers, background on fallback icons, background in inputs */
+  --default: #eaebec;
+  /* used for secondary player buttons */
+  --default-foreground: #484a4d;
+  /* text color in forms */
+  --field-foreground: #181819;
+  /* main text color */
+  --foreground: #2b2c2c;
+  /* popup background */
+  --overlay: #ffffff;
+  /* Success color */
+  --success: #00a23e;
+  /* Success foreground color */
+  --success-foreground: #333634;
+  /* Player background, card background, notification background */
+  --surface: #ffffff;
+  /* menu background */
+  --surface-secondary: #f4f4f5;
+  /* warning color */
+  --warning: #f2a21c;
+  /* warning foreground color */
+  --warning-foreground: #1a1815;
+  /* not used, set to same as default */
+  --field-background: var(--default);
+  /* not used, guess its for placeholder text in forms */
+  --field-placeholder: --var(default-foreground);
+  /* color on focused objects. Set to same as accent */
+  --focus: var(--accent);
+  /* descriptive texts. Table headers, field description, list headers */
+  --muted: var(--default-foreground);
+  /* seems not to be used atm. Should probably be used as popup text colors */
+  --overlay-foreground: var(--foreground);
+  /* Seems not to be used. Set to same as border */
+  --scrollbar: var(--border);
+  /* Seems not to be used. Set to same as border */
+  --segment: var(--border);
+  /* Seems not to be used. Set to same as foreground */
+  --segment-foreground: var(--foreground);
+  /* Separators in tables, probably others. Set to same as border */
+  --separator: var(--border);
+  /* foregrouncd color on surface, set to same as foreground *NOT USED* */
+  --surface-foreground: var(--foreground);
+  /* not used, set to same as foreground */
+  --surface-secondary-foreground: var(--foreground);
+  /* not used, set to same as surface-secondary */
+  --surface-tertiary: var(--surface-secondary);
+  /* not used, set to same as foreground */
+  --surface-tertiary-foreground: var(--foreground);
+
+  /* Border Radius */
+  /* --radius: 0.5rem; */
+  /* --field-radius: 0.75rem; */
+
+  /* Font Family */
+  /* Make sure to load Inter font in your app */
+  /* --font-sans: var(--font-inter); */
+}
+
+.dark,
+[data-theme="dark"] {
+  color-scheme: dark;
+  /* Theme Colors (Dark Mode) */
+  --accent: #ff5000;
+  /* foreground color on components with main bg */
+  --accent-foreground: #ffffff;
+  --background: oklch(12.00% 0.0154 256.91);
+  --border: oklch(28.00% 0.0154 256.91);
+  --danger: oklch(59.40% 0.2028 25.00);
+  --danger-foreground: oklch(99.11% 0 0);
+  --default: oklch(27.40% 0.0154 256.91);
+  --default-foreground: oklch(99.11% 0 0);
+  --field-background: oklch(21.03% 0.0308 256.91);
+  --field-foreground: oklch(99.11% 0.0154 256.91);
+  --field-placeholder: oklch(70.50% 0.0308 256.91);
+  --focus: oklch(62.04% 0.1950 256.91);
+  --foreground: oklch(99.11% 0.0154 256.91);
+  --muted: oklch(70.50% 0.0308 256.91);
+  --overlay: oklch(21.03% 0.0308 256.91);
+  --overlay-foreground: oklch(99.11% 0.0154 256.91);
+  --scrollbar: oklch(70.50% 0.0154 256.91);
+  --segment: oklch(39.64% 0.0154 256.91);
+  --segment-foreground: oklch(99.11% 0.0154 256.91);
+  --separator: oklch(25.00% 0.0154 256.91);
+  --success: oklch(73.29% 0.1995 151.18);
+  --success-foreground: oklch(21.03% 0.0059 151.18);
+  --surface: oklch(21.03% 0.0308 256.91);
+  --surface-foreground: oklch(99.11% 0.0154 256.91);
+  --surface-secondary: oklch(25.70% 0.0231 256.91);
+  --surface-secondary-foreground: oklch(99.11% 0.0154 256.91);
+  --surface-tertiary: oklch(27.21% 0.0231 256.91);
+  --surface-tertiary-foreground: oklch(99.11% 0.0154 256.91);
+  --warning: oklch(82.03% 0.1431 76.71);
+  --warning-foreground: oklch(21.03% 0.0059 76.71);
+}
+
+@config "../../tailwind.config.js"

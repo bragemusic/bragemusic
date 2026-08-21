@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Brage Music</title>
+    <meta key="title" content="Brage Music" property="og:title" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="/manifest.json">
+    <meta
+      content="Self hosted music player"
+      property="og:description"
+    />
+    <meta
+      content="Self hosted music player"
+      name="description"
+    />
+    <meta
+      key="viewport"
+      content="viewport-fit=cover, width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0"
+      name="viewport"
+    />
+    <link href="/logo.svg" rel="icon" />
+    <style>
+      html, body, #root {
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background-color: var(--background);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
