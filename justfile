@@ -31,6 +31,7 @@ login email password long_lived_token="true":
 build-frontend:
     rm -rf ./assets/frontend/*
     mkdir -p ./assets/frontend
+    npm install
     npm install --prefix web/
     npm run build --prefix web/
     cp -r ./web/dist/* ./assets/frontend

@@ -39,12 +39,13 @@ export default defineConfig({
     tailwindcss(),
     svgr(),
     libInjectCss(),
-    dts({ include: ["lib"] }),
+    dts({ include: ["frontend/lib"] }),
   ],
   build: {
     sourcemap: true,
+    outDir: "frontend/dist",
     lib: {
-      entry: resolve(__dirname, "lib/main.ts"),
+      entry: resolve(__dirname, "frontend/lib/main.ts"),
       formats: ["es"],
     },
     rollupOptions: {
@@ -62,7 +63,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./lib"),
+      "@": path.resolve(__dirname, "./frontend/lib"),
     },
   },
 });

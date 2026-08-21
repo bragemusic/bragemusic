@@ -4,10 +4,12 @@ data
 db/schema.sql
 .env.local
 
-importDir
+node_modules
 
 assets/frontend/*.html
 assets/frontend/assets/*
 
 web/node_modules
 web/dist
+
+frontend/dist

@@ -1,13 +1,11 @@
 {
-  "name": "bragemusic-frontend",
-  "private": true,
+  "name": "bragemusic",
+  "private": false,
   "version": "0.0.0",
   "type": "module",
   "main": "frontend/dist/main.js",
   "types": "frontend/dist/main.d.ts",
-  "files": [
-    "frontend/dist"
-  ],
+  "files": ["frontend/dist"],
   "scripts": {
     "dev": "vite",
     "build": "tsc --p ./tsconfig.build.json && vite build",
