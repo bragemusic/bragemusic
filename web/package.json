@@ -6,7 +6,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.4",
-    "bragemusic-frontend": "github:bragemusic/frontend#v0.0.2",
+    "bragemusic-frontend": "file:..",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "vite-plugin-svgr": "^4.5.0"
