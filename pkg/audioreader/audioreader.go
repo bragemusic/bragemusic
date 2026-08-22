@@ -6,8 +6,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/bragemusic/core/pkg/serverclient"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/serverclient"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 type AudioReader interface {

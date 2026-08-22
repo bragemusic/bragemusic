@@ -4,10 +4,10 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/bragemusic/core/pkg/auth"
-	"github.com/bragemusic/core/pkg/device"
-	"github.com/bragemusic/core/pkg/routes"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/auth"
+	"github.com/bragemusic/bragemusic/pkg/device"
+	"github.com/bragemusic/bragemusic/pkg/routes"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 func (s *Server) deviceRoutes() []routes.RouteHandler {

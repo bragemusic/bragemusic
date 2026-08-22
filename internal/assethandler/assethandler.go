@@ -8,9 +8,9 @@ import (
 	"path"
 	"strings"
 
-	"github.com/bragemusic/core/pkg/config"
-	"github.com/bragemusic/core/pkg/serverclient"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/config"
+	"github.com/bragemusic/bragemusic/pkg/serverclient"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 const disableTransitions = `/* Disable Transitions */

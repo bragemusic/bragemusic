@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/bragemusic/core/pkg/routes"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/routes"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 func (s *Server) albumTrackRoutes() []routes.RouteHandler {

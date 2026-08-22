@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 func (m MediaManager) ListEntityEvents(ctx context.Context) ([]types.EntityEvent, error) {

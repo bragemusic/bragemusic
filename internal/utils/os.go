@@ -4,8 +4,8 @@ import (
 	"context"
 	"os"
 
-	"github.com/bragemusic/core/pkg/config"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/config"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 func SetupFolderStructure(ctx context.Context, cfg config.ClientConfig) error {

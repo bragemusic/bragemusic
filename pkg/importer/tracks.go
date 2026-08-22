@@ -4,9 +4,9 @@ import (
 	"context"
 	"slices"
 
-	"github.com/bragemusic/core/pkg/database"
-	"github.com/bragemusic/core/pkg/types"
-	"github.com/bragemusic/core/pkg/utils"
+	"github.com/bragemusic/bragemusic/pkg/database"
+	"github.com/bragemusic/bragemusic/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/utils"
 	"github.com/gofrs/uuid/v5"
 )
 

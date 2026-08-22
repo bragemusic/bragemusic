@@ -9,7 +9,7 @@ import (
 
 	"github.com/amacneil/dbmate/v2/pkg/dbmate"
 	_ "github.com/amacneil/dbmate/v2/pkg/driver/sqlite"
-	dbMigrations "github.com/bragemusic/core/db"
+	dbMigrations "github.com/bragemusic/bragemusic/db"
 )
 
 func Migrate(ctx context.Context, databasePath string, slogHandler slog.Handler) error {

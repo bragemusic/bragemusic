@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bragemusic/core/pkg/auth"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/auth"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/go-chi/chi/v5"
 )
 

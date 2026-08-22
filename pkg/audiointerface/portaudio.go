@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gordonklaus/portaudio"
 )
 

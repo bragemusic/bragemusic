@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/jmoiron/sqlx"
 )
 

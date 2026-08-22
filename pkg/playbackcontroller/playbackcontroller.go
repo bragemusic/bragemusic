@@ -4,10 +4,10 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/bragemusic/core/pkg/audioplayer"
-	"github.com/bragemusic/core/pkg/device"
-	"github.com/bragemusic/core/pkg/serverclient"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/audioplayer"
+	"github.com/bragemusic/bragemusic/pkg/device"
+	"github.com/bragemusic/bragemusic/pkg/serverclient"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 

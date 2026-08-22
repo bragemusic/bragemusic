@@ -3,8 +3,8 @@ package mediamanager
 import (
 	"context"
 
-	"github.com/bragemusic/core/pkg/database"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/database"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 func (m MediaManager) SearchFull(ctx context.Context, searchTerm string) (si []types.SearchItem, err error) {

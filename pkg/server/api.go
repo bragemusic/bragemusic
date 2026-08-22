@@ -3,9 +3,9 @@ package server
 import (
 	"net/http"
 
-	"github.com/bragemusic/core/internal/vars"
-	"github.com/bragemusic/core/pkg/routes"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/internal/vars"
+	"github.com/bragemusic/bragemusic/pkg/routes"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
 )

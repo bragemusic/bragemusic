@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bragemusic/core/pkg/acoustid"
-	"github.com/bragemusic/core/pkg/database"
-	"github.com/bragemusic/core/pkg/musicbrainz"
-	"github.com/bragemusic/core/pkg/types"
-	"github.com/bragemusic/core/pkg/utils"
+	"github.com/bragemusic/bragemusic/pkg/acoustid"
+	"github.com/bragemusic/bragemusic/pkg/database"
+	"github.com/bragemusic/bragemusic/pkg/musicbrainz"
+	"github.com/bragemusic/bragemusic/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/utils"
 	"github.com/dhowden/tag"
 	"github.com/gofrs/uuid/v5"
 )

@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/bragemusic/core/pkg/bragerr"
-	"github.com/bragemusic/core/pkg/database"
+	"github.com/bragemusic/bragemusic/pkg/bragerr"
+	"github.com/bragemusic/bragemusic/pkg/database"
 )
 
 type Analyser struct {

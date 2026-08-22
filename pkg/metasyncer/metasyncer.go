@@ -7,10 +7,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/bragemusic/core/pkg/database"
-	"github.com/bragemusic/core/pkg/imagemagick"
-	"github.com/bragemusic/core/pkg/musicbrainz"
-	"github.com/bragemusic/core/pkg/wiki"
+	"github.com/bragemusic/bragemusic/pkg/database"
+	"github.com/bragemusic/bragemusic/pkg/imagemagick"
+	"github.com/bragemusic/bragemusic/pkg/musicbrainz"
+	"github.com/bragemusic/bragemusic/pkg/wiki"
 	"github.com/gofrs/uuid/v5"
 )
 

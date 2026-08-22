@@ -1,4 +1,4 @@
-module github.com/bragemusic/core
+module github.com/bragemusic/bragemusic
 
 go 1.25.0
 

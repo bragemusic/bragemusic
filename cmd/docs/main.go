@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/bragemusic/core/internal/vars"
-	"github.com/bragemusic/core/pkg/config"
-	"github.com/bragemusic/core/pkg/server"
-	"github.com/bragemusic/core/pkg/utils"
+	"github.com/bragemusic/bragemusic/internal/vars"
+	"github.com/bragemusic/bragemusic/pkg/config"
+	"github.com/bragemusic/bragemusic/pkg/server"
+	"github.com/bragemusic/bragemusic/pkg/utils"
 	"github.com/swaggest/openapi-go/openapi31"
 )
 

@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"path/filepath"
 
-	"github.com/bragemusic/core/pkg/musicbrainz"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/musicbrainz"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 func (s ServerClient) ImportAlbum(ctx context.Context, r io.Reader, filename string, musicbrainzID *string) error {

@@ -3,9 +3,9 @@ package mediamanager
 import (
 	"log/slog"
 
-	"github.com/bragemusic/core/pkg/bragerr"
-	"github.com/bragemusic/core/pkg/database"
-	"github.com/bragemusic/core/pkg/imagemagick"
+	"github.com/bragemusic/bragemusic/pkg/bragerr"
+	"github.com/bragemusic/bragemusic/pkg/database"
+	"github.com/bragemusic/bragemusic/pkg/imagemagick"
 )
 
 type MediaManager struct {

@@ -8,11 +8,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bragemusic/core/pkg/audiointerface"
-	"github.com/bragemusic/core/pkg/audioreader"
-	"github.com/bragemusic/core/pkg/files"
-	"github.com/bragemusic/core/pkg/mpris"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/audiointerface"
+	"github.com/bragemusic/bragemusic/pkg/audioreader"
+	"github.com/bragemusic/bragemusic/pkg/files"
+	"github.com/bragemusic/bragemusic/pkg/mpris"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 

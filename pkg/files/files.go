@@ -3,7 +3,7 @@ package files
 import (
 	"fmt"
 
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 func ParseAudioFile(f types.MediaStream, codec types.Codec) (types.AudioFile, error) {

@@ -6,7 +6,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gofrs/uuid/v5"
 	"github.com/jmoiron/sqlx"
 	"github.com/mattn/go-sqlite3"

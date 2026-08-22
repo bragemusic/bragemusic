@@ -10,8 +10,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/adrg/xdg"
-	"github.com/bragemusic/core/pkg/client"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/client"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 type General struct {

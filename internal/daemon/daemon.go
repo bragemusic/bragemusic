@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/bragemusic/core/pkg/client"
-	"github.com/bragemusic/core/pkg/config"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/client"
+	"github.com/bragemusic/bragemusic/pkg/config"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 func Run(ctx context.Context, logger *slog.Logger, cfg config.ClientConfig) {

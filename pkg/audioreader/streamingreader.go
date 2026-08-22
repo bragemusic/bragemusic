@@ -9,8 +9,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/bragemusic/core/pkg/serverclient"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/serverclient"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 type writerFunc func([]byte) (int, error)
