@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/bragemusic/core/pkg/bragerr"
+	"github.com/bragemusic/bragemusic/pkg/bragerr"
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
 )

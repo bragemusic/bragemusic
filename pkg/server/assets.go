@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bragemusic/core/pkg/auth"
+	"github.com/bragemusic/bragemusic/pkg/auth"
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
 )

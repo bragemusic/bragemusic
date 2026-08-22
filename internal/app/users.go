@@ -3,7 +3,7 @@ package app
 import (
 	"os"
 
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gofrs/uuid/v5"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )

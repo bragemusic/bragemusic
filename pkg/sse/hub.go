@@ -8,10 +8,10 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/bragemusic/core/pkg/auth"
-	"github.com/bragemusic/core/pkg/database"
-	"github.com/bragemusic/core/pkg/routes"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/auth"
+	"github.com/bragemusic/bragemusic/pkg/database"
+	"github.com/bragemusic/bragemusic/pkg/routes"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gofrs/uuid/v5"
 	"github.com/samber/lo"
 )

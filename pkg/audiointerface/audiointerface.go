@@ -3,7 +3,7 @@ package audiointerface
 import (
 	"context"
 
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 type AudioInterface interface {

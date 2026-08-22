@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bragemusic/core/pkg/sse"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/sse"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 

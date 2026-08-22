@@ -3,7 +3,7 @@ package audioplayer
 import (
 	"context"
 
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 

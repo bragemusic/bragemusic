@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/adrg/xdg"
-	"github.com/bragemusic/core/pkg/serverclient"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/serverclient"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 

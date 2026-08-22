@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bragemusic/core/pkg/auth"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/auth"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 func (m MediaManager) GetSyncState(ctx context.Context, since time.Time) (st types.SyncState, err error) {

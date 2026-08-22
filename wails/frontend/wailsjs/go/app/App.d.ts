@@ -42,7 +42,7 @@ export function DeleteUserToken(arg1:string):Promise<void>;
 
 export function DisconnectDevice():Promise<void>;
 
-export function FilterTracks(arg1:types.TrackFilter,arg2:number,arg3:number):Promise<types.ListPaginationPayload_github_com_bragemusic_core_pkg_types_TrackDetailed_>;
+export function FilterTracks(arg1:types.TrackFilter,arg2:number,arg3:number):Promise<types.ListPaginationPayload_github_com_bragemusic_bragemusic_pkg_types_TrackDetailed_>;
 
 export function GetAlbum(arg1:string):Promise<types.AlbumDetailed>;
 
@@ -76,7 +76,7 @@ export function ListEntityEvents():Promise<Array<types.EntityEvent>>;
 
 export function ListFeaturedAlbumsByArtist(arg1:string):Promise<Array<types.AlbumDetailed>>;
 
-export function ListImportItems(arg1:number,arg2:number):Promise<types.ListPaginationPayload_github_com_bragemusic_core_pkg_types_Import_>;
+export function ListImportItems(arg1:number,arg2:number):Promise<types.ListPaginationPayload_github_com_bragemusic_bragemusic_pkg_types_Import_>;
 
 export function ListLikedTracks():Promise<Array<types.TrackDetailed>>;
 
@@ -114,7 +114,7 @@ export function RemoveDeviceToken(arg1:string):Promise<void>;
 
 export function SearchFull(arg1:string):Promise<Array<types.SearchItem>>;
 
-export function SearchMusicBrainz(arg1:string,arg2:string):Promise<types.ListPayload_github_com_bragemusic_core_pkg_musicbrainz_SearchResults_>;
+export function SearchMusicBrainz(arg1:string,arg2:string):Promise<types.ListPayload_github_com_bragemusic_bragemusic_pkg_musicbrainz_SearchResults_>;
 
 export function SendMessage(arg1:string):Promise<void>;
 

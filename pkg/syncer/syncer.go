@@ -10,11 +10,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/bragemusic/core/pkg/bragerr"
-	"github.com/bragemusic/core/pkg/database"
-	"github.com/bragemusic/core/pkg/imagemagick"
-	"github.com/bragemusic/core/pkg/serverclient"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/bragerr"
+	"github.com/bragemusic/bragemusic/pkg/database"
+	"github.com/bragemusic/bragemusic/pkg/imagemagick"
+	"github.com/bragemusic/bragemusic/pkg/serverclient"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gofrs/uuid/v5"
 	"github.com/mattn/go-sqlite3"
 )

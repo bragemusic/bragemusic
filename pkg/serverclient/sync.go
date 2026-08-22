@@ -5,7 +5,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 func (s ServerClient) GetSyncState(ctx context.Context, changesSince time.Time) (syncState types.SyncState, err error) {

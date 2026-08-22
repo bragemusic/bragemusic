@@ -9,9 +9,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/bragemusic/core/pkg/musicbrainz"
-	"github.com/bragemusic/core/pkg/routes"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/musicbrainz"
+	"github.com/bragemusic/bragemusic/pkg/routes"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 func (s *Server) importRoutes() []routes.RouteHandler {

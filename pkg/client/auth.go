@@ -5,16 +5,16 @@ import (
 	"errors"
 	"log/slog"
 
-	"github.com/bragemusic/core/internal/vars"
-	"github.com/bragemusic/core/pkg/audiointerface"
-	"github.com/bragemusic/core/pkg/audioplayer"
-	"github.com/bragemusic/core/pkg/audioreader"
-	"github.com/bragemusic/core/pkg/authclient"
-	"github.com/bragemusic/core/pkg/device"
-	"github.com/bragemusic/core/pkg/jobmanager"
-	"github.com/bragemusic/core/pkg/playbackcontroller"
-	"github.com/bragemusic/core/pkg/serverclient"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/internal/vars"
+	"github.com/bragemusic/bragemusic/pkg/audiointerface"
+	"github.com/bragemusic/bragemusic/pkg/audioplayer"
+	"github.com/bragemusic/bragemusic/pkg/audioreader"
+	"github.com/bragemusic/bragemusic/pkg/authclient"
+	"github.com/bragemusic/bragemusic/pkg/device"
+	"github.com/bragemusic/bragemusic/pkg/jobmanager"
+	"github.com/bragemusic/bragemusic/pkg/playbackcontroller"
+	"github.com/bragemusic/bragemusic/pkg/serverclient"
+	"github.com/bragemusic/bragemusic/pkg/types"
 )
 
 type Auth struct {

@@ -4,7 +4,7 @@ import (
 	"io"
 	"math"
 
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/mewkiz/flac"
 )
 

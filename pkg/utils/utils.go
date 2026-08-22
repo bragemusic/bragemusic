@@ -12,7 +12,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/bragemusic/core/pkg/acoustid"
+	"github.com/bragemusic/bragemusic/pkg/acoustid"
 	"github.com/dhowden/tag"
 )
 

@@ -8,11 +8,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/bragemusic/core/pkg/audioreader"
-	"github.com/bragemusic/core/pkg/files"
-	"github.com/bragemusic/core/pkg/filetx"
-	"github.com/bragemusic/core/pkg/types"
-	"github.com/bragemusic/core/pkg/utils"
+	"github.com/bragemusic/bragemusic/pkg/audioreader"
+	"github.com/bragemusic/bragemusic/pkg/files"
+	"github.com/bragemusic/bragemusic/pkg/filetx"
+	"github.com/bragemusic/bragemusic/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/utils"
 	"github.com/gofrs/uuid/v5"
 )
 

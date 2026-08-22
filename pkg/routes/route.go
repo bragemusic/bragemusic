@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bragemusic/core/pkg/auth"
-	"github.com/bragemusic/core/pkg/bragerr"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/auth"
+	"github.com/bragemusic/bragemusic/pkg/bragerr"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/go-chi/chi/v5"
 	"github.com/gofrs/uuid/v5"
 	"github.com/swaggest/openapi-go"

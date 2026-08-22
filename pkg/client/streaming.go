@@ -5,11 +5,11 @@ import (
 	"log/slog"
 	"os"
 
-	"github.com/bragemusic/core/pkg/bragerr"
-	"github.com/bragemusic/core/pkg/jobmanager"
-	"github.com/bragemusic/core/pkg/serverclient"
-	"github.com/bragemusic/core/pkg/syncer"
-	"github.com/bragemusic/core/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/bragerr"
+	"github.com/bragemusic/bragemusic/pkg/jobmanager"
+	"github.com/bragemusic/bragemusic/pkg/serverclient"
+	"github.com/bragemusic/bragemusic/pkg/syncer"
+	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gofrs/uuid/v5"
 )
 

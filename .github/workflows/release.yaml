@@ -57,7 +57,7 @@ jobs:
 
       - name: Build Binary
         run: |
-          wails build -tags "fts5,webkit2_41" --ldflags="-X 'github.com/bragemusic/core/internal/vars.VERSION=${{ github.ref_name }}' -X 'github.com/bragemusic/core/internal/vars.PLATFORM=linux'"
+          wails build -tags "fts5,webkit2_41" --ldflags="-X 'github.com/bragemusic/bragemusic/internal/vars.VERSION=${{ github.ref_name }}' -X 'github.com/bragemusic/bragemusic/internal/vars.PLATFORM=linux'"
 
       - name: Upload asset
         env:

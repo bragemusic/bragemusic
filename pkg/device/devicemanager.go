@@ -8,12 +8,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bragemusic/core/pkg/auth"
-	"github.com/bragemusic/core/pkg/bragerr"
-	"github.com/bragemusic/core/pkg/database"
-	"github.com/bragemusic/core/pkg/sse"
-	"github.com/bragemusic/core/pkg/types"
-	"github.com/bragemusic/core/pkg/utils"
+	"github.com/bragemusic/bragemusic/pkg/auth"
+	"github.com/bragemusic/bragemusic/pkg/bragerr"
+	"github.com/bragemusic/bragemusic/pkg/database"
+	"github.com/bragemusic/bragemusic/pkg/sse"
+	"github.com/bragemusic/bragemusic/pkg/types"
+	"github.com/bragemusic/bragemusic/pkg/utils"
 	"github.com/gofrs/uuid/v5"
 	"github.com/samber/lo"
 )

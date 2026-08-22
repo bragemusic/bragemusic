@@ -38,12 +38,12 @@ RUN apk add --no-cache \
     jack-dev
 
 RUN go mod download
-RUN CGO_ENABLED=1 go build -tags fts5 -o bragemusic-server --ldflags="-X 'github.com/bragemusic/core/internal/vars.VERSION=${VERSION}'" cmd/server/main.go
+RUN CGO_ENABLED=1 go build -tags fts5 -o bragemusic-server --ldflags="-X 'github.com/bragemusic/bragemusic/internal/vars.VERSION=${VERSION}'" cmd/server/main.go
 
 # ---- BUILD RELEASE STAGE
 FROM alpine:latest AS release
 
-LABEL org.opencontainers.image.source="https://github.com/bragemusic/core"
+LABEL org.opencontainers.image.source="https://github.com/bragemusic/bragemusic"
 
 WORKDIR /bragemusic-server
 COPY --from=go-build /build/db/migrations ./migrations
