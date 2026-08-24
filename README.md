@@ -37,6 +37,11 @@ Brage Music is an open-source music server and player for people who want to man
 
 It is built around a shared core and provides a web interface, desktop application, and server in a single project.
 
+> [!WARNING]
+> ⚠️ Brage Music is in early developement and will almost certainly contain bugs. 
+> 
+ 
+
 <p align="center">
     <br/>
     <img src="docs/screenshot.png" title="Screenshot">
