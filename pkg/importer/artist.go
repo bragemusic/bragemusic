@@ -27,6 +27,11 @@ func (i Importer) addArtist(ctx context.Context, tx database.DatabaseFace, artis
 		return uuid.Nil, err
 	}
 
+	// Issue #140: Should fix artists with empty string as mbID
+	if artist.MusicBrainzID != nil && *artist.MusicBrainzID == "" {
+		artist.MusicBrainzID = nil
+	}
+
 	if existingArtist != nil {
 		artist.ID = existingArtist.ID
 		if existingArtist.MusicBrainzID == nil && artist.MusicBrainzID != nil {
