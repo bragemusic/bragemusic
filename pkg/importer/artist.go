@@ -2,6 +2,7 @@ package importer
 
 import (
 	"context"
+	"errors"
 
 	"github.com/bragemusic/bragemusic/pkg/database"
 	"github.com/bragemusic/bragemusic/pkg/types"
@@ -12,6 +13,12 @@ func (i Importer) generateArtist(ctx context.Context, albumAnalysis AlbumAnalysi
 	if albumAnalysis.AlbumID != "" {
 		artist, err = i.generateArtistFromAlbumMbID(ctx, albumAnalysis.AlbumID)
 		if err != nil {
+			// Issue #140: If mbID is not found for the artist, use ID3 instead
+			if errors.Is(err, ErrArtistMbIDNotFound) {
+				i.log.WarnContext(ctx, "no artist musicbrainz ID found, using ID3")
+				artist = i.generateArtistFromID3(ctx, albumAnalysis)
+				return artist, nil
+			}
 			return types.Artist{}, err
 		}
 	} else {

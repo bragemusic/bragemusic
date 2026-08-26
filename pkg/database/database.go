@@ -212,6 +212,9 @@ func (d Database) Rollback() error {
 }
 
 func New(db *sqlx.DB) (Database, error) {
+	db.SetMaxOpenConns(1)
+	db.SetMaxIdleConns(1)
+
 	sqlite3conn := db.Driver().(*sqlite3.SQLiteDriver)
 	sqlite3conn.ConnectHook = func(conn *sqlite3.SQLiteConn) error {
 		if err := conn.RegisterFunc("normalize", normalizeForCompare, true); err != nil {
