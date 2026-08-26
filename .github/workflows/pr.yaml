@@ -1,0 +1,27 @@
+name: Pull Request
+on:
+  pull_request:
+    types: [opened, synchronize]
+permissions:
+  contents: read
+  packages: write
+jobs:
+  server-container:
+    name: Build and Publish Server Container
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      GHCR_FULL_NAME: "ghcr.io/bragemusic/server:pr-${{ github.event.pull_request.number }}"
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Build, Tag and Push Image
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker build \
+            --build-arg VERSION="pr-${{ github.event.pull_request.number }}" \
+            -f server.Dockerfile \
+            -t "${GHCR_FULL_NAME}" .
+          docker push "${GHCR_FULL_NAME}"
