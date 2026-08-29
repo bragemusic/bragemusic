@@ -298,7 +298,10 @@ func (m *MusicBrainz) do(ctx context.Context, req *http.Request) (resp *http.Res
 		client := &http.Client{}
 		resp, err = client.Do(req)
 		m.lastReqTime = time.Now()
-		if err != nil {
+		if err != nil || resp.StatusCode >= 400 {
+			if err == nil {
+				err = fmt.Errorf("response with status %d", resp.StatusCode)
+			}
 			m.log.DebugContext(ctx, "backing off", "error", err.Error())
 			time.Sleep(time.Duration(i+1) * backoff)
 		} else {
