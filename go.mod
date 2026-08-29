@@ -74,6 +74,7 @@ require (
 	github.com/lmittmann/tint v1.2.0
 	github.com/mewkiz/flac v1.0.13
 	github.com/samber/lo v1.52.0
+	github.com/simukti/sqldb-logger v0.0.0-20230108155151-646c1a075551
 	github.com/swaggest/openapi-go v0.2.60
 	github.com/wailsapp/wails/v2 v2.12.0
 	golang.org/x/crypto v0.53.0

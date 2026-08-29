@@ -2,14 +2,19 @@ package database
 
 import (
 	"context"
+	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"log/slog"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gofrs/uuid/v5"
 	"github.com/jmoiron/sqlx"
 	"github.com/mattn/go-sqlite3"
+	sqldblogger "github.com/simukti/sqldb-logger"
 )
 
 type (
@@ -30,6 +35,7 @@ var (
 	ErrNoRowDeleted = errors.New("no row was deleted")
 	ErrNoUser       = errors.New("no user id provided")
 )
+var whitespaceRegex = regexp.MustCompile(`\s+`)
 
 type DatabaseFace interface {
 	Begin(ctx context.Context) (DatabaseFace, error)
@@ -174,18 +180,52 @@ type DatabaseFace interface {
 	DeviceFace
 }
 
+type DbLogger struct {
+	Logger *slog.Logger
+}
+
+func (dl DbLogger) isWriteQuery(msg string) bool {
+	msg = strings.TrimSpace(strings.ToUpper(msg))
+
+	return strings.HasPrefix(msg, "INSERT") ||
+		strings.HasPrefix(msg, "UPDATE") ||
+		strings.HasPrefix(msg, "DELETE") ||
+		strings.HasPrefix(msg, "BEGIN") ||
+		strings.HasPrefix(msg, "COMMIT") ||
+		strings.HasPrefix(msg, "ROLLBACK")
+}
+
+func (dl DbLogger) Log(ctx context.Context, level sqldblogger.Level, msg string, data map[string]interface{}) {
+	if !dl.isWriteQuery(msg) {
+		return
+	}
+
+	args := []any{}
+	for k, v := range data {
+		args = append(args, k, v)
+	}
+	msg = whitespaceRegex.ReplaceAllString(strings.TrimSpace(strings.ReplaceAll(msg, "\n", " ")), " ")
+	if level == 3 {
+		dl.Logger.ErrorContext(ctx, msg, args...)
+	} else {
+		dl.Logger.DebugContext(ctx, msg, args...)
+	}
+}
+
 type executor interface {
 	Begin(ctx context.Context) (DatabaseFace, error)
 	driver.Tx
 }
 
 type Database struct {
-	ext sqlx.ExtContext
+	ext      sqlx.ExtContext
+	log      *slog.Logger
+	commited bool
 	// db *sqlx.DB
 	// executor
 }
 
-func (d Database) Begin(ctx context.Context) (DatabaseFace, error) {
+func (d *Database) Begin(ctx context.Context) (DatabaseFace, error) {
 	db, ok := d.ext.(*sqlx.DB)
 	if !ok {
 		return nil, errors.New("cannot start transaction inside another transaction")
@@ -194,27 +234,42 @@ func (d Database) Begin(ctx context.Context) (DatabaseFace, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Database{ext: tx}, nil
+
+	d.log.DebugContext(ctx, "starting transaction")
+	return &Database{ext: tx, log: d.log}, nil
 }
 
-func (d Database) Commit() error {
+func (d *Database) Commit() error {
 	if tx, ok := d.ext.(*sqlx.Tx); ok {
-		return tx.Commit()
+		d.log.Debug("committing transaction")
+		err := tx.Commit()
+		if err != nil {
+			return err
+		}
+		d.commited = true
+		return nil
 	}
+	d.log.Error("failed to commit transaction, not in transaction")
 	return nil
 }
 
-func (d Database) Rollback() error {
+func (d *Database) Rollback() error {
+	if d.commited {
+		return nil
+	}
+
 	if tx, ok := d.ext.(*sqlx.Tx); ok {
+		d.log.Debug("rolling back transaction")
 		return tx.Rollback()
 	}
+	d.log.Error("failed to rollback transaction, not in transaction")
 	return nil
 }
 
-func New(db *sqlx.DB) (Database, error) {
+func New(dbSql *sql.DB, slogHandler slog.Handler) (*Database, error) {
+	db := sqlx.NewDb(dbSql, "sqlite3")
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
-
 	sqlite3conn := db.Driver().(*sqlite3.SQLiteDriver)
 	sqlite3conn.ConnectHook = func(conn *sqlite3.SQLiteConn) error {
 		if err := conn.RegisterFunc("normalize", normalizeForCompare, true); err != nil {
@@ -249,7 +304,8 @@ func New(db *sqlx.DB) (Database, error) {
 	// db.SetMaxOpenConns(1)
 	// db.SetMaxIdleConns(1)
 
-	return Database{
+	return &Database{
 		ext: db,
+		log: slog.New(slogHandler).With("service", "database"),
 	}, nil
 }

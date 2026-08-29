@@ -302,6 +302,7 @@ func (m *MusicBrainz) do(ctx context.Context, req *http.Request) (resp *http.Res
 			m.log.DebugContext(ctx, "backing off", "error", err.Error())
 			time.Sleep(time.Duration(i+1) * backoff)
 		} else {
+			m.log.DebugContext(ctx, "response recieved", "url", req.URL.String(), "status", resp.StatusCode, "contentLength", resp.ContentLength)
 			return resp, nil
 		}
 	}

@@ -30,9 +30,10 @@ import (
 	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/bragemusic/bragemusic/pkg/utils"
 	"github.com/bragemusic/bragemusic/pkg/wiki"
+	sqldblogger "github.com/simukti/sqldb-logger"
 
-	"github.com/jmoiron/sqlx"
 	"github.com/lmittmann/tint"
+	"github.com/mattn/go-sqlite3"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -82,14 +83,24 @@ func main() {
 	}
 
 	dbPath := filepath.Join(scfg.Paths.ConfigDir, "data.db")
-	dbSqlite, err := sqlx.Open("sqlite3", dbPath)
-	if err != nil {
-		logger.Error(err.Error())
-		return
-	}
+	// dbSqlite, err := sql.Open("sqlite3", dbPath)
+	// if err != nil {
+	// 	logger.Error(err.Error())
+	// 	return
+	// }
+
+	dbSqlite := sqldblogger.OpenDriver(
+		dbPath,
+		&sqlite3.SQLiteDriver{},
+		database.DbLogger{Logger: slog.New(slogHandler).With("service", "database")},
+		sqldblogger.WithMinimumLevel(sqldblogger.LevelTrace),
+		sqldblogger.WithLogArguments(true),
+		sqldblogger.WithSQLQueryAsMessage(true),
+		sqldblogger.WithConnectionIDFieldname("con_id"),
+	)
 	defer dbSqlite.Close()
 
-	db, err := database.New(dbSqlite)
+	db, err := database.New(dbSqlite, slogHandler)
 	if err != nil {
 		logger.Error(err.Error())
 		return
@@ -137,15 +148,15 @@ func main() {
 		return
 	}
 
-	sseHub := sse.NewHub(&db, slogHandler)
+	sseHub := sse.NewHub(db, slogHandler)
 
 	w := wiki.New(scfg.Wikipedia.Email, slogHandler)
 
 	mb := musicbrainz.New(slogHandler)
 
-	imp := importer.New(impCfg, &db, sseHub, mb, aid, im, slogHandler)
+	imp := importer.New(impCfg, db, sseHub, mb, aid, im, slogHandler)
 
-	ms := metasyncer.New(impCfg.ImageDirPath, &db, mb, w, im, internalusers.MetaSyncer, slogHandler)
+	ms := metasyncer.New(impCfg.ImageDirPath, db, mb, w, im, internalusers.MetaSyncer, slogHandler)
 
 	jmgr := jobmanager.New(slogHandler)
 	jmgr.RegisterJob(ctx, jobmanager.JobDefinition{
@@ -170,7 +181,7 @@ func main() {
 	})
 
 	if scfg.Analyser.BaseURL != "" {
-		ana := analyser.New(scfg.Analyser.BaseURL, scfg.Paths.MusicDir, &db, slogHandler)
+		ana := analyser.New(scfg.Analyser.BaseURL, scfg.Paths.MusicDir, db, slogHandler)
 		jmgr.RegisterJob(ctx, jobmanager.JobDefinition{
 			Type:     types.JobAnalyserRunTrackAnalysis,
 			CronExpr: scfg.Jobs.TrackAnalysis,
@@ -180,7 +191,7 @@ func main() {
 		logger.WarnContext(ctx, "no analyser base url set. No analysis will be performed")
 	}
 
-	dm := device.NewManager(sseHub, &db, slogHandler)
+	dm := device.NewManager(sseHub, db, slogHandler)
 
 	s := server.New(slogHandler, &m, &a, &imp, &mb, &jmgr, sseHub, &dm, distFS, scfg)
 
