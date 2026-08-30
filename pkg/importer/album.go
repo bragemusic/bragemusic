@@ -36,6 +36,11 @@ func (i Importer) addAlbum(ctx context.Context, tx database.DatabaseFace, albumA
 		album = i.generateAlbumFromID3(ctx, albumAnalysis)
 	}
 
+	// Issue #140: Should fix albums with empty string as mbID
+	if album.MusicBrainzID != nil && *album.MusicBrainzID == "" {
+		album.MusicBrainzID = nil
+	}
+
 	if existingAlbum.ID != uuid.Nil {
 		// Exisiting album is not created from musicbrainz id but new one is, update it
 		if existingAlbum.MusicBrainzID == nil && album.MusicBrainzID != nil {

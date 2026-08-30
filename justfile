@@ -3,7 +3,7 @@ clean-data:
     rm -r ../data/img/albums/*
     rm -r ../data/img/artists/*
     rm -r ../data/music/*
-    rm ../data/config/data.db
+    rm ../data/config/*
 
 import:
     go run -tags fts5 cmd/importer/main.go
@@ -38,6 +38,14 @@ build-frontend:
     cp ./web/static/* ./assets/frontend/assets
 
 serve:
+    mkdir -p ${BM_PATHS_MUSIC_DIR}
+    mkdir -p ${BM_PATHS_IMAGE_DIR}
+    mkdir -p ${BM_PATHS_CONFIG_DIR}
+    mkdir -p ${BM_PATHS_IMPORT_DIR}
+    mkdir -p ${BM_PATHS_MANUAL_IMPORT_DIR}
+    mkdir -p ${BM_PATHS_BACKUP_IMPORT_DIR}
+
+    DATABASE_URL=sqlite:${BM_PATHS_CONFIG_DIR}/data.db hermox --service=migrations -- dbmate -d ./db/migrations up
     go run -tags fts5 cmd/server/main.go
 
 dev-client:

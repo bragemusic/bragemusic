@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"io"
 	"log/slog"
@@ -19,7 +20,6 @@ import (
 	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/bragemusic/bragemusic/pkg/utils"
 	"github.com/gofrs/uuid/v5"
-	"github.com/jmoiron/sqlx"
 )
 
 func (c *clientSync) RegisterEventCallback(f func(types.ClientEvent, any)) {
@@ -288,18 +288,18 @@ func newSyncClient(ctx context.Context, config Config, jm *jobmanager.JobManager
 		return nil, err
 	}
 
-	dbSqlite, err := sqlx.Open("sqlite3", dbPath)
+	dbSqlite, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := database.New(dbSqlite)
+	db, err := database.New(dbSqlite, slogHandler)
 	if err != nil {
 		return nil, err
 	}
 
-	mm := mediamanager.New(slogHandler, &db, nil, config.MusicDirPath, config.ImagePath)
-	sy := syncer.New(sc, user, &db, config.MusicDirPath, config.ImagePath, slogHandler)
+	mm := mediamanager.New(slogHandler, db, nil, config.MusicDirPath, config.ImagePath)
+	sy := syncer.New(sc, user, db, config.MusicDirPath, config.ImagePath, slogHandler)
 
 	c := &clientSync{
 		config:       config,
