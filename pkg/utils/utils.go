@@ -9,12 +9,15 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/bragemusic/bragemusic/pkg/acoustid"
 	"github.com/dhowden/tag"
 )
+
+var mbIDRe = regexp.MustCompile(`mbid#([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})`)
 
 func Ptr[T any](t T) *T {
 	return &t
@@ -149,4 +152,15 @@ func ParseLogLevel(s string) (slog.Level, error) {
 	var level slog.Level
 	err := level.UnmarshalText([]byte(s))
 	return level, err
+}
+
+func MatchMbID(s string) (found bool, mbid string) {
+	matches := mbIDRe.FindStringSubmatch(s)
+	if matches == nil {
+		return false, ""
+	}
+
+	mbid = matches[1]
+
+	return true, mbid
 }

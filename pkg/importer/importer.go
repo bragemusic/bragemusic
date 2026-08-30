@@ -166,8 +166,16 @@ func (i *Importer) runManualDirImportCheck(ctx context.Context) error {
 
 			switch strings.ToLower(filepath.Ext(path)) {
 			case ".zip":
-				i.log.InfoContext(ctx, "manual import file found", "filename", path)
-				if err := i.AddImportEntry(ctx, filepath.Base(path), types.ImportTypeAlbum, uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111")), nil); err != nil {
+				filename := filepath.Base(path)
+
+				var mbID *string
+				mbIDFound, mbIDRes := utils.MatchMbID(filename)
+				if mbIDFound {
+					mbID = &mbIDRes
+				}
+
+				i.log.InfoContext(ctx, "manual import file found", "filename", filename, "mbID", mbID)
+				if err := i.AddImportEntry(ctx, filename, types.ImportTypeAlbum, uuid.Must(uuid.FromString("11111111-1111-1111-1111-111111111111")), mbID); err != nil {
 					return err
 				}
 
