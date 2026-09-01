@@ -34,6 +34,7 @@ import BlogPage from "@/pages/blog";
 import { ThemeProvider } from "next-themes";
 import { Spinner } from "@heroui/react";
 import { LocalPlayer } from "./components/LocalPlayer";
+import { MediaSession } from "./components/MediaSession";
 
 function App() {
   return (
@@ -42,6 +43,7 @@ function App() {
         <BrowserRouter>
           <>
             <LocalPlayer/>
+            <MediaSession/>
             <AppContent />
           </>
         </BrowserRouter>
