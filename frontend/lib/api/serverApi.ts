@@ -7,6 +7,7 @@ import { requests, responses } from "@/types/server";
 import { isBragErr } from "@/util/functions";
 import { PlayerApi } from "./PlayerApi";
 import { PlayContextType } from "@/types/playcontext";
+import { LocalPlayerContext } from "../types/playcontext";
 
 let deviceID: string | null = null;
 let shuffle = false
@@ -896,6 +897,7 @@ export class ServerApi implements Api, PlayerApi {
 
     async playPause(): Promise<void> {
         if (connectedDeviceID == null) {
+            this.emitEvent(Event.PlayerLocalPlayPause)
             return;
         }
         await this.api.post(`/devices/${connectedDeviceID}/player/play-pause`);
@@ -928,11 +930,24 @@ export class ServerApi implements Api, PlayerApi {
     }
 
     private async startPlayerWithAlbum(parentId: string, idx: number) {
-        if (connectedDeviceID == null) {
-            return;
-        }
+        // if (connectedDeviceID == null) {
+        //     console.log("local play")
+        //     return;
+        // }
 
         const tracks = await this.listTracksByAlbum(parentId)
+
+        if (connectedDeviceID == null) {
+            const ctx: LocalPlayerContext = {
+                type: PlayContextType.Album,
+                ref_id: parentId,
+                tracks: tracks,
+                track_index: idx,
+            }
+            this.emitEvent(Event.PlayerLocalStartContext, ctx)
+            return
+        }
+
         const state: types.PlayerState = new types.PlayerState({
             playback: new types.PlaybackState({
                 track_index: idx,

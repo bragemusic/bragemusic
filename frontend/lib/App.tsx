@@ -21,7 +21,7 @@ import { SessionProvider, useSession } from "./session/SessionContext";
 import LikedTracksPage from "./pages/LikedTracksPage";
 import { usePlayerState } from "./store/playerStore";
 import { useDeviceStore } from "./store/deviceStore";
-import { useApi } from "./api/ApiContext";
+import { useApi, usePlayerApi } from "./api/ApiContext";
 import MediaPage from "./pages/MediaPage";
 import HomePage from "./pages/HomePage";
 import ServerPage from "./pages/ServerPage";
@@ -33,13 +33,17 @@ import AboutPage from "@/pages/about";
 import BlogPage from "@/pages/blog";
 import { ThemeProvider } from "next-themes";
 import { Spinner } from "@heroui/react";
+import { LocalPlayer } from "./components/LocalPlayer";
 
 function App() {
   return (
     <ThemeProvider>
       <SessionProvider>
         <BrowserRouter>
-          <AppContent />
+          <>
+            <LocalPlayer/>
+            <AppContent />
+          </>
         </BrowserRouter>
       </SessionProvider>
     </ThemeProvider>
