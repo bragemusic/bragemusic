@@ -4,6 +4,7 @@ import { useApi} from "@/api/ApiContext";
 import { Event } from "@/types/events.ts";
 import { types } from "@/types/core";
 import { LocalPlayerContext, TrackSource } from "../types/playcontext";
+import { timeNow } from "../util/functions";
 
 export function LocalPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -34,6 +35,14 @@ export function LocalPlayer() {
         pbRef.current = pb;
     }, [pb]);
 
+    const updatePb = (update: (prev: types.PlaybackState) => types.PlaybackState) => {
+        setPb(prev => ({
+            ...update(prev),
+            progress: Math.round(audioRef.current?.currentTime ? audioRef.current?.currentTime * 1000 : 0),
+            updated_at: timeNow(),
+        }));
+    };
+
     useEffect(() => {
         const unsubscribePlayerLocalStartContext = api.eventSubscribe(Event.PlayerLocalStartContext, (lctx: LocalPlayerContext) => {
             setCtx((prev) => ({
@@ -43,7 +52,7 @@ export function LocalPlayer() {
                     tracks: lctx.tracks,
                     track_order: lctx.tracks.map((_, i) => i),
                 }));
-            setPb((prev) => ({
+            updatePb((prev) => ({
                 ...prev,
                 playing: true,
                 track_index: lctx.track_index,
@@ -54,7 +63,7 @@ export function LocalPlayer() {
         const unsubscribePlayPause = api.eventSubscribe(
             Event.PlayerLocalPlayPause,
             () => {
-            setPb((prev) => ({
+            updatePb((prev) => ({
                 ...prev,
                 playing: !prev.playing,
             }));
@@ -112,8 +121,12 @@ export function LocalPlayer() {
     }, [pb, ctx]);
 
     useEffect(() => {
+        setPb((prev) => ({
+            ...prev,
+            progress: 0,
+        }))
         if (!currentTrack.media_file) {
-        return
+            return
         }
         audioRef.current!.src = "/api/mediafiles/" + currentTrack.media_file.id + "/file";
         audioRef.current?.play();
@@ -139,7 +152,7 @@ export function LocalPlayer() {
             track_order: [],
             queue: [],
         }))
-        setPb((prev) => ({
+        updatePb((prev) => ({
             ...prev,
             playing: false,
             progress: 0,
@@ -164,7 +177,7 @@ export function LocalPlayer() {
             }
         }
         //FIXME: Check for shuffle and/or loop
-        setPb((prev) => {
+        updatePb((prev) => {
             return {
             ...prev,
             track_index: ntid,
