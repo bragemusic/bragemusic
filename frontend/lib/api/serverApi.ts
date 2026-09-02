@@ -906,6 +906,7 @@ export class ServerApi implements Api, PlayerApi {
 
     async previousTrack(): Promise<void> {
         if (connectedDeviceID == null) {
+            this.emitEvent(Event.PlayerLocalPreviousTrack)
             return;
         }
         await this.api.post(`/devices/${connectedDeviceID}/player/previous`);

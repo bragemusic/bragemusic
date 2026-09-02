@@ -35,10 +35,10 @@ export function LocalPlayer() {
         pbRef.current = pb;
     }, [pb]);
 
-    const updatePb = (update: (prev: types.PlaybackState) => types.PlaybackState) => {
+    const updatePb = (update: (prev: types.PlaybackState) => types.PlaybackState, progress?: number) => {
         setPb(prev => ({
             ...update(prev),
-            progress: Math.round(audioRef.current?.currentTime ? audioRef.current?.currentTime * 1000 : 0),
+            progress: progress ?? Math.round(audioRef.current?.currentTime ? audioRef.current?.currentTime * 1000 : 0),
             updated_at: timeNow(),
         }));
     };
@@ -76,10 +76,16 @@ export function LocalPlayer() {
             }
         );
 
+        const unsubscribePlayerLocalPreviousTrack = api.eventSubscribe(Event.PlayerLocalPreviousTrack, () => {
+                previousTrack();
+            }
+        );
+
         return () => {
             unsubscribePlayerLocalStartContext?.();
             unsubscribePlayPause?.();
             unsubscribePlayerLocalNextTrack?.();
+            unsubscribePlayerLocalPreviousTrack?.();
         };
     }, [api]);
 
@@ -182,6 +188,40 @@ export function LocalPlayer() {
             ...prev,
             track_index: ntid,
         }});
+    }
+
+    const previousTrack = () => {
+        const ctx = ctxRef.current;
+        const pb = pbRef.current;
+
+        if (!audioRef.current) {
+            return
+        }
+
+        let ntid = pb.track_index
+        if (audioRef.current?.currentTime < 10) {
+           ntid = ntid-1
+        }
+
+        if (ntid < 0) {
+            stop()
+            return {
+                ...pb,
+                playing: false,
+                progress: 0,
+                track_sourece: TrackSource.Context,
+                track_index: 0,
+            }
+        }
+
+        audioRef.current.currentTime = 0;
+        audioRef.current.play();
+        //FIXME: Check for shuffle and/or loop
+        updatePb((prev) => {
+            return {
+            ...prev,
+            track_index: ntid,
+        }}, 0);
     }
 
 
