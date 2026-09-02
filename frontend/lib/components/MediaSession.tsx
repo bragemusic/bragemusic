@@ -47,7 +47,7 @@ export const MediaSession = () => {
         });
 
         navigator.mediaSession.setActionHandler("nexttrack", () => {
-            // api.emitEvent(Event.PlayerLocalNext);
+            playerApi.nextTrack()
         });
     }, [playCtx]);
 

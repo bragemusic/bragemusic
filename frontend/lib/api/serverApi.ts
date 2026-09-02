@@ -869,7 +869,8 @@ export class ServerApi implements Api, PlayerApi {
 
     async nextTrack(): Promise<void> {
         if (connectedDeviceID == null) {
-            return;
+            this.emitEvent(Event.PlayerLocalNextTrack)
+            return
         }
         await this.api.post(`/devices/${connectedDeviceID}/player/next`);
     }
@@ -930,11 +931,6 @@ export class ServerApi implements Api, PlayerApi {
     }
 
     private async startPlayerWithAlbum(parentId: string, idx: number) {
-        // if (connectedDeviceID == null) {
-        //     console.log("local play")
-        //     return;
-        // }
-
         const tracks = await this.listTracksByAlbum(parentId)
 
         if (connectedDeviceID == null) {

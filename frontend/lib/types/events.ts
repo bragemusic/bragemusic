@@ -20,6 +20,7 @@ export enum Event {
 
   PlayerLocalStartContext = "player.local.startcontext",
   PlayerLocalPlayPause = "player.local.playpause",
+  PlayerLocalNextTrack = "player.local.nexttrack",
 
   DeviceConnectionID = "device.connection.id",
 
