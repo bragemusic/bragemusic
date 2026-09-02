@@ -43,7 +43,7 @@ export const MediaSession = () => {
         });
 
         navigator.mediaSession.setActionHandler("previoustrack", () => {
-            // api.emitEvent(Event.PlayerLocalPrevious);
+            playerApi.previousTrack()
         });
 
         navigator.mediaSession.setActionHandler("nexttrack", () => {
