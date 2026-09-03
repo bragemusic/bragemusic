@@ -45,13 +45,13 @@ export function LocalPlayer() {
 
     useEffect(() => {
         const unsubscribePlayerLocalStartContext = api.eventSubscribe(Event.PlayerLocalStartContext, (lctx: LocalPlayerContext) => {
-            setCtx((prev) => ({
+            setCtx((prev) => (new types.PlayContext({
                     ...prev,
                     type: lctx.type,
                     ref_id: lctx.ref_id,
                     tracks: lctx.tracks,
                     track_order: lctx.tracks.map((_, i) => i),
-                }));
+                })));
             updatePb((prev) => ({
                 ...prev,
                 playing: true,
@@ -151,13 +151,13 @@ export function LocalPlayer() {
     const stop = () => {
         audioRef.current?.pause()
         audioRef.current?.removeAttribute("src");
-        setCtx((prev) => ({
+        setCtx((prev) => (new types.PlayContext({
             ...prev,
             ref_id: "",
             tracks: [],
             track_order: [],
             queue: [],
-        }))
+        })))
         updatePb((prev) => ({
             ...prev,
             playing: false,
@@ -191,7 +191,6 @@ export function LocalPlayer() {
     }
 
     const previousTrack = () => {
-        const ctx = ctxRef.current;
         const pb = pbRef.current;
 
         if (!audioRef.current) {

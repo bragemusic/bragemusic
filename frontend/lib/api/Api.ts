@@ -114,5 +114,8 @@ export interface Api {
   removeDeviceAndToken(id: string): Promise<void>;
 
   listThemes(): Promise<Array<types.ThemeDescription>>;
+
+
+  emitEvent(eventName: Event, data?: any): void;
   //
 }

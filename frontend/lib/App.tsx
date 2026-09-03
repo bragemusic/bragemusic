@@ -21,7 +21,7 @@ import { SessionProvider, useSession } from "./session/SessionContext";
 import LikedTracksPage from "./pages/LikedTracksPage";
 import { usePlayerState } from "./store/playerStore";
 import { useDeviceStore } from "./store/deviceStore";
-import { useApi, usePlayerApi } from "./api/ApiContext";
+import { useApi } from "./api/ApiContext";
 import MediaPage from "./pages/MediaPage";
 import HomePage from "./pages/HomePage";
 import ServerPage from "./pages/ServerPage";

@@ -14,8 +14,8 @@ export enum TrackSource {
 }
 
 export class LocalPlayerContext {
-    type: PlayContextType;
-    ref_id: string;
-    tracks: types.TrackDetailed[];
-    track_index: number;
+    type: PlayContextType = PlayContextType.Album;
+    ref_id = "";
+    tracks: types.TrackDetailed[] = [];
+    track_index = 0;
 }

@@ -158,7 +158,7 @@ export class ServerApi implements Api, PlayerApi {
         };
     }
 
-    private emitEvent(eventName: Event, data?: any) {
+    emitEvent(eventName: Event, data?: any) {
         const set = this.listeners.get(eventName);
         if (!set) return;
 
