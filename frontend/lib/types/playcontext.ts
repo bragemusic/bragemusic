@@ -1,3 +1,5 @@
+import { types } from "./core";
+
 export enum PlayContextType {
   Album = "album",
   LikedTracks = "liked_tracks",
@@ -9,4 +11,11 @@ export enum PlayContextType {
 export enum TrackSource {
   Context = "context",
   Queue = "queue",
+}
+
+export class LocalPlayerContext {
+    type: PlayContextType = PlayContextType.Album;
+    ref_id = "";
+    tracks: types.TrackDetailed[] = [];
+    track_index = 0;
 }

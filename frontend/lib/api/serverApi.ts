@@ -7,6 +7,7 @@ import { requests, responses } from "@/types/server";
 import { isBragErr } from "@/util/functions";
 import { PlayerApi } from "./PlayerApi";
 import { PlayContextType } from "@/types/playcontext";
+import { LocalPlayerContext } from "../types/playcontext";
 
 let deviceID: string | null = null;
 let shuffle = false
@@ -157,7 +158,7 @@ export class ServerApi implements Api, PlayerApi {
         };
     }
 
-    private emitEvent(eventName: Event, data?: any) {
+    emitEvent(eventName: Event, data?: any) {
         const set = this.listeners.get(eventName);
         if (!set) return;
 
@@ -344,6 +345,11 @@ export class ServerApi implements Api, PlayerApi {
         }
 
         return 0;
+    }
+
+    async addPlayCount(trackID: string): Promise<void> {
+        await this.mediaApi.post(`/tracks/${trackID}/play-history`);
+        this.emitEvent(Event.EntitiesUpdated);
     }
 
     async listArtists(): Promise<Array<types.ArtistDetailed>> {
@@ -868,16 +874,13 @@ export class ServerApi implements Api, PlayerApi {
 
     async nextTrack(): Promise<void> {
         if (connectedDeviceID == null) {
-            return;
+            this.emitEvent(Event.PlayerLocalNextTrack)
+            return
         }
         await this.api.post(`/devices/${connectedDeviceID}/player/next`);
     }
 
     async nextRepeat(): Promise<void> {
-        if (connectedDeviceID == null) {
-            return;
-        }
-
         let newRepeat = repeat
         switch (repeat) {
             case "off":
@@ -891,11 +894,18 @@ export class ServerApi implements Api, PlayerApi {
                 break
         }
 
+        if (connectedDeviceID == null) {
+            this.emitEvent(Event.PlayerLocalRepeat, newRepeat)
+            repeat = newRepeat
+            return;
+        }
+
         await this.api.post(`/devices/${connectedDeviceID}/player/repeat`, {json: {type: newRepeat}});
     }
 
     async playPause(): Promise<void> {
         if (connectedDeviceID == null) {
+            this.emitEvent(Event.PlayerLocalPlayPause)
             return;
         }
         await this.api.post(`/devices/${connectedDeviceID}/player/play-pause`);
@@ -903,6 +913,7 @@ export class ServerApi implements Api, PlayerApi {
 
     async previousTrack(): Promise<void> {
         if (connectedDeviceID == null) {
+            this.emitEvent(Event.PlayerLocalPreviousTrack)
             return;
         }
         await this.api.post(`/devices/${connectedDeviceID}/player/previous`);
@@ -928,11 +939,19 @@ export class ServerApi implements Api, PlayerApi {
     }
 
     private async startPlayerWithAlbum(parentId: string, idx: number) {
+        const tracks = await this.listTracksByAlbum(parentId)
+
         if (connectedDeviceID == null) {
-            return;
+            const ctx: LocalPlayerContext = {
+                type: PlayContextType.Album,
+                ref_id: parentId,
+                tracks: tracks,
+                track_index: idx,
+            }
+            this.emitEvent(Event.PlayerLocalStartContext, ctx)
+            return
         }
 
-        const tracks = await this.listTracksByAlbum(parentId)
         const state: types.PlayerState = new types.PlayerState({
             playback: new types.PlaybackState({
                 track_index: idx,
@@ -989,6 +1008,8 @@ export class ServerApi implements Api, PlayerApi {
 
     async toggleShuffle(): Promise<void> {
         if (connectedDeviceID == null) {
+            this.emitEvent(Event.PlayerLocalShuffle, !shuffle)
+            shuffle = !shuffle
             return;
         }
 
