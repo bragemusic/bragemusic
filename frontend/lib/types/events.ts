@@ -23,6 +23,7 @@ export enum Event {
   PlayerLocalNextTrack = "player.local.nexttrack",
   PlayerLocalPreviousTrack = "player.local.previoustrack",
   PlayerLocalRepeat = "player.local.repeat",
+  PlayerLocalShuffle= "player.local.shuffle",
 
   DeviceConnectionID = "device.connection.id",
 

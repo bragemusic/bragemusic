@@ -6,11 +6,29 @@ import { types } from "@/types/core";
 import { LocalPlayerContext, TrackSource } from "../types/playcontext";
 import { timeNow } from "../util/functions";
 
+function shuffle<T>(array: T[]): T[] {
+    const result = [...array];
+
+    for (let i = result.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+
+        [result[i], result[j]] = [result[j], result[i]];
+    }
+
+    return result;
+}
+
 export function LocalPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const api = useApi();
 
-    const [ctx, setCtx] = useState(new types.PlayContext)
+    const [ctx, setCtx] = useState<types.PlayContext>({
+        type: "",
+        ref_id: "",
+        tracks: [],
+        track_order: [],
+        queue: [],
+    })
     const [pb, setPb] = useState<types.PlaybackState>({
         playing: false,
         shuffle: false,
@@ -32,6 +50,27 @@ export function LocalPlayer() {
     useEffect(() => {
         pbRef.current = pb;
     }, [pb]);
+
+useEffect(() => {
+    const currentTrack =
+        ctxRef.current.track_order[pbRef.current.track_index];
+
+    const { trackOrder, trackIndex } = shuffleTrackOrder(
+        ctxRef.current.tracks,
+        pb.shuffle,
+        currentTrack,
+    );
+
+    setCtx(prev => ({
+        ...prev,
+        track_order: trackOrder,
+    }));
+
+    updatePb(prev => ({
+        ...prev,
+        track_index: trackIndex,
+    }));
+}, [pb.shuffle]);
 
     const passed70Ref = useRef(false);
 
@@ -59,17 +98,24 @@ export function LocalPlayer() {
 
     useEffect(() => {
         const unsubscribePlayerLocalStartContext = api.eventSubscribe(Event.PlayerLocalStartContext, (lctx: LocalPlayerContext) => {
-            setCtx((prev) => (new types.PlayContext({
-                    ...prev,
-                    type: lctx.type,
-                    ref_id: lctx.ref_id,
-                    tracks: lctx.tracks,
-                    track_order: lctx.tracks.map((_, i) => i),
-                })));
-            updatePb((prev) => ({
-                ...prev,
+            const { trackOrder, trackIndex } = shuffleTrackOrder(
+                lctx.tracks,
+                pbRef.current.shuffle,
+                lctx.track_index,
+            );
+
+            updatePb(pb => ({
+                ...pb,
                 playing: true,
-                track_index: lctx.track_index,
+                track_index: trackIndex,
+            }));
+
+            setCtx(prev => new types.PlayContext({
+                ...prev,
+                type: lctx.type,
+                ref_id: lctx.ref_id,
+                tracks: lctx.tracks,
+                track_order: trackOrder,
             }));
             }
         );
@@ -103,35 +149,37 @@ export function LocalPlayer() {
             }
         );
 
+        const unsubscribePlayerLocalShuffle= api.eventSubscribe(Event.PlayerLocalShuffle, (shuffle: boolean) => {
+            updatePb((prev) => ({
+                ...prev,
+                shuffle: shuffle,
+            }));
+            }
+        );
+
         return () => {
             unsubscribePlayerLocalStartContext?.();
             unsubscribePlayPause?.();
             unsubscribePlayerLocalNextTrack?.();
             unsubscribePlayerLocalPreviousTrack?.();
             unsubscribePlayerLocalRepeat?.();
+            unsubscribePlayerLocalShuffle?.();
         };
     }, [api]);
 
-  const evalContextAndState = (ctx: types.PlayContext, pb: types.PlaybackState) => {
-    if (ctx.type != "album") {
-      console.error("only album implemented for playcontext")
-      return
+    const evalContextAndState = (ctx: types.PlayContext, pb: types.PlaybackState) => {
+        if (ctx.type != "album") {
+        console.error("only album implemented for playcontext")
+        return
+        }
+
+        if (ctx.tracks.length == 0 || pb.track_index >= ctx.tracks.length) {
+        return
+        }
+
+
+        setCurrentTrack(ctx.tracks[ctx.track_order[pb.track_index]])
     }
-
-    if (ctx.tracks.length == 0 || pb.track_index >= ctx.tracks.length) {
-      return
-    }
-
-    setCurrentTrack(ctx.tracks[ctx.track_order[pb.track_index]])
-    // setIsPlaying(pb.playing)
-
-
-
-    // FIXME: Needs to handle shuffle and loop and so on. track_order is ignored atm
-      //
-    // const track =
-
-  }
 
     useEffect(() => {
         api.emitEvent(Event.PlayerContextChange, ctx)
@@ -275,6 +323,44 @@ export function LocalPlayer() {
             track_index: ntid,
         }}, 0);
     }
+
+const shuffleTrackOrder = (
+    tracks: types.TrackDetailed[],
+    shuffle: boolean,
+    currentIndex: number,
+): { trackOrder: number[]; trackIndex: number } => {
+    const numberOfTracks = tracks.length;
+
+    if (numberOfTracks === 0) {
+        return {
+            trackOrder: [],
+            trackIndex: 0,
+        };
+    }
+
+    if (!shuffle) {
+        return {
+            trackOrder: tracks.map((_, i) => i),
+            trackIndex: currentIndex,
+        };
+    }
+
+    const nums = tracks.map((_, i) => i);
+
+    // Put selected track first
+    [nums[0], nums[currentIndex]] = [nums[currentIndex], nums[0]];
+
+    // Shuffle everything after the selected track
+    for (let i = nums.length - 1; i > 1; i--) {
+        const j = 1 + Math.floor(Math.random() * i);
+        [nums[i], nums[j]] = [nums[j], nums[i]];
+    }
+
+    return {
+        trackOrder: nums,
+        trackIndex: 0,
+    };
+};
 
 
     return (

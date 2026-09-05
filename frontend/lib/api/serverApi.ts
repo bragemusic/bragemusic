@@ -1008,6 +1008,8 @@ export class ServerApi implements Api, PlayerApi {
 
     async toggleShuffle(): Promise<void> {
         if (connectedDeviceID == null) {
+            this.emitEvent(Event.PlayerLocalShuffle, !shuffle)
+            shuffle = !shuffle
             return;
         }
 
