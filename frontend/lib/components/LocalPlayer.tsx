@@ -95,11 +95,20 @@ export function LocalPlayer() {
             }
         );
 
+        const unsubscribePlayerLocalRepeat = api.eventSubscribe(Event.PlayerLocalRepeat, (repeat: string) => {
+            updatePb((prev) => ({
+                ...prev,
+                repeat: repeat,
+            }));
+            }
+        );
+
         return () => {
             unsubscribePlayerLocalStartContext?.();
             unsubscribePlayPause?.();
             unsubscribePlayerLocalNextTrack?.();
             unsubscribePlayerLocalPreviousTrack?.();
+            unsubscribePlayerLocalRepeat?.();
         };
     }, [api]);
 
@@ -141,16 +150,7 @@ export function LocalPlayer() {
     }, [pb, ctx]);
 
     useEffect(() => {
-        passed70Ref.current = false;
-        setPb((prev) => ({
-            ...prev,
-            progress: 0,
-        }))
-        if (!currentTrack.media_file) {
-            return
-        }
-        audioRef.current!.src = "/api/mediafiles/" + currentTrack.media_file.id + "/file";
-        audioRef.current?.play();
+        startCurrentTrack()
     }, [currentTrack]);
 
 
@@ -162,6 +162,19 @@ export function LocalPlayer() {
         }
     }, [pb.playing]);
 
+
+    const startCurrentTrack = () => {
+        passed70Ref.current = false;
+        setPb((prev) => ({
+            ...prev,
+            progress: 0,
+        }))
+        if (!currentTrack.media_file) {
+            return
+        }
+        audioRef.current!.src = "/api/mediafiles/" + currentTrack.media_file.id + "/file";
+        audioRef.current?.play();
+    }
 
     const stop = () => {
         audioRef.current?.pause()
@@ -188,18 +201,30 @@ export function LocalPlayer() {
 
         passed70Ref.current = false;
 
+        if (!audioRef.current) {
+            return
+        }
+
+        if (pb.repeat == "one") {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play();
+            updatePb((prev) => {
+                return {
+                ...prev,
+            }}, 0);
+            return
+        }
+
         let ntid = pb.track_index + 1;
         if (ntid >= ctx.track_order.length) {
-            stop()
-            return {
-                ...pb,
-                playing: false,
-                progress: 0,
-                track_sourece: TrackSource.Context,
-                track_index: 0,
+            if (pb.repeat == "all") {
+                ntid = 0
+            } else {
+                stop()
+                return
             }
         }
-        //FIXME: Check for shuffle and/or loop
+        //FIXME: Check for shuffle
         updatePb((prev) => {
             return {
             ...prev,
@@ -208,11 +233,22 @@ export function LocalPlayer() {
     }
 
     const previousTrack = () => {
+        const ctx = ctxRef.current;
         const pb = pbRef.current;
 
         passed70Ref.current = false;
 
         if (!audioRef.current) {
+            return
+        }
+
+        if (pb.repeat == "one") {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play();
+            updatePb((prev) => {
+                return {
+                ...prev,
+            }}, 0);
             return
         }
 
@@ -222,19 +258,17 @@ export function LocalPlayer() {
         }
 
         if (ntid < 0) {
-            stop()
-            return {
-                ...pb,
-                playing: false,
-                progress: 0,
-                track_sourece: TrackSource.Context,
-                track_index: 0,
+            if (pb.repeat == "all") {
+                ntid = ctx.track_order.length - 1
+            } else {
+                stop()
+                return
             }
         }
 
         audioRef.current.currentTime = 0;
         audioRef.current.play();
-        //FIXME: Check for shuffle and/or loop
+        //FIXME: Check for shuffle
         updatePb((prev) => {
             return {
             ...prev,

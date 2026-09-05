@@ -881,10 +881,6 @@ export class ServerApi implements Api, PlayerApi {
     }
 
     async nextRepeat(): Promise<void> {
-        if (connectedDeviceID == null) {
-            return;
-        }
-
         let newRepeat = repeat
         switch (repeat) {
             case "off":
@@ -896,6 +892,12 @@ export class ServerApi implements Api, PlayerApi {
             case "one":
                 newRepeat = "off"
                 break
+        }
+
+        if (connectedDeviceID == null) {
+            this.emitEvent(Event.PlayerLocalRepeat, newRepeat)
+            repeat = newRepeat
+            return;
         }
 
         await this.api.post(`/devices/${connectedDeviceID}/player/repeat`, {json: {type: newRepeat}});
