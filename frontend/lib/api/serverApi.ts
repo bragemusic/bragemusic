@@ -347,6 +347,11 @@ export class ServerApi implements Api, PlayerApi {
         return 0;
     }
 
+    async addPlayCount(trackID: string): Promise<void> {
+        await this.mediaApi.post(`/tracks/${trackID}/play-history`);
+        this.emitEvent(Event.EntitiesUpdated);
+    }
+
     async listArtists(): Promise<Array<types.ArtistDetailed>> {
         const resp = await this.mediaApi
             .get("/artists")

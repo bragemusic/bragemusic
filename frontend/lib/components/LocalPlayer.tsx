@@ -10,8 +10,6 @@ export function LocalPlayer() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const api = useApi();
 
-
-    // FIXME: NEEDS OWN TYPE FOR ALL OF THIS. THIS COMPONENT IS IN CONTROL
     const [ctx, setCtx] = useState(new types.PlayContext)
     const [pb, setPb] = useState<types.PlaybackState>({
         playing: false,
@@ -34,6 +32,22 @@ export function LocalPlayer() {
     useEffect(() => {
         pbRef.current = pb;
     }, [pb]);
+
+    const passed70Ref = useRef(false);
+
+    const handleTimeUpdate = () => {
+        const audio = audioRef.current;
+        if (!audio || !audio.duration) {
+            return;
+        }
+
+        const progress = audio.currentTime / audio.duration;
+
+        if (progress >= 0.75 && !passed70Ref.current) {
+            passed70Ref.current = true;
+            api.addPlayCount(currentTrack.id)
+        }
+    };
 
     const updatePb = (update: (prev: types.PlaybackState) => types.PlaybackState, progress?: number) => {
         setPb(prev => ({
@@ -127,6 +141,7 @@ export function LocalPlayer() {
     }, [pb, ctx]);
 
     useEffect(() => {
+        passed70Ref.current = false;
         setPb((prev) => ({
             ...prev,
             progress: 0,
@@ -171,6 +186,8 @@ export function LocalPlayer() {
         const ctx = ctxRef.current;
         const pb = pbRef.current;
 
+        passed70Ref.current = false;
+
         let ntid = pb.track_index + 1;
         if (ntid >= ctx.track_order.length) {
             stop()
@@ -192,6 +209,8 @@ export function LocalPlayer() {
 
     const previousTrack = () => {
         const pb = pbRef.current;
+
+        passed70Ref.current = false;
 
         if (!audioRef.current) {
             return
@@ -227,6 +246,7 @@ export function LocalPlayer() {
     return (
         <audio
         ref={audioRef}
+            onTimeUpdate={handleTimeUpdate}
             onEnded={() => {
                 api.emitEvent(Event.PlayerLocalNextTrack);
             }}
