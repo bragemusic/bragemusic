@@ -969,11 +969,20 @@ export class ServerApi implements Api, PlayerApi {
     }
 
     private async startPlayerWithPlaylist(parentId: string, idx: number) {
+        const tracks = await this.listPlaylistTracks(parentId)
+
+
         if (connectedDeviceID == null) {
-            return;
+            const ctx: LocalPlayerContext = {
+                type: PlayContextType.Playlist,
+                ref_id: parentId,
+                tracks: tracks,
+                track_index: idx,
+            }
+            this.emitEvent(Event.PlayerLocalStartContext, ctx)
+            return
         }
 
-        const tracks = await this.listPlaylistTracks(parentId)
         const state: types.PlayerState = new types.PlayerState({
             playback: new types.PlaybackState({
                 track_index: idx,
@@ -989,11 +998,19 @@ export class ServerApi implements Api, PlayerApi {
     }
 
     private async startPlayerWithLikedTracks(parentId: string, idx: number) {
+        const tracks = await this.listLikedTracks()
+
         if (connectedDeviceID == null) {
-            return;
+            const ctx: LocalPlayerContext = {
+                type: PlayContextType.LikedTracks,
+                ref_id: parentId,
+                tracks: tracks,
+                track_index: idx,
+            }
+            this.emitEvent(Event.PlayerLocalStartContext, ctx)
+            return
         }
 
-        const tracks = await this.listLikedTracks()
         const state: types.PlayerState = new types.PlayerState({
             playback: new types.PlaybackState({
                 track_index: idx,

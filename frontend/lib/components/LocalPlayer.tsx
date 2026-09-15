@@ -202,11 +202,6 @@ export function LocalPlayer() {
         ctx: types.PlayContext,
         pb: types.PlaybackState,
     ) => {
-        if (ctx.type != "album") {
-            console.error("only album implemented for playcontext");
-            return;
-        }
-
         if (pb.track_source == TrackSource.Queue && ctx.queue.length > 0) {
             setCurrentTrack(ctx.queue[0]);
             return
