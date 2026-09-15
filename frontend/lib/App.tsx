@@ -36,14 +36,18 @@ import { Spinner } from "@heroui/react";
 import { LocalPlayer } from "./components/LocalPlayer";
 import { MediaSession } from "./components/MediaSession";
 
-function App() {
+function App({ useLocalPlayer }: { useLocalPlayer: boolean }) {
   return (
     <ThemeProvider>
       <SessionProvider>
         <BrowserRouter>
           <>
-            <LocalPlayer/>
-            <MediaSession/>
+            {useLocalPlayer && (
+              <>
+                <LocalPlayer />
+                <MediaSession />
+              </>
+            )}
             <AppContent />
           </>
         </BrowserRouter>

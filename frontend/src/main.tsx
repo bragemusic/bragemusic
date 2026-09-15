@@ -28,7 +28,7 @@ const api = new ServerApi()
 ReactDOM.createRoot(document.getElementById("root")!).render(
   // <React.StrictMode>
   <ApiProvider api={api} playerApi={api}>
-    <App />
+    <App useLocalPlayer={true}/>
   </ApiProvider>,
   // </React.StrictMode>,
 );
