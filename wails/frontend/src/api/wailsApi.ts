@@ -291,4 +291,8 @@ export class WailsApi implements Api {
     async listThemes():Promise<Array<types.ThemeDescription>> {
         return await App.Themes()
     }
+
+
+    emitEvent(_e: Event, _d?: any) {
+    }
 }

@@ -24,7 +24,7 @@ loadTheme()
 ReactDOM.createRoot(document.getElementById("root")!).render(
   // <React.StrictMode>
   <ApiProvider api={new WailsApi()} playerApi={new WailsPlayerApi()}>
-    <App />
+    <App useLocalPlayer={false}/>
   </ApiProvider>
   // </React.StrictMode>,
 );
