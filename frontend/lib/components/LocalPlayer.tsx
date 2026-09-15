@@ -175,6 +175,18 @@ export function LocalPlayer() {
             },
         );
 
+        const unsubscribePlayerLocalAddToQueue = api.eventSubscribe(
+            Event.PlayerLocalAddToQueue,
+            (track: types.TrackDetailed) => {
+                setCtx((prev) => {
+                    const next = new types.PlayContext();
+                    Object.assign(next, prev);
+                    next.queue = [...prev.queue, track];
+                    return next;
+                });
+            },
+        );
+
         return () => {
             unsubscribePlayerLocalStartContext?.();
             unsubscribePlayPause?.();
@@ -182,6 +194,7 @@ export function LocalPlayer() {
             unsubscribePlayerLocalPreviousTrack?.();
             unsubscribePlayerLocalRepeat?.();
             unsubscribePlayerLocalShuffle?.();
+            unsubscribePlayerLocalAddToQueue?.();
         };
     }, [api]);
 
@@ -193,6 +206,12 @@ export function LocalPlayer() {
             console.error("only album implemented for playcontext");
             return;
         }
+
+        if (pb.track_source == TrackSource.Queue && ctx.queue.length > 0) {
+            setCurrentTrack(ctx.queue[0]);
+            return
+        }
+
 
         if (ctx.tracks.length == 0 || pb.track_index >= ctx.tracks.length) {
             return;
@@ -260,7 +279,7 @@ export function LocalPlayer() {
             ...prev,
             playing: false,
             progress: 0,
-            track_sourece: TrackSource.Context,
+            track_source: TrackSource.Context,
             track_index: 0,
         }));
     };
@@ -273,6 +292,27 @@ export function LocalPlayer() {
 
         if (!audioRef.current) {
             return;
+        }
+
+        if (ctx.queue.length > 0) {
+            if (pb.track_source == TrackSource.Queue) {
+                setCtx(
+                    (prev) =>
+                        new types.PlayContext({
+                            ...prev,
+                            queue: prev.queue.slice(1),
+                        }),
+                );
+                if (ctx.queue.length > 1) {
+                    return
+                }
+            } else {
+                updatePb((prev) => ({
+                    ...prev,
+                    track_source: TrackSource.Queue,
+                }));
+                return
+            }
         }
 
         if (pb.repeat == "one") {
@@ -295,11 +335,12 @@ export function LocalPlayer() {
                 return;
             }
         }
-        //FIXME: Check for shuffle
+
         updatePb((prev) => {
             return {
                 ...prev,
                 track_index: ntid,
+                track_source: TrackSource.Context,
             };
         });
     };

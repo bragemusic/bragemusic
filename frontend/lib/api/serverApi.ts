@@ -864,11 +864,13 @@ export class ServerApi implements Api, PlayerApi {
 
     // ==== PLAYER API ==== //
     async addTrackToQueue(trackID: string, albumID: string): Promise<void> {
+        const track = await this.getTrack(trackID, albumID)
+
         if (connectedDeviceID == null) {
+            this.emitEvent(Event.PlayerLocalAddToQueue, track)
             return;
         }
 
-        const track = await this.getTrack(trackID, albumID)
         await this.api.post(`/devices/${connectedDeviceID}/player/queue`, {json: track});
     }
 
