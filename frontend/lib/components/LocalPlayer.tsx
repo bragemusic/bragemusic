@@ -187,6 +187,13 @@ export function LocalPlayer() {
             },
         );
 
+        const unsubscribePlayerLocalStop= api.eventSubscribe(
+            Event.PlayerLocalStop,
+            () => {
+                stop();
+            },
+        );
+
         return () => {
             unsubscribePlayerLocalStartContext?.();
             unsubscribePlayPause?.();
@@ -195,6 +202,7 @@ export function LocalPlayer() {
             unsubscribePlayerLocalRepeat?.();
             unsubscribePlayerLocalShuffle?.();
             unsubscribePlayerLocalAddToQueue?.();
+            unsubscribePlayerLocalStop?.();
         };
     }, [api]);
 

@@ -817,6 +817,7 @@ export class ServerApi implements Api, PlayerApi {
     }
 
     async connectDevice(id: string): Promise<void> {
+        this.emitEvent(Event.PlayerLocalStop)
         connectedDeviceID = id;
 
         const devices = await this.listDevices()

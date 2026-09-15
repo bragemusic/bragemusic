@@ -25,6 +25,7 @@ export enum Event {
   PlayerLocalRepeat = "player.local.repeat",
   PlayerLocalShuffle= "player.local.shuffle",
   PlayerLocalAddToQueue = "player.local.addtoqueue",
+  PlayerLocalStop = "player.local.stop",
 
   DeviceConnectionID = "device.connection.id",
 
