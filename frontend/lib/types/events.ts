@@ -15,6 +15,18 @@ export enum Event {
   PlayerContextChange = "player.contextchange",
   PlayerPlaybackChange = "player.playbackchange",
 
+  PlayerLocalContextChange = "player.local.contextchange",
+  PlayerLocalPlaybackChange = "player.local.playbackchange",
+
+  PlayerLocalStartContext = "player.local.startcontext",
+  PlayerLocalPlayPause = "player.local.playpause",
+  PlayerLocalNextTrack = "player.local.nexttrack",
+  PlayerLocalPreviousTrack = "player.local.previoustrack",
+  PlayerLocalRepeat = "player.local.repeat",
+  PlayerLocalShuffle= "player.local.shuffle",
+  PlayerLocalAddToQueue = "player.local.addtoqueue",
+  PlayerLocalStop = "player.local.stop",
+
   DeviceConnectionID = "device.connection.id",
 
   DeviceConnected = "device.connected",

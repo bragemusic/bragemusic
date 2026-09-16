@@ -9,6 +9,10 @@ export const makeTimestamp = (ms: number): string => {
   return minutes + ":" + String(remainingSeconds).padStart(2, "0");
 };
 
+export const timeNow = (): string => {
+  return new Date().toISOString()
+}
+
 export function isBragErr(obj: any): obj is BragErr {
   return (
     obj &&

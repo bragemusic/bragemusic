@@ -38,6 +38,7 @@ export interface Api {
   updateTrack(id: string, data: types.TrackUpdate): Promise<void>;
   countLikedTracks(): Promise<number>;
   countTracks(): Promise<number>;
+  addPlayCount(trackID: string): Promise<void>;
 
   listArtists(): Promise<Array<types.ArtistDetailed>>;
   countArtists(): Promise<number>;
@@ -114,5 +115,8 @@ export interface Api {
   removeDeviceAndToken(id: string): Promise<void>;
 
   listThemes(): Promise<Array<types.ThemeDescription>>;
+
+
+  emitEvent(eventName: Event, data?: any): void;
   //
 }
