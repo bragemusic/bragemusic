@@ -1,4 +1,3 @@
-import { Card as BaseCard } from "@heroui/react";
 import { ChevronRight, LucideIcon } from "lucide-react";
 import { useMediaQuery } from 'react-responsive'
 import { mqMobile }from "@/config/config";
