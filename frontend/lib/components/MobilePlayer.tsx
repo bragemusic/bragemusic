@@ -130,66 +130,81 @@ export const MobilePlayer = () => {
                     }}
                         className="flex overflow-hidden overscroll-none absolute top-0 left-0 flex-col items-center pt-8 w-full h-full bg-background z-60 touch-none"
                     >
-                        <div className="flex flex-col justify-end px-8 pb-8 w-full h-1/2 max-h-1/2">
-                            <Image
-                                fallbackIcon={Music2}
-                                height={320}
-                                src={albumImageLink(
-                                playCtx?.current_track?.album_id as string,
-                                640,
-                                )}
-                                width={320}
-                                radius="xl"
-                                customHeight={true}
-                                className="shadow-xl aspect-square"
-                            />
-                        </div>
-                        <div className="flex flex-col gap-2 justify-between px-8 pb-8 w-full h-1/2 max-h-1/2">
-                            <div className="flex overflow-hidden flex-col justify-between py-1 text-lg">
-                                <Link className="font-bold hover:underline truncate" to={trackLink()}>
-                                    {playCtx?.current_track?.title}
-                                </Link>
-                                <div>
-                                    {artistIds?.map((artistId, index) => (
-                                    <Link
-                                        key={artistId}
-                                        className="hover:underline text-foreground/80 text-title"
-                                        to={`/artists/${artistId}`}
-                                    >
-                                        {artistNames?.[index]}
-                                        {index < artistIds.length - 1 && ", "}
-                                    </Link>
-                                    ))}
-                                </div>
-                                <Link
-                                    className="hover:underline text-foreground/80 truncate"
-                                    to={`/albums/${playCtx?.current_track?.album_id}`}
-                                >
-                                    {playCtx?.current_track?.album_name}
-                                </Link>
-                            </div>
-                            <div className="flex gap-2 items-center w-full">
-                                <span className="text-xs text-foreground">
-                                    {makeTimestamp(progressMs)}
-                                </span>
-                                <div className="overflow-hidden w-full rounded-full border-border/70 border-1 bg-background h-[8px]">
-                                    <div
-                                    className="h-full origin-left bg-accent"
-                                    style={{ transform: `scaleX(${progressPercent})` }}
-                                    />
-                                </div>
-                                <span className="text-xs text-foreground">
-                                    {makeTimestamp(
-                                    playCtx?.current_track?.media_file?.duration_ms
-                                        ? playCtx?.current_track?.media_file?.duration_ms
-                                        : 0,
+                        <div
+                            className="absolute -inset-4 bg-center bg-cover pointer-events-none blur-xl"
+                            style={{
+                                backgroundImage: playCtx?.current_track?.album_id
+                                ? `url(${albumImageLink(playCtx.current_track.album_id, 640)})`
+                                : undefined,
+                            }}
+                        />
+
+                        {/* Color overlay */}
+                        <div className="absolute inset-0 pointer-events-none bg-background/60" />
+
+                        {/* Actual content */}
+                        <div className="flex relative z-10 flex-col items-center w-full h-full">
+                            <div className="flex flex-col justify-end px-8 pb-8 w-full h-1/2 max-h-1/2">
+                                <Image
+                                    fallbackIcon={Music2}
+                                    height={320}
+                                    src={albumImageLink(
+                                    playCtx?.current_track?.album_id as string,
+                                    640,
                                     )}
-                                </span>
+                                    width={320}
+                                    radius="xl"
+                                    customHeight={true}
+                                    className="shadow-xl aspect-square"
+                                />
                             </div>
-                            <PlayerControls playCtx={playCtx} mobile={true} className="pt-8"/>
-                            <div className="flex justify-between items-center">
-                                <QueueButton playCtx={playCtx} size="lg" />
-                                <DeviceButton size="lg" />
+                            <div className="flex flex-col gap-2 justify-between px-8 pb-8 w-full h-1/2 max-h-1/2">
+                                <div className="flex overflow-hidden flex-col justify-between py-1 text-lg">
+                                    <Link className="font-bold hover:underline truncate" to={trackLink()}>
+                                        {playCtx?.current_track?.title}
+                                    </Link>
+                                    <div>
+                                        {artistIds?.map((artistId, index) => (
+                                        <Link
+                                            key={artistId}
+                                            className="hover:underline text-foreground/80 text-title"
+                                            to={`/artists/${artistId}`}
+                                        >
+                                            {artistNames?.[index]}
+                                            {index < artistIds.length - 1 && ", "}
+                                        </Link>
+                                        ))}
+                                    </div>
+                                    <Link
+                                        className="hover:underline text-foreground/80 truncate"
+                                        to={`/albums/${playCtx?.current_track?.album_id}`}
+                                    >
+                                        {playCtx?.current_track?.album_name}
+                                    </Link>
+                                </div>
+                                <div className="flex gap-2 items-center w-full">
+                                    <span className="text-xs text-foreground">
+                                        {makeTimestamp(progressMs)}
+                                    </span>
+                                    <div className="overflow-hidden w-full rounded-full border-border/70 border-1 bg-background h-[8px]">
+                                        <div
+                                        className="h-full origin-left bg-accent"
+                                        style={{ transform: `scaleX(${progressPercent})` }}
+                                        />
+                                    </div>
+                                    <span className="text-xs text-foreground">
+                                        {makeTimestamp(
+                                        playCtx?.current_track?.media_file?.duration_ms
+                                            ? playCtx?.current_track?.media_file?.duration_ms
+                                            : 0,
+                                        )}
+                                    </span>
+                                </div>
+                                <PlayerControls playCtx={playCtx} mobile={true} className="pt-8"/>
+                                <div className="flex justify-between items-center">
+                                    <QueueButton playCtx={playCtx} size="lg" />
+                                    <DeviceButton size="lg" />
+                                </div>
                             </div>
                         </div>
                     </motion.div>
