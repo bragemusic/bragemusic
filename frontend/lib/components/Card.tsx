@@ -1,5 +1,5 @@
 import { Card as BaseCard } from "@heroui/react";
-import { LucideIcon } from "lucide-react";
+import { ChevronRight, LucideIcon } from "lucide-react";
 import { useMediaQuery } from 'react-responsive'
 import { mqMobile }from "@/config/config";
 
@@ -40,49 +40,50 @@ export const Card: React.FC<CardProps> = ({
   const isMobile = useMediaQuery({ query: mqMobile })
 
   if (isMobile) {
-      return (
-        <BaseCard
-          className={`relative gap-0 p-0 ${onClick ? "cursor-pointer" : ""} w-full border-1 border-border rounded-sm`}
-          onClick={onClick}
-        >
-          <div className="flex relative gap-4 w-full">
-            {OverlayIcon &&
-              <div className="absolute top-0 left-0 p-1 mt-1 ml-1 rounded-full shadow-md bg-accent text-accent-foreground"><OverlayIcon size={10}/></div>
-            }
-            {actionButtons &&
-              <div className="flex gap-2 justify-center pb-2 w-full">
-                {actionButtons.map((d) => (
-                  <ActionButton
-                    confirm={d.confirm}
-                    icon={d.icon}
-                    size={d.size}
-                    tooltip={d.tooltip}
-                    variant={d.variant}
-                    onClick={d.onClick}
-                  />
-                ))}
-              </div>
-            }
-            <Image
-              fallbackIcon={fallbackIcon}
-              height={80}
-              width={80}
-              radius="none"
-              src={imgSrc}
-            />
-            <div className="flex overflow-hidden flex-col pt-3 h-full">
-              <div className="w-full text-base font-medium sm:text-lg text-foreground truncate">
-                {title}
-              </div>
-              {description && (
-                <div className="pt-1 w-full text-xs font-medium sm:text-sm text-foreground/50">
-                  {description}
-                </div>
-              )}
+    return (
+      <div className="flex gap-3 px-2 w-full min-w-0" onClick={onClick}>
+        <div className="flex relative">
+          {OverlayIcon &&
+            <div className="absolute top-0 left-0 p-1 mt-1 ml-1 rounded-full shadow-md bg-accent text-accent-foreground"><OverlayIcon size={10}/></div>
+          }
+          {actionButtons &&
+            <div className="flex gap-2 justify-center pb-2 w-full">
+              {actionButtons.map((d) => (
+                <ActionButton
+                  confirm={d.confirm}
+                  icon={d.icon}
+                  size={d.size}
+                  tooltip={d.tooltip}
+                  variant={d.variant}
+                  onClick={d.onClick}
+                />
+              ))}
             </div>
+          }
+          <Image
+            fallbackIcon={fallbackIcon}
+            height={60}
+            width={60}
+            radius={radius}
+            src={imgSrc}
+            className="border-border border-1"
+          />
+        </div>
+        <div className="flex gap-1 w-full min-w-0 border-b-1 border-border">
+          <div className="flex overflow-hidden flex-col justify-center w-full min-w-0 h-full shrink">
+            <div className="w-full text-base font-medium sm:text-lg text-foreground truncate">
+              {title}
+            </div>
+            {description && (
+              <div className="pt-1 w-full text-xs font-medium sm:text-sm text-foreground/50">
+                {description}
+              </div>
+            )}
           </div>
-        </BaseCard>
-    );
+          <ChevronRight className="h-full stroke-foreground/30"/>
+        </div>
+      </div>
+    )
   } else {
     return (
     <div
