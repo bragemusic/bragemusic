@@ -90,7 +90,14 @@ export function Image({
           `bg-default text-foreground flex items-center justify-center ${radiusClass(radius)} ` +
           className
         }
-        style={customHeight ? {} : { height, width }}
+        style={customHeight ? {} : {
+          height: `${height}px`,
+          width: `${width}px`,
+          minHeight: `${height}px`,
+          maxHeight: `${height}px`,
+          minWidth: `${width}px`,
+          maxWidth: `${width}px`,
+        }}
         onClick={onClick}
       >
         <Icon size={height / 3} />
@@ -107,6 +114,10 @@ export function Image({
       style={customHeight ? {} : {
         height: `${height}px`,
         width: `${width}px`,
+        minHeight: `${height}px`,
+        maxHeight: `${height}px`,
+        minWidth: `${width}px`,
+        maxWidth: `${width}px`,
       }}
       onClick={onClick}
     />

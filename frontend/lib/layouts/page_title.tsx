@@ -16,9 +16,9 @@ export default function PageTitleLayout({
 }: PageTitleLayoutProps) {
   return (
     <DefaultLayout scroll={scroll}>
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center px-1 mt-7 sm:px-0 sm:mt-0">
           {title &&
-            <h2 className="text-2xl font-semibold sm:text-4xl text-foreground">{title}</h2>
+            <h2 className="text-4xl font-semibold sm:text-4xl text-foreground">{title}</h2>
           }
           {headerContent && (
             <div className="flex gap-4 items-center">{headerContent}</div>
