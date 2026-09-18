@@ -1,5 +1,7 @@
 import { useSession } from "@/session/SessionContext";
 import Banner from "@/components/Banner";
+import PageTitleLayout from "../layouts/page_title";
+import { RecentAlbums } from "../components/RecentAlbums";
 
 export default function HomePage({
   scrollRef,
@@ -18,6 +20,14 @@ export default function HomePage({
     }
     return "Good Evening";
   };
+
+  return (
+    <PageTitleLayout title={getGreeting()}>
+      <div className="flex flex-col flex-1 min-w-0 min-h-0">
+        <RecentAlbums />
+      </div>
+    </PageTitleLayout>
+  )
 
   return (
     <>

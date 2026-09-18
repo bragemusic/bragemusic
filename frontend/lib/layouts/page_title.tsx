@@ -24,7 +24,7 @@ export default function PageTitleLayout({
             <div className="flex gap-4 items-center">{headerContent}</div>
           )}
         </div>
-      <div className={cn("flex overflow-hidden flex-1 justify-between w-full min-h-0select-none", title != undefined ? "mt-12" : "")}>{children}</div>
+      <div className={cn("flex overflow-hidden flex-1 justify-between w-full min-h-0 select-none", title != undefined ? "mt-12" : "")}>{children}</div>
     </DefaultLayout>
   );
 }

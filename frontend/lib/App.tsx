@@ -88,16 +88,16 @@ function AppContent() {
         <>
           <Toast />
 
-          <div className="flex flex-1 min-h-0">
+          <div className="flex flex-1 min-w-0 min-h-0">
             {!isMobile && <Menu />}
 
-            <div className="flex relative flex-col flex-1 min-h-0">
+            <div className="flex relative flex-col flex-1 min-w-0 min-h-0">
               {isMobile && <MobilePlayer />}
               {isMobile && <MobileMenu />}
 
               <div
                 ref={scrollRef}
-                className="overflow-y-auto flex-1 min-h-0 bg-background"
+                className="overflow-y-auto flex-1 min-w-0 min-h-0 bg-background"
               >
                 <Routes>
                   <Route element={<HomePage  scrollRef={scrollRef}/>} path="/" />
