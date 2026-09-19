@@ -191,29 +191,33 @@ func (d Database) ListAlbumsDetailed(ctx context.Context, sortBy SortBy, sortOrd
 
 	switch sortBy {
 	case SortByName:
-		sortByStr = "sort_name"
+		sortByStr = "al.sort_name"
 	case SortByDate:
-		sortByStr = "release_date"
+		sortByStr = "al.release_date"
 	case SortByAdded:
 		sortByStr = "al.created_at"
 	}
 
 	query := fmt.Sprintf(`
-		SELECT DISTINCT
-			al.id,
-			al.musicbrainz_id,
-			al.name,
-			al.sort_name,
-			al.release_date,
-			al.description,
-			al.owner,
-			al.public,
-			al.created_at,
-			al.updated_at
-		FROM albums al
-		JOIN album_artists aa ON aa.album_id = al.id
-		ORDER BY %s %s
-    `, sortByStr, sortOrder)
+    SELECT
+        al.id,
+        al.musicbrainz_id,
+        al.name,
+        al.sort_name,
+        al.release_date,
+        al.description,
+        al.owner,
+        al.public,
+        al.created_at,
+        al.updated_at,
+        GROUP_CONCAT(DISTINCT ar.id) AS artist_ids,
+        GROUP_CONCAT(DISTINCT ar.name) AS artist_names
+    FROM albums al
+    JOIN album_artists aa ON aa.album_id = al.id
+    JOIN artists ar ON ar.id = aa.artist_id
+    GROUP BY al.id
+    ORDER BY %s %s
+`, sortByStr, sortOrder)
 
 	if limit != nil {
 		query += fmt.Sprintf(" LIMIT %d", *limit)
