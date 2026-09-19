@@ -72,7 +72,7 @@ func (s ServerClient) GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (
 	return album, nil
 }
 
-func (s ServerClient) ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) (albums []types.AlbumDetailed, err error) {
+func (s ServerClient) ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder, limit *int) (albums []types.AlbumDetailed, err error) {
 	u, err := url.JoinPath(s.baseUrl, "api", "albums")
 	if err != nil {
 		return nil, err
@@ -86,6 +86,9 @@ func (s ServerClient) ListAlbums(ctx context.Context, sortBy database.SortBy, so
 	q := ur.Query()
 	q.Set("sortBy", string(sortBy))
 	q.Set("sortOrder", string(sortOrder))
+	if limit != nil {
+		q.Set("limit", fmt.Sprint(limit))
+	}
 
 	ur.RawQuery = q.Encode()
 

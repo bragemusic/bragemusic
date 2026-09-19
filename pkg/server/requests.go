@@ -1,9 +1,12 @@
 package server
 
 import (
+	"fmt"
+
 	"github.com/bragemusic/bragemusic/pkg/database"
 	"github.com/bragemusic/bragemusic/pkg/types"
 	"github.com/gofrs/uuid/v5"
+	"github.com/samber/lo"
 )
 
 type ReqNoContent struct{}
@@ -408,10 +411,18 @@ type ReqList struct {
 	Count     bool               `query:"count" description:"Only return the count, not the payload."`
 	SortOrder database.SortOrder `query:"sortOrder" description:"Sort ascending or descending."`
 	SortBy    database.SortBy    `query:"sortBy" description:"Sort by key."`
+	Limit     *int               `query:"limit" description:"Limit the number of items to return."`
 }
 
 func (r ReqList) Validate() (validationMessages string, err error) {
-	return "", nil
+	if !lo.Contains([]database.SortBy{"", database.SortByDate, database.SortByName, database.SortByPlayCount, database.SortByAdded}, r.SortBy) {
+		validationMessages += fmt.Sprintf("'%s' is not a valid sortBy value\n", r.SortBy)
+	}
+
+	if !lo.Contains([]database.SortOrder{"", database.SortAsc, database.SortDesc}, r.SortOrder) {
+		validationMessages += fmt.Sprintf("'%s' is not a valid sortOrder value\n", r.SortOrder)
+	}
+	return validationMessages, nil
 }
 
 type ReqListPagination struct {

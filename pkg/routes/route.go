@@ -138,6 +138,12 @@ func (ro RouteObject[Req, Resp]) Handler(log, errLog *slog.Logger, berr *bragerr
 			return
 		}
 
+		if vErrs != "" {
+			berr := berr.ReqValidation(vErrs)
+			bragerr.HandleHttpResponse(ctx, berr, w, errLog)
+			return
+		}
+
 		user, err := auth.UserFromContext(ctx)
 		if err != nil {
 			bragerr.HandleHttpResponse(ctx, err, w, errLog)
@@ -319,6 +325,26 @@ func ParseQueries[T Validator](q url.Values, v *T) error {
 					return err
 				}
 				rv.Field(fidx).SetInt(int64(intVal))
+			}
+
+		case reflect.Pointer:
+			if len(vs) == 0 {
+				break
+			}
+
+			switch field.Type().Elem().Kind() {
+			case reflect.String:
+				field.Set(reflect.ValueOf(&vs[0]))
+
+			case reflect.Int:
+				intVal, err := strconv.Atoi(vs[0])
+				if err != nil {
+					return err
+				}
+				field.Set(reflect.ValueOf(&intVal))
+
+			default:
+				return fmt.Errorf("unsupported pointer type: %s", field.Type())
 			}
 
 		case reflect.Bool:

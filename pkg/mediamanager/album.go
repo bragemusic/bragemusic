@@ -45,37 +45,11 @@ func (m MediaManager) ListFeaturedAlbumsByArtist(ctx context.Context, artistID u
 	return albums, nil
 }
 
-func (m MediaManager) ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) (albums []types.AlbumDetailed, err error) {
-	artists, err := m.db.ListArtists(ctx, sortBy, sortOrder)
+func (m MediaManager) ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder, limit *int) (albums []types.AlbumDetailed, err error) {
+	albums, err = m.db.ListAlbumsDetailed(ctx, sortBy, sortOrder, limit)
 	if err != nil {
-		return nil, m.berr.DatabaseError(err, types.EntityArtist, nil)
+		return nil, err
 	}
-
-	for _, artist := range artists {
-		alb, err := m.ListAlbumsByArtist(ctx, artist.ID, sortBy, sortOrder)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, album := range alb {
-			_, idx, exists := lo.FindIndexOf(albums, func(item types.AlbumDetailed) bool {
-				return item.ID == album.ID
-			})
-
-			if !exists {
-				album.ArtistNames = append(album.ArtistNames, artist.Name)
-				album.ArtistIDs = append(album.ArtistIDs, artist.ID.String())
-				albums = append(albums, album)
-				continue
-			}
-
-			albums[idx].ArtistNames = append(albums[idx].ArtistNames, artist.Name)
-			albums[idx].ArtistIDs = append(albums[idx].ArtistIDs, artist.ID.String())
-
-		}
-
-	}
-
 	return albums, nil
 }
 

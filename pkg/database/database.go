@@ -25,6 +25,7 @@ type (
 const (
 	SortByName      SortBy = "name"
 	SortByDate      SortBy = "date"
+	SortByAdded     SortBy = "added"
 	SortByPlayCount SortBy = "play_count"
 
 	SortAsc  SortOrder = "ASC"
@@ -50,6 +51,7 @@ type DatabaseFace interface {
 	GetAlbumDetailed(ctx context.Context, albumID uuid.UUID) (album types.AlbumDetailed, err error)
 	GetAlbumsByMbIDs(ctx context.Context, albumMbIds []string) ([]types.Album, error)
 	ListAlbums(ctx context.Context) (albums []types.Album, err error)
+	ListAlbumsDetailed(ctx context.Context, sortBy SortBy, sortOrder SortOrder, limit *int) (albums []types.AlbumDetailed, err error)
 	ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
 	ListFeaturedAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error)
 	ListUpdatedAlbums(ctx context.Context, since time.Time) (albumIDs []string, err error)

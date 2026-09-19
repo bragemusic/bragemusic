@@ -186,6 +186,47 @@ func (d Database) ListAlbums(ctx context.Context) (albums []types.Album, err err
 	return albums, nil
 }
 
+func (d Database) ListAlbumsDetailed(ctx context.Context, sortBy SortBy, sortOrder SortOrder, limit *int) (albums []types.AlbumDetailed, err error) {
+	sortByStr := ""
+
+	switch sortBy {
+	case SortByName:
+		sortByStr = "sort_name"
+	case SortByDate:
+		sortByStr = "release_date"
+	case SortByAdded:
+		sortByStr = "al.created_at"
+	}
+
+	query := fmt.Sprintf(`
+		SELECT DISTINCT
+			al.id,
+			al.musicbrainz_id,
+			al.name,
+			al.sort_name,
+			al.release_date,
+			al.description,
+			al.owner,
+			al.public,
+			al.created_at,
+			al.updated_at
+		FROM albums al
+		JOIN album_artists aa ON aa.album_id = al.id
+		ORDER BY %s %s
+    `, sortByStr, sortOrder)
+
+	if limit != nil {
+		query += fmt.Sprintf(" LIMIT %d", *limit)
+	}
+
+	err = sqlx.SelectContext(ctx, d.ext, &albums, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return albums, nil
+}
+
 func (d Database) ListAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy SortBy, sortOrder SortOrder) (albums []types.AlbumDetailed, err error) {
 	sortByStr := ""
 

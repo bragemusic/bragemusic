@@ -172,7 +172,18 @@ func (s *Server) listAlbums() routes.RouteFunc[ReqList, types.ListPayload[types.
 			}, nil
 		}
 
-		albums, err := s.mediamgr.ListAlbums(ctx, database.SortByName, database.SortAsc)
+		sortBy := database.SortByName
+		sortOrder := database.SortAsc
+
+		if req.SortBy != "" {
+			sortBy = req.SortBy
+		}
+
+		if req.SortOrder != "" {
+			sortOrder = req.SortOrder
+		}
+
+		albums, err := s.mediamgr.ListAlbums(ctx, sortBy, sortOrder, req.Limit)
 		if err != nil {
 			return resp, err
 		}
@@ -180,7 +191,7 @@ func (s *Server) listAlbums() routes.RouteFunc[ReqList, types.ListPayload[types.
 		return types.Response[types.ListPayload[types.AlbumDetailed]]{
 			Payload: types.ListPayload[types.AlbumDetailed]{
 				Items: albums,
-				Count: cnt,
+				Count: len(albums),
 			},
 			Status: http.StatusOK,
 		}, nil

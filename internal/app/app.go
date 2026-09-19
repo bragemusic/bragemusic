@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/bragemusic/bragemusic/internal/assethandler"
+	"github.com/bragemusic/bragemusic/internal/utils"
 	"github.com/bragemusic/bragemusic/pkg/bragerr"
 	"github.com/bragemusic/bragemusic/pkg/client"
 	"github.com/bragemusic/bragemusic/pkg/config"
@@ -14,8 +16,6 @@ import (
 	"github.com/bragemusic/bragemusic/pkg/musicbrainz"
 	"github.com/bragemusic/bragemusic/pkg/serverclient"
 	"github.com/bragemusic/bragemusic/pkg/types"
-	"github.com/bragemusic/bragemusic/internal/assethandler"
-	"github.com/bragemusic/bragemusic/internal/utils"
 	"github.com/gofrs/uuid/v5"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -367,7 +367,7 @@ func (a *App) ListFeaturedAlbumsByArtist(artistID string) []types.AlbumDetailed 
 }
 
 func (a *App) ListAlbums() []types.AlbumDetailed {
-	albums, err := a.client.ListAlbums(a.ctx, database.SortByName, database.SortAsc)
+	albums, err := a.client.ListAlbums(a.ctx, database.SortByName, database.SortAsc, nil)
 	if err != nil {
 		a.handleError(err)
 		return nil

@@ -164,7 +164,7 @@ type MetadataFace interface {
 	ListFeaturedAlbumsByArtist(ctx context.Context, artistID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder) (albums []types.AlbumDetailed, err error)
 
 	// ListAlbums returns albums ordered by the provided sorting options.
-	ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder) ([]types.AlbumDetailed, error)
+	ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder, limit *int) ([]types.AlbumDetailed, error)
 
 	// UpdateAlbum updates metadata for an album.
 	UpdateAlbum(ctx context.Context, id uuid.UUID, album types.AlbumUpdate) error
