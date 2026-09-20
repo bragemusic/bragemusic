@@ -8,6 +8,7 @@ import { isBragErr } from "@/util/functions";
 import { PlayerApi } from "./PlayerApi";
 import { PlayContextType } from "@/types/playcontext";
 import { LocalPlayerContext } from "../types/playcontext";
+import { SortBy, SortOrder } from "../types/sorting";
 
 let deviceID: string | null = null;
 let shuffle = false
@@ -232,9 +233,15 @@ export class ServerApi implements Api, PlayerApi {
             .json<types.AlbumDetailed>();
     }
 
-    async listAlbums(): Promise<Array<types.AlbumDetailed>> {
+    async listAlbums(sortBy: SortBy = SortBy.Name, sortOrder: SortOrder = SortOrder.Asc, limit?: number): Promise<Array<types.AlbumDetailed>> {
+        const searchParams = {
+            sortBy: sortBy,
+            sortOrder: sortOrder,
+            ...(limit !== undefined && { limit }),
+        };
+
         const resp = await this.mediaApi
-            .get("/albums")
+            .get("/albums", { searchParams: searchParams })
             .json<responses.ListPayload<types.AlbumDetailed>>();
         if (resp.items) {
             return resp.items;

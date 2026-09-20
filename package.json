@@ -5,7 +5,9 @@
   "type": "module",
   "main": "frontend/dist/main.js",
   "types": "frontend/dist/main.d.ts",
-  "files": ["frontend/dist"],
+  "files": [
+    "frontend/dist"
+  ],
   "scripts": {
     "dev": "vite --config vite.dev.config.ts",
     "build": "tsc --p ./tsconfig.build.json && vite build",
@@ -32,7 +34,7 @@
     "react-responsive": "^10.0.1",
     "react-router-dom": "6.23.0",
     "tailwind-variants": "3.1.1",
-    "tailwindcss": "^4.2.2",
+    "tailwindcss": "^4.3.3",
     "use-debounce": "^10.1.1",
     "vite-plugin-svgr": "^4.5.0",
     "zustand": "^5.0.11"

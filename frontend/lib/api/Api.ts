@@ -2,6 +2,7 @@ import { UserDetails } from "@/models/UserDetails";
 import { musicbrainz, types } from "@/types/core";
 import { Event } from "@/types/events.ts";
 import { responses } from "@/types/server";
+import { SortBy, SortOrder } from "../types/sorting";
 
 export interface Api {
   eventSubscribe(eventName: Event, callback: (...data: any) => void): () => void;
@@ -26,7 +27,7 @@ export interface Api {
   updateArtist(id:string, data:types.Artist):Promise<void>;
 
   getAlbum(id: string): Promise<types.AlbumDetailed>;
-  listAlbums(): Promise<Array<types.AlbumDetailed>>;
+  listAlbums(sortBy: SortBy, sortOrder: SortOrder, limit?: number): Promise<Array<types.AlbumDetailed>>;
   listTracksByAlbum(albumID: string): Promise<Array<types.TrackDetailed>>;
   updateAlbum(id: string, data: types.AlbumUpdate): Promise<void>;
   countAlbums(): Promise<number>;

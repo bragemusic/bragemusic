@@ -9,10 +9,10 @@ export const SideScrollContainer: React.FC<SideScrollContainerProps> = ({
 }) => {
     return (
             <ScrollShadow
-                className="py-4 max-w-min scrollbar-none"
+                className="py-4 max-w-min scrollbar-thin"
                 orientation="horizontal"
             >
-                <div className="flex flex-row gap-4 w-max">
+                <div className="flex flex-row gap-6 w-max">
                     {children}
                 </div>
             </ScrollShadow>
