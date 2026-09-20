@@ -31,7 +31,7 @@ export const AlbumRecentCard: React.FC<AlbumRecentCardProps> = ({ album }) => {
           radius="none"
           className="shadow-md border-1 border-border"
         />
-      <Text type="body-sm" className="font-bold truncate">{album.name}</Text>
+      <Text type="body-sm" className="pt-1 -mb-1 font-bold truncate">{album.name}</Text>
       <Text type="body-sm" className="truncate">{album.artist_names?.join(", ")}</Text>
       <Text type="body-xs" className="truncate">{`Added ${formatHRDate(album.created_at)}`}</Text>
       </div>
