@@ -42,6 +42,7 @@ type AlbumDetailed struct {
 	DiscCount     int         `db:"disc_count" json:"disc_count"`
 	Description   *string     `db:"description" json:"description,omitempty"`
 	Owner         string      `db:"owner" json:"owner"`
+	PlayCount     int         `db:"play_count" json:"play_count"`
 	Public        *bool       `db:"public" json:"public,omitempty"`
 	CreatedAt     time.Time   `db:"created_at" json:"created_at"`
 	UpdatedAt     time.Time   `db:"updated_at" json:"updated_at"`

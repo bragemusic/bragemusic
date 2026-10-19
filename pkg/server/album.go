@@ -183,7 +183,7 @@ func (s *Server) listAlbums() routes.RouteFunc[ReqList, types.ListPayload[types.
 			sortOrder = req.SortOrder
 		}
 
-		albums, err := s.mediamgr.ListAlbums(ctx, sortBy, sortOrder, req.Limit)
+		albums, err := s.mediamgr.ListAlbums(ctx, user.ID, sortBy, sortOrder, req.Limit)
 		if err != nil {
 			return resp, err
 		}

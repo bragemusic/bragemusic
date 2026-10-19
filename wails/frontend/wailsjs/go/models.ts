@@ -56,6 +56,7 @@ export namespace types {
 	    disc_count: number;
 	    description?: string;
 	    owner: string;
+	    play_count: number;
 	    public?: boolean;
 	    // Go type: time
 	    created_at: any;
@@ -79,6 +80,7 @@ export namespace types {
 	        this.disc_count = source["disc_count"];
 	        this.description = source["description"];
 	        this.owner = source["owner"];
+	        this.play_count = source["play_count"];
 	        this.public = source["public"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	        this.updated_at = this.convertValues(source["updated_at"], null);

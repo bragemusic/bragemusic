@@ -93,6 +93,10 @@ func (c clientSync) FilterTracks(ctx context.Context, filter types.TrackFilter, 
 	}, nil
 }
 
+func (c clientSync) ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder, limit *int) ([]types.AlbumDetailed, error) {
+	return c.MediaManager.ListAlbums(ctx, c.user.ID, sortBy, sortOrder, limit)
+}
+
 func (c clientSync) UpdateAlbum(ctx context.Context, id uuid.UUID, album types.AlbumUpdate) error {
 	if err := c.sc.UpdateAlbum(ctx, id, album); err != nil {
 		return err

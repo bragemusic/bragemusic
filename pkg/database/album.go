@@ -186,7 +186,7 @@ func (d Database) ListAlbums(ctx context.Context) (albums []types.Album, err err
 	return albums, nil
 }
 
-func (d Database) ListAlbumsDetailed(ctx context.Context, sortBy SortBy, sortOrder SortOrder, limit *int) (albums []types.AlbumDetailed, err error) {
+func (d Database) ListAlbumsDetailed(ctx context.Context, userID uuid.UUID, sortBy SortBy, sortOrder SortOrder, limit *int) (albums []types.AlbumDetailed, err error) {
 	sortByStr := ""
 
 	switch sortBy {
@@ -196,6 +196,8 @@ func (d Database) ListAlbumsDetailed(ctx context.Context, sortBy SortBy, sortOrd
 		sortByStr = "al.release_date"
 	case SortByAdded:
 		sortByStr = "al.created_at"
+	case SortByPlayCount:
+		sortByStr = "play_count"
 	}
 
 	query := fmt.Sprintf(`
@@ -211,7 +213,14 @@ func (d Database) ListAlbumsDetailed(ctx context.Context, sortBy SortBy, sortOrd
         al.created_at,
         al.updated_at,
         GROUP_CONCAT(DISTINCT ar.id) AS artist_ids,
-        GROUP_CONCAT(DISTINCT ar.name) AS artist_names
+        GROUP_CONCAT(DISTINCT ar.name) AS artist_names,
+        (
+            SELECT COUNT(*)
+            FROM album_tracks atr
+            JOIN play_history ph ON ph.track_id = atr.track_id
+            WHERE atr.album_id = al.id
+              AND ph.user_id = ?
+        ) AS play_count
     FROM albums al
     JOIN album_artists aa ON aa.album_id = al.id
     JOIN artists ar ON ar.id = aa.artist_id
@@ -219,11 +228,14 @@ func (d Database) ListAlbumsDetailed(ctx context.Context, sortBy SortBy, sortOrd
     ORDER BY %s %s
 `, sortByStr, sortOrder)
 
+	args := []any{userID}
+
 	if limit != nil {
-		query += fmt.Sprintf(" LIMIT %d", *limit)
+		query += " LIMIT ?"
+		args = append(args, *limit)
 	}
 
-	err = sqlx.SelectContext(ctx, d.ext, &albums, query)
+	err = sqlx.SelectContext(ctx, d.ext, &albums, query, args...)
 	if err != nil {
 		return nil, err
 	}

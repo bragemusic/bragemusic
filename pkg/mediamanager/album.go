@@ -45,8 +45,8 @@ func (m MediaManager) ListFeaturedAlbumsByArtist(ctx context.Context, artistID u
 	return albums, nil
 }
 
-func (m MediaManager) ListAlbums(ctx context.Context, sortBy database.SortBy, sortOrder database.SortOrder, limit *int) (albums []types.AlbumDetailed, err error) {
-	albums, err = m.db.ListAlbumsDetailed(ctx, sortBy, sortOrder, limit)
+func (m MediaManager) ListAlbums(ctx context.Context, userID uuid.UUID, sortBy database.SortBy, sortOrder database.SortOrder, limit *int) (albums []types.AlbumDetailed, err error) {
+	albums, err = m.db.ListAlbumsDetailed(ctx, userID, sortBy, sortOrder, limit)
 	if err != nil {
 		return nil, err
 	}

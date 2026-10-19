@@ -56,6 +56,7 @@ export namespace types {
 	    disc_count: number;
 	    description?: string;
 	    owner: string;
+	    play_count: number;
 	    public?: boolean;
 	    // Go type: time
 	    created_at: any;
@@ -79,6 +80,7 @@ export namespace types {
 	        this.disc_count = source["disc_count"];
 	        this.description = source["description"];
 	        this.owner = source["owner"];
+	        this.play_count = source["play_count"];
 	        this.public = source["public"];
 	        this.created_at = this.convertValues(source["created_at"], null);
 	        this.updated_at = this.convertValues(source["updated_at"], null);
@@ -714,7 +716,7 @@ export namespace types {
 	        this.updated_at = source["updated_at"];
 	    }
 	}
-	export class ListPaginationPayload_github_com_bragemusic_core_pkg_types_Import_ {
+	export class ListPaginationPayload_github_com_bragemusic_bragemusic_pkg_types_Import_ {
 	    items?: Import[];
 	    page: number;
 	    limit: number;
@@ -722,7 +724,7 @@ export namespace types {
 	    total_items: number;
 
 	    static createFrom(source: any = {}) {
-	        return new ListPaginationPayload_github_com_bragemusic_core_pkg_types_Import_(source);
+	        return new ListPaginationPayload_github_com_bragemusic_bragemusic_pkg_types_Import_(source);
 	    }
 
 	    constructor(source: any = {}) {
@@ -752,7 +754,7 @@ export namespace types {
 		    return a;
 		}
 	}
-	export class ListPaginationPayload_github_com_bragemusic_core_pkg_types_TrackDetailed_ {
+	export class ListPaginationPayload_github_com_bragemusic_bragemusic_pkg_types_TrackDetailed_ {
 	    items?: TrackDetailed[];
 	    page: number;
 	    limit: number;
@@ -760,7 +762,7 @@ export namespace types {
 	    total_items: number;
 
 	    static createFrom(source: any = {}) {
-	        return new ListPaginationPayload_github_com_bragemusic_core_pkg_types_TrackDetailed_(source);
+	        return new ListPaginationPayload_github_com_bragemusic_bragemusic_pkg_types_TrackDetailed_(source);
 	    }
 
 	    constructor(source: any = {}) {
@@ -790,12 +792,12 @@ export namespace types {
 		    return a;
 		}
 	}
-	export class ListPayload_github_com_bragemusic_core_pkg_musicbrainz_SearchResults_ {
+	export class ListPayload_github_com_bragemusic_bragemusic_pkg_musicbrainz_SearchResults_ {
 	    items?: musicbrainz.SearchResults[];
 	    count: number;
 
 	    static createFrom(source: any = {}) {
-	        return new ListPayload_github_com_bragemusic_core_pkg_musicbrainz_SearchResults_(source);
+	        return new ListPayload_github_com_bragemusic_bragemusic_pkg_musicbrainz_SearchResults_(source);
 	    }
 
 	    constructor(source: any = {}) {
