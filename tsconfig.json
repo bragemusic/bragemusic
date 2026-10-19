@@ -24,6 +24,6 @@
     "noUncheckedIndexedAccess": false,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"],
+  "include": ["frontend/lib"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

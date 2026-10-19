@@ -49,7 +49,8 @@ serve:
     go run -tags fts5 cmd/server/main.go
 
 dev-client:
-    wails dev -tags fts5
+    # Make this optional in settings
+    WEBKIT_SKIA_ENABLE_CPU_RENDERING=1 wails dev -tags fts5,webkit2_41
 
 build-linux-client version:
     wails build -tags fts5 --ldflags="-X 'github.com/bragemusic/core/internal/vars.VERSION={{version}}' -X 'github.com/bragemusic/core/internal/vars.PLATFORM=linux'"

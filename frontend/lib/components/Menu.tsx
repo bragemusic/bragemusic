@@ -2,86 +2,86 @@ import {
   Disc,
   Music4,
   ListMusic,
-  ChevronRight,
   UsersIcon,
   Heart,
   CloudSync,
   CloudUpload,
   Wrench,
   Home,
+  LucideIcon,
+  Search,
+  Server,
 } from "lucide-react";
-import { cn } from "@heroui/react";
-import { ReactNode, useState, useEffect } from "react";
+import { Badge, cn, Key, Separator, useOverlayState } from "@heroui/react";
+import { useState, useEffect } from "react";
 import clsx from "clsx";
 import { useNavigate } from "react-router-dom";
-import { Chip, Header, ListBox } from "@heroui/react";
+import { ListBox } from "@heroui/react";
 
 import Logo from "@/icons/logo.svg?react";
 
 import { Searchbar } from "./Searchbar";
-import { ServerStatus } from "./ServerStatus";
 
 import { useApi } from "@/api/ApiContext";
 import { useSession } from "@/session/SessionContext";
 import { UserRoles } from "@/types/roles";
 import { Event } from "@/types/events";
+import { UserMenu } from "./UserMenu";
 
-interface IconWrapperProps {
-  children: ReactNode;
-  className?: string;
+interface MenuButtonProps {
+  id: string;
+  title: string;
+  icon: LucideIcon;
+  badgeColor?: "accent"| "default"| "success"| "warning"| "danger" ;
+  className?:string;
 }
 
-const ServerIconWrapper = ({ children, className }: IconWrapperProps) => (
-  <div
-    className={cn(
-      className,
-      "flex items-center rounded-small justify-center w-6 h-6 bg-background/90 p-1 text-foreground",
-    )}
-  >
-    {children}
-  </div>
-);
-
-interface ItemCounterProps {
-  number?: number;
-}
-
-const ItemCounter = ({ number }: ItemCounterProps) => (
-  <div className="hidden gap-1 items-center lg:flex text-default-600 fill-foreground text-foreground">
-    {number !== undefined && (
-      <Chip color="accent" size="sm" variant="primary">
-        {number.toString()}
-      </Chip>
-    )}
-    <ChevronRight size={14} />
-  </div>
-);
+const MenuButton = ({ id, title, icon: Icon, className, badgeColor }: MenuButtonProps) => {
+  return (
+    <ListBox.Item
+      id={id}
+      textValue={title}
+      className={cn("py-2 px-4 text-xs rounded-lg hover:stroke-accent stroke-foreground", className)}
+    >
+      <Badge.Anchor className="flex flex-col gap-1 justify-center items-center w-full">
+        <Icon size={18} className="stroke-inherit"/>
+        <p className="text-center">{title}</p>
+        {badgeColor && <Badge color={badgeColor} size="sm" variant="primary" className="mr-1 -mt-1" />}
+      </Badge.Anchor>
+    </ListBox.Item>
+  );
+};
 
 export const Menu = () => {
-  const [artistsCount, setArtistsCount] = useState(0);
-  const [albumCount, setAlbumCount] = useState(0);
-  const [trackCount, setTrackCount] = useState(0);
-  const [likedTrackCount, setLikedTrackCount] = useState(0);
-  const [playlistCount, setPlaylistCount] = useState(0);
   const [syncInProgress, setSyncInProgress] = useState(false);
 
+  const searchState = useOverlayState();
+
   const mediaItems = [
-    { key: "Artists", href: "/artists", icon: <UsersIcon />, count: artistsCount },
-    { key: "Albums", href: "/albums", icon: <Disc />, count: albumCount },
-    { key: "Tracks", href: "/tracks", icon: <Music4 />, count: trackCount },
+    { key: "Artists", href: "/artists", icon: UsersIcon },
+    { key: "Albums", href: "/albums", icon: Disc },
+    { key: "Tracks", href: "/tracks", icon: Music4 },
   ];
   const homeItems = [
     {
+      key: "Search",
+      href: "",
+      icon: Search,
+    },
+    {
+      key: "Home",
+      href: "/",
+      icon: Home,
+    },
+    {
       key: "Playlists",
       href: "/playlists",
-      icon: <ListMusic />,
-      count: playlistCount,
+      icon: ListMusic,
     },
     {
       key: "Liked Tracks",
       href: "/liked-tracks",
-      icon: <Heart />,
-      count: likedTrackCount,
+      icon: Heart,
     },
   ];
 
@@ -89,27 +89,6 @@ export const Menu = () => {
   const session = useSession();
   const navigate = useNavigate();
 
-  const loadData = () => {
-    api.countArtists().then(setArtistsCount);
-    api.countAlbums().then(setAlbumCount);
-    api.countTracks().then(setTrackCount);
-    api.countLikedTracks().then(setLikedTrackCount);
-    api.countPlaylists().then(setPlaylistCount);
-  };
-
-  useEffect(() => {
-    loadData();
-  }, [api]);
-
-  useEffect(() => {
-    const syncF = api.eventSubscribe(Event.EntitiesUpdated, () => {
-      loadData();
-    });
-
-    return () => {
-      syncF();
-    };
-  }, []);
 
   useEffect(() => {
     const syncP = api.eventSubscribe(Event.SyncInProgress, (p: boolean) => {
@@ -133,128 +112,101 @@ export const Menu = () => {
     return [];
   };
 
+  const listActions = (key: Key) => {
+    console.log(session.serverInfo.status)
+    if (key === "synchronise" && !syncInProgress) {
+      api.syncLibrary();
+      return;
+    } else if (key === "import_music") {
+      navigate("/import");
+      return;
+    } else if (key === "admin") {
+      navigate("/server-admin");
+      return;
+    } else if (key === "Search") {
+      searchState.setOpen(true)
+      return;
+    }
+
+    mediaItems.forEach((item) => {
+      if (item.key == key) {
+        navigate(item.href);
+
+        return;
+      }
+    });
+    homeItems.forEach((item) => {
+      if (item.key == key) {
+        navigate(item.href);
+
+        return;
+      }
+    });
+  }
+
   return (
-    <div className="flex overflow-visible flex-col gap-0 justify-between p-0 py-4 border-r-1 border-border bg-surface-secondary w-[80px] lg:w-[250px] lg:min-w-[250px]">
-      <div>
-        <div className="flex items-center pl-5 fill-foreground text-foreground">
-          <Logo className="" height={40} width={40} />
-          <span className="hidden ml-2 text-xl font-bold lg:block">
-            Brage Music
-          </span>
-        </div>
-        <div className="px-4 mt-10">
-          <Searchbar />
-        </div>
+    <div className="flex overflow-visible flex-col gap-0 justify-between items-center p-0 py-6 bg-surface-secondaryd w-[100px]">
+      <div className="flex flex-col flex-grow items-center">
+        <Searchbar state={searchState} />
+        <Logo className="fill-accent" height={40} width={40} />
         <ListBox
           aria-label="servermenu"
-          className="overflow-visible gap-0 p-0 pr-2 pb-5 pl-4 mt-10 bg-none"
-          // itemClasses={{
-          //   base: "px-3 rounded-none gap-3 h-8 data-[hover=true]:bg-default-100/80",
-          // }}
+          className="flex overflow-visible flex-col flex-1 flex-grow gap-0 p-0 px-3 pb-5 mt-10 min-h-0 bg-none w-[100px]"
           disabledKeys={disabledServerKeys()}
-          onAction={(key) => {
-            if (key === "synchronise" && !syncInProgress) {
-              api.syncLibrary();
-              return;
-            } else if (key === "import_music") {
-              navigate("/import");
-              return;
-            } else if (key === "admin") {
-              navigate("/server-admin");
-              return;
-            } else if (key === "home") {
-              navigate("/");
-              return;
-            }
-
-            mediaItems.forEach((item) => {
-              if (item.key == key) {
-                navigate(item.href);
-
-                return;
-              }
-            });
-            homeItems.forEach((item) => {
-              if (item.key == key) {
-                navigate(item.href);
-
-                return;
-              }
-            });
-          }}
+          onAction={listActions}
         >
-          <ListBox.Item className="justify-center" id="home" key="home">
-            <ServerIconWrapper><Home/></ServerIconWrapper>
-            <p className="hidden flex-grow lg:block text-foreground">
-             Home
-            </p>
-          </ListBox.Item>
-          {homeItems.map((item) => (
-            <ListBox.Item className="justify-center" id={item.key} key={item.key}>
-              <ServerIconWrapper>{item.icon}</ServerIconWrapper>
-              <p className="hidden flex-grow lg:block text-foreground">
-                {item.key}
-              </p>
-              <ItemCounter number={item.count} />
-            </ListBox.Item>
-          ))}
-          <ListBox.Section>
-            <Header>Media</Header>
-            {mediaItems.map((item) => (
-              <ListBox.Item className="justify-center" id={item.key} key={item.key}>
-                <ServerIconWrapper>{item.icon}</ServerIconWrapper>
-                <p className="hidden flex-grow lg:block text-foreground">
-                  {item.key}
-                </p>
-                <ItemCounter number={item.count} />
-              </ListBox.Item>
+          <ListBox.Section className="gap-2 mb-4">
+            {homeItems.map((item) => (
+              <MenuButton key={item.key} id={item.key} title={item.key} icon={item.icon}/>
             ))}
           </ListBox.Section>
 
-          <ListBox.Section className="text-foreground">
-            <Header>Server</Header>
+          <Separator />
+
+          <ListBox.Section className="gap-2 mt-4 mb-2">
+            {mediaItems.map((item) => (
+              <MenuButton key={item.key} id={item.key} title={item.key} icon={item.icon}/>
+            ))}
+          </ListBox.Section>
+
+          <ListBox.Section className="gap-2 mt-auto mb-2">
             {session.supportsSync ? (
-              <ListBox.Item
-                className={clsx(
-                  syncInProgress ? "text-success" : "",
-                  "justify-center",
-                )}
-                id="synchronise"
+              <MenuButton
                 key="synchronise"
-              >
-                <ServerIconWrapper>
-                  <CloudSync />
-                </ServerIconWrapper>
-                <p className="hidden flex-grow lg:block text-foreground">
-                  {syncInProgress ? "Synchronising..." : "Synchronise"}
-                </p>
-              </ListBox.Item>
+                id="synchronise"
+                title={syncInProgress ? "Syncing..." : "Sync"}
+                icon={CloudSync}
+                className={clsx(
+                    syncInProgress ? "text-success" : "",
+                  )}
+              />
             ) : null}
             {session.user?.hasAnyRole(
               UserRoles.Admin,
               UserRoles.ImporterWrite,
             ) ? (
-              <ListBox.Item className="justify-center" id="import_music" key="import_music">
-                <ServerIconWrapper>
-                  <CloudUpload />
-                </ServerIconWrapper>
-                <p className="hidden flex-grow lg:block">Import Music</p>
-              </ListBox.Item>
+              <MenuButton key="import_music" id="import_music" title="Import" icon={CloudUpload}/>
             ) : null}
             {session.user?.hasAnyRole(UserRoles.Admin) ? (
-              <ListBox.Item className="justify-center" id="admin" key="admin">
-                <ServerIconWrapper>
-                  <Wrench />
-                </ServerIconWrapper>
-                <p className="hidden flex-grow lg:block">Administration</p>
-              </ListBox.Item>
+              <MenuButton key="admin" id="admin" title="Server Admin" icon={Wrench}/>
             ) : null}
+            <MenuButton
+              key="server_status"
+              id="server_status"
+              title="Server"
+              icon={Server}
+              badgeColor={
+                session.serverInfo.status == "running" ? "success" :
+                  session.serverInfo.status == "no_auth" ? "warning" :
+                  session.serverInfo.status == "unavailable" ? "danger" : undefined
+              }
+            />
           </ListBox.Section>
+
         </ListBox>
       </div>
-      <div className="flex flex-col gap-4 lg:px-4 px-4.5">
-        <ServerStatus serverInfo={session.serverInfo} />
-      </div>
+
+      <UserMenu />
     </div>
   );
 };

@@ -31,7 +31,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({}) => {
       {session.user ? (
         <Dropdown className="mt-4">
           <Dropdown.Trigger>
-            <UserBadge radius="sm" user={session.user} />
+            <UserBadge radius="full" user={session.user} />
           </Dropdown.Trigger>
           <Dropdown.Popover>
             <Dropdown.Menu

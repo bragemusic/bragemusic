@@ -7,6 +7,14 @@
  * @see https://heroui.com/docs/react/getting-started/theming
  */
 
+@theme {
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme inline {
+  --color-accent-deep: var(--accent-deep);
+}
+
 @layer components {
   .dropdown__popover {
     @apply border-1 border-border;
@@ -21,6 +29,8 @@
   }
 }
 
+
+
 :root,
 .light,
 .default,
@@ -28,6 +38,8 @@
 [data-theme="default"] {
   /* main color */
   --accent: #ff5000;
+
+  --accent-deep: #d24200;
   /* foreground color on components with main bg */
   --accent-foreground: #ffffff;
   /* main background */

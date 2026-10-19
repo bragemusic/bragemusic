@@ -3,6 +3,7 @@ import { CloudCog, House, LucideIcon, Music, Search } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Searchbar } from "./Searchbar";
+import { useOverlayState } from "@heroui/react";
 
 interface MenuItemProps {
     id: string;
@@ -34,6 +35,8 @@ export const MobileMenu = () => {
 
     const navigate = useNavigate();
 
+    const searchState = useOverlayState();
+
     const onMenuClick = (id: string) => {
         setSelectedItem(id)
         switch (id) {
@@ -51,13 +54,10 @@ export const MobileMenu = () => {
 
     return (
         <div className="absolute bottom-0 z-20 px-4 pb-4 w-full">
-            <div className="flex justify-between p-1 w-full rounded-full shadow-md backdrop-blur-sm bg-surface/60 border-1 border-border">
+            <Searchbar state={searchState}/>
+            <div className="flex justify-between p-1 w-full rounded-t-xl shadow-md rounded-b-4xl backdrop-blur-sm bg-surface/60 border-1 border-border">
                 <MenuItem onClick={onMenuClick} selected={selectedItem == "home"} id={"home"} key={"home"} name="Home" icon={House}/>
-                <Searchbar
-                    trigger={({ onClick }) => (
-                        <MenuItem onClick={onClick} selected={selectedItem == "search"} id={"search"} key={"search"} name="Search" icon={Search}/>
-                    )}
-                />
+                <MenuItem onClick={() => {searchState.setOpen(true)}} selected={selectedItem == "search"} id={"search"} key={"search"} name="Search" icon={Search}/>
                 <MenuItem onClick={onMenuClick} selected={selectedItem == "media"} id={"media"} key={"media"} name="Media" icon={Music}/>
                 <MenuItem onClick={onMenuClick} selected={selectedItem == "server"} id={"server"} key={"server"} name="Server" icon={CloudCog}/>
             </div>

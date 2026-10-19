@@ -26,7 +26,7 @@ export function BannerButton({
   tooltip,
   onClick,
   onUpload,
-  variant = "primary",
+  variant = "tertiary",
   type = "normal",
   isDisabled = false,
   confirm = false,

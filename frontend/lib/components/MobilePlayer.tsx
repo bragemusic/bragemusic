@@ -77,7 +77,7 @@ export const MobilePlayer = () => {
                     onTouchEnd={handleTouchEnd}
                     className="absolute z-20 px-4 pb-4 w-full bottom-17"
                 >
-                    <div className="flex gap-2 items-center p-1.5 px-4 w-full rounded-full shadow-md backdrop-blur-sm bg-surface/60 border-1 border-border">
+                    <div className="flex gap-2 items-center p-1.5 px-4 w-full rounded-xl shadow-md backdrop-blur-sm bg-surface/60 border-1 border-border">
                         <Image
                             fallbackIcon={Music2}
                             height={30}

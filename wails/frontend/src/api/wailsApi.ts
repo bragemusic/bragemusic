@@ -1,7 +1,8 @@
-import { Api, UserDetails, responses } from "bragemusic";
-import { types, musicbrainz } from "../../wailsjs/go/models";
+import { Api, UserDetails, responses, Event } from "bragemusic";
+import { types, musicbrainz, serverclient } from "../../wailsjs/go/models";
 import * as App from "../../wailsjs/go/app/App";
 import { EventsOn } from "../../wailsjs/runtime/runtime";
+
 
 export class WailsApi implements Api {
     eventSubscribe = EventsOn;
@@ -292,7 +293,25 @@ export class WailsApi implements Api {
         return await App.Themes()
     }
 
+    emitEvent(eventName: Event, data?: any) {
+        console.log(eventName, data)
+    }
 
-    emitEvent(_e: Event, _d?: any) {
+    async uploadAlbumImage(
+        id: string,
+        file: File | serverclient.FileUpload,
+    ): Promise<void> {
+        console.log(id, file)
+    }
+
+    async uploadArtistImage(
+        id: string,
+        file: File | serverclient.FileUpload,
+    ): Promise<void> {
+        console.log(id, file)
+    }
+
+    async addPlayCount(trackID: string): Promise<void> {
+        console.log(trackID)
     }
 }

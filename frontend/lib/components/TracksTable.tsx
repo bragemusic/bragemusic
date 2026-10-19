@@ -305,7 +305,6 @@ interface TracksTableProps {
   columns: ColumnType[];
   parent_id: string | undefined;
   parent_type: PlayContextType;
-  alteringRowColor?: boolean;
   visibleCount?: number;
   virtualize?: boolean;
 }
@@ -315,7 +314,6 @@ export const TracksTable: React.FC<TracksTableProps> = ({
   columns,
   parent_id,
   parent_type,
-  alteringRowColor = true,
   visibleCount,
 }) => {
   const [numberOfDiscs, setNumberOfDiscs] = useState(1);
@@ -438,7 +436,7 @@ export const TracksTable: React.FC<TracksTableProps> = ({
   const gridcols = columns.map((c) => (ColMap[c].width)).join(" ")
 
   const content = (
-    <div className="flex overflow-scroll flex-col flex-1 px-2 min-h-0">
+    <div className="flex overflow-scroll flex-col flex-1 px-2 min-h-0 divide-y-1 divide-border">
       <div
           className={`grid items-center py-2 font-semibold uppercase text-[10px] text-foreground/50`}
           style={{
@@ -462,10 +460,10 @@ export const TracksTable: React.FC<TracksTableProps> = ({
         return (
           <div
             className={cn(
-              `grid items-center py-1 text-sm`,
+              `grid items-center py-1 text-sm rounded-lg`,
               track.media_file ? "fill-foreground stroke-foreground" : "text-foreground/40",
-              track.media_file ? "hover:bg-accent hover:text-accent-foreground hover:fill-accent-foreground hover:stroke-accent-foreground" : "",
-              alteringRowColor && idx % 2 == 1 ? "bg-surface" : "",
+              track.media_file ? "hover:bg-accent-deep hover:font-semibold hover:text-accent-foreground hover:fill-accent-foreground hover:stroke-accent-foreground" : "",
+              // alteringRowColor && idx % 2 == 1 ? "bg-surface" : "",
             )}
             style={{
               gridTemplateColumns: gridcols,

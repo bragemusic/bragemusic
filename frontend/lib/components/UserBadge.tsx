@@ -8,7 +8,7 @@ import { userAvatarLink } from "@/util/images";
 interface UserBadgeProps {
   user?: types.UserDetails;
   size?: AvatarProps["size"];
-  radius?: "sm" | "md" | "lg" | "xl";
+  radius?: "sm" | "md" | "lg" | "xl" | "full";
   showAsLink?: boolean;
 }
 

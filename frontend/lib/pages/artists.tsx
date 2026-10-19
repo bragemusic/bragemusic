@@ -5,15 +5,18 @@ import { types } from "@/types/core";
 import { useApi } from "@/api/ApiContext";
 import { ArtistCard } from "@/components/ArtistCard";
 import CardLayout from "@/layouts/CardLayout";
-import { ActionButton } from "@/primitives/Buttons";
 import { Plus } from "lucide-react";
 import { useSession } from "@/session/SessionContext";
-import { useOverlayState } from "@heroui/react";
+import { Button, Key, SearchField, ToggleButton, ToggleButtonGroup, useOverlayState } from "@heroui/react";
 import EditModal from "@/components/EditModal";
 import { Input, NumberInput, Textarea } from "@/primitives/Inputs";
+import { SortBy } from "@/types/sorting";
 
 export default function ArtistsPage() {
   const [artists, setArtists] = useState<types.ArtistDetailed[]>([]);
+  const [selectedSorting, setSelectedSorting] = useState(new Set<Key>([SortBy.Name]));
+
+  const sortBy = ([...selectedSorting][0] ?? SortBy.Name) as SortBy;
 
   const api = useApi();
   const session = useSession();
@@ -21,7 +24,9 @@ export default function ArtistsPage() {
 
   useEffect(() => {
     api.listArtists().then(setArtists);
+    console.log(sortBy)
   }, [api]);
+
 
   const onAddArtist = (fd: FormData) => {
     const source = {
@@ -49,17 +54,38 @@ export default function ArtistsPage() {
   return (
     <CardLayout
       title="Artists"
+      subtitle={`${artists.length} artists in your library`}
       headerContent={
-        <>
-          <ActionButton
-            icon={Plus}
-            isDisabled={!session.serverFullyAvailable}
-            tooltip="Add new artist"
-            onClick={() => {
-              addState.setOpen(true);
-            }}
-          />
-        </>
+        <div className="flex flex-col gap-4 items-center w-full xl:flex-row">
+          <SearchField name="filter" className="w-full">
+            <SearchField.Group  className="w-full h-10 rounded-full shadow-none border-border border-1 bg-surface">
+              <SearchField.SearchIcon />
+              <SearchField.Input className="w-full xl:w-[280px]" placeholder="Filter artists"/>
+              <SearchField.ClearButton />
+            </SearchField.Group>
+          </SearchField>
+
+          <div className="flex gap-4 justify-between items-center w-full">
+            <ToggleButtonGroup selectedKeys={selectedSorting} onSelectionChange={(k) => {k.size > 0 && setSelectedSorting(k)}} selectionMode="single" size="lg">
+              <ToggleButton id={SortBy.Name}>
+                A-Z
+              </ToggleButton>
+              <ToggleButton id={SortBy.Added}>
+                <ToggleButtonGroup.Separator />
+                Recently added
+              </ToggleButton>
+              <ToggleButton id={SortBy.PlayCount}>
+                <ToggleButtonGroup.Separator />
+                Most played
+              </ToggleButton>
+            </ToggleButtonGroup>
+
+            <Button size="lg" isDisabled={!session.serverFullyAvailable} onClick={() => {addState.setOpen(true)}} >
+              <Plus/>
+              Add artist
+            </Button>
+          </div>
+        </div>
       }
     >
       <EditModal

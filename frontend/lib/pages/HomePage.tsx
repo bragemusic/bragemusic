@@ -23,7 +23,10 @@ export default function HomePage({
 
   return (
     <PageTitleLayout title={getGreeting()}>
-      <div className="flex flex-col flex-1 min-w-0 min-h-0">
+      <div className="flex flex-col flex-1 gap-3 min-w-0 min-h-0">
+        <RecentAlbums />
+        <RecentAlbums />
+        <RecentAlbums />
         <RecentAlbums />
       </div>
     </PageTitleLayout>

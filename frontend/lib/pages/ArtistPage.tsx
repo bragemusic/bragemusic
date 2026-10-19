@@ -179,7 +179,6 @@ export default function ArtistPage({
           {artist && (
             <div className="flex flex-col gap-2 mb-10">
               <TracksTable
-                alteringRowColor={false}
                 columns={isMobile ? ["album_cover", "title", "length", "plays"] : ["album_cover", "title", "length", "plays"]}
                 parent_id={artist.id.toString()}
                 parent_type={PlayContextType.TopTracks}

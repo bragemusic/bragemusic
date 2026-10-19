@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { types } from "@/types/core";
 
 import { useApi } from "@/api/ApiContext";
-import { Card, Text } from "@heroui/react";
+import {Text } from "@heroui/react";
 import { SideScrollContainer } from "./SideScrollContainer";
 import { SortBy, SortOrder } from "../types/sorting";
 import { AlbumRecentCard } from "./AlbumRecentCard";
@@ -11,11 +11,11 @@ import { AlbumRecentCard } from "./AlbumRecentCard";
 interface RecentAlbumsProps{}
 
 export const RecentAlbums: React.FC<RecentAlbumsProps> = () => {
-    const images = [
-        "https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/docs/robot1.jpeg",
-        "https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/docs/avocado.jpeg",
-        "https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/docs/oranges.jpeg",
-    ];
+    // const images = [
+    //     "https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/docs/robot1.jpeg",
+    //     "https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/docs/avocado.jpeg",
+    //     "https://heroui-assets.nyc3.cdn.digitaloceanspaces.com/docs/oranges.jpeg",
+    // ];
 
     const [albums, setAlbums] = useState<types.AlbumDetailed[]>([]);
 

@@ -9,6 +9,7 @@ import { MobileMenu } from "./components/MobileMenu";
 import { MobilePlayer } from "./components/MobilePlayer";
 import ArtistsPage from "./pages/artists";
 import ArtistPage from "./pages/ArtistPage";
+import ArtistPageNew from "./pages/ArtistPageNew";
 import AlbumPage from "./pages/AlbumPage";
 import Toast from "./components/toast";
 import AlbumsPage from "./pages/AlbumsPage";
@@ -35,6 +36,7 @@ import { ThemeProvider } from "next-themes";
 import { Spinner } from "@heroui/react";
 import { LocalPlayer } from "./components/LocalPlayer";
 import { MediaSession } from "./components/MediaSession";
+import { BackgroundProvider } from "./hooks/BackgroundProvider";
 
 function App({ useLocalPlayer }: { useLocalPlayer: boolean }) {
   return (
@@ -48,7 +50,9 @@ function App({ useLocalPlayer }: { useLocalPlayer: boolean }) {
                 <MediaSession />
               </>
             )}
-            <AppContent />
+            <BackgroundProvider>
+              <AppContent />
+            </BackgroundProvider>
           </>
         </BrowserRouter>
       </SessionProvider>
@@ -97,15 +101,16 @@ function AppContent() {
 
               <div
                 ref={scrollRef}
-                className="overflow-y-auto flex-1 min-w-0 min-h-0 bg-background"
+                className="overflow-y-auto flex-1 min-w-0 min-h-0 bg-none"
               >
                 <Routes>
                   <Route element={<HomePage  scrollRef={scrollRef}/>} path="/" />
                   <Route element={<ArtistsPage />} path="/artists" />
-                  <Route element={<ArtistPage scrollRef={scrollRef} />} path="/artists/:artistID"/>
+                  <Route element={<ArtistPage scrollRef={scrollRef} />} path="/artists1/:artistID"/>
+                  <Route element={<ArtistPageNew />} path="/artists/:artistID"/>
                   <Route element={<AlbumsPage />} path="/albums" />
                   <Route
-                    element={<AlbumPage scrollRef={scrollRef} />}
+                    element={<AlbumPage/>}
                     path="/albums/:albumID"
                   />
                   <Route element={<ImportPage />} path="/import" />
@@ -137,7 +142,7 @@ function AppContent() {
   }
 
   return (
-    <div className="flex overflow-hidden flex-col select-none h-dvh bg-background" >
+    <div className="flex overflow-hidden flex-col select-none h-dvh" >
       {content}
     </div>
   );

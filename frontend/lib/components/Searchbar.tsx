@@ -1,6 +1,6 @@
 import { Music2, Search } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Button, Input, Modal, useOverlayState } from "@heroui/react";
+import { Input, Modal, useOverlayState } from "@heroui/react";
 import { Link } from "react-router-dom";
 
 import { types } from "@/types/core";
@@ -9,6 +9,8 @@ import { Image } from "./Image";
 
 import { albumImageLinkFromID, artistImageLinkFromID } from "@/util/images";
 import { useApi } from "@/api/ApiContext";
+
+type State = ReturnType<typeof useOverlayState>;
 
 const generateImageLink = (si: types.SearchItem): string => {
   if (si.link_type === "artist") {
@@ -35,15 +37,15 @@ interface SearchResultsProps {
 }
 
 interface SearchbarProps {
-  trigger?: React.ComponentType<{ onClick: () => void }>;
+    state: State;
 }
 
-export const Searchbar: React.FC<SearchbarProps> = ({ trigger: Trigger }) => {
+export const Searchbar: React.FC<SearchbarProps> = ({ state }) => {
   const [results, setResults] = useState<types.SearchItem[]>([]);
   const [value, setValue] = useState("");
   const [debouncedValue, setDebouncedValue] = useState("");
 
-  const state = useOverlayState();
+  // const state = useOverlayState();
   const api = useApi();
 
   useEffect(() => {
@@ -102,25 +104,6 @@ export const Searchbar: React.FC<SearchbarProps> = ({ trigger: Trigger }) => {
 
   return (
     <div className="">
-      {Trigger ? (
-        <Trigger
-          onClick={() => {
-            state.setOpen(true);
-          }}
-        />
-      ) : (
-        <Button
-          isIconOnly
-          className="w-full text-md bg-background border-1 border-border text-foreground"
-          size="sm"
-          onPress={() => {
-            state.setOpen(true);
-          }}
-        >
-          <Search size={18} />
-          <p className="hidden px-2 lg:block">Search</p>
-        </Button>
-      )}
 
       <Modal>
         <Modal.Backdrop
